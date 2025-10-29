@@ -240,6 +240,7 @@ for participant_number=1:n_participants
         trial_path = fullfile(dataset_path, participant_ID, good_trials_file_name(trial_number));
         [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide);
         n_steps = forceplate_data.n_forceplates;
+        steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps);
         
         % Fix event times:
         % if the step is good,
@@ -487,8 +488,8 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     metadata.Mass.calculation_meathod = "given";
     
     % Is_shod
-    metadata.Is_shod.value = false;
-    metadata.Is_shod.unit = "binary";
+    metadata.Is_shod.value = "No";
+    metadata.Is_shod.unit = "Yes\No";
     metadata.Is_shod.method = "given";
     
     % leg length - from ASIS to medial ankle 

@@ -163,8 +163,8 @@ for participant_number = 1:n_participants
     metadata.Mass.method = "given";
     
     % Is_shod
-    metadata.Is_shod.value = false;
-    metadata.Is_shod.unit = "binary";
+    metadata.Is_shod.value = "No";
+    metadata.Is_shod.unit = "Yes\No";
     metadata.Is_shod.method = "given";
 
     % standing trial

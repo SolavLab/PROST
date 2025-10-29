@@ -43,14 +43,14 @@ classdef ROSAnalyzer < handle
         %                 [participants_to_ignore_right]}
 
             % Pre Initialization
-            samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'logical',    'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
-            samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Gender',      'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',    'Radius',    'Center_x',  'Center_z',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
-            samples_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'true/false', 'mm',        'mm',        'mm',        'deg',       'deg',       'deg',        'mm'       };
-            samples_var_descriptions = {'',           '',               '',            '',                    'feature',   'feature',     'feature',   'feature',   'feature',    'feature',      'feature',      'feature',    'label',     'label',     'label',     'label',     'label',     'label',      ''         };
+            samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
+            samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Gender',      'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_x',  'Center_z',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
+            samples_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Yes/No',      'mm',        'mm',        'mm',        'deg',       'deg',       'deg',        'mm'       };
+            samples_var_descriptions = {'',           '',               '',            '',                    'feature',   'feature',     'feature',   'feature',   'feature',    'feature',      'feature',      'feature',     'label',     'label',     'label',     'label',     'label',     'label',      ''         };
             samples_numCols = length(samples_var_names);
     
-            summary_var_types = {'doublenan',  'string',       'string',       'string'   'doublenan',      'string',      'string'       'cell'              'doublenan'         'doublenan',       'logical', 'logical'};
-            summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod', 'Has_medial'};
+            summary_var_types = {'doublenan',  'string',       'string',       'string'   'doublenan',      'string',      'string'       'cell'              'doublenan'         'doublenan',       'categorical', 'logical'};
+            summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod',     'Has_medial'};
             summary_numCols = length(summary_var_names);
     
             if nargin == 0 || isempty(load_list)
@@ -165,7 +165,8 @@ classdef ROSAnalyzer < handle
         function [samples, entry_numbers] = get_sample_entry(obj, dataset_id, participant_id, side, anatomical_side)
         %GET_SAMPLE_ENTRY returns the entry numbers and sample entries from the 
         % samples table given the dataset IDs, participant IDs, sides and 
-        % anatomical sides. Returns empty table and NaN if does not exist.
+        % anatomical sides. Returns empty table and empty array if does not 
+        % exist.
         % Input :
         %   dataset_id - the dataset ID for the requested entry. A positive 
         %                integer number. Could be a vector of IDs.
@@ -190,10 +191,10 @@ classdef ROSAnalyzer < handle
             if nargin < 4
                 side = ["left" "right"];
             end
-            if nargin < 3
+            if nargin == 2
                 dataset = obj.get_dataset(dataset_id);
                 if isempty(dataset)
-                    entry_numbers = NaN;
+                    entry_numbers = [];
                     samples = table;
                     return
                 end
@@ -205,31 +206,29 @@ classdef ROSAnalyzer < handle
             dataset_rows = ismember(obj.SamplesTable.Dataset_id, dataset_id);
             entry_numbers = find(dataset_rows & participant_rows & side_rows & anatomical_side_rows);
             if isempty(entry_numbers)
-                entry_numbers = NaN;
                 samples = table;
             else
                 samples = obj.SamplesTable(entry_numbers, :);
             end
         end
-        function var = get_sample_var(obj, var_name)
-        %GET_SAMPLE_VAR returns all entries of var_name from samples table.
+        function var = get_sample_var(obj, list)
+        %GET_SAMPLE_VAR returns a table of all variables in list from the 
+        % samples table.
         % Input :
-        %   var_name - the variable name. Must be a string scalar or 
-        %              character row vector.
+        %   list - the variable name or list of variable names. Must be a string 
+        %          array or character cell array.
         % Output :
-        %   var - the sample table entries for variable var_name.
+        %   var - the sample table entries for the variables in list.
 
-            if ~isStringScalar(var_name) && (~ischar(var_name) || isrow(var_name))
-                error("ROSAnalyzer:SamplesTable:WrongFormat", ...
-                      "Samples table variable name must be a string scalar or character row vector.")
-            elseif ~ismember(var_name, obj.SamplesTable.Properties.VariableNames)
-                error("ROSAnalyzer:SamplesTable:UnrecognizedVariableName", ...
-                      "'%s' is not a variable name of the samples table.", var_name)
+            idx = ismember(list, string(obj.SamplesTable.Properties.VariableNames));
+            if ~any(idx)
+                error("ROSAnalyzer:SamplesTable:VariableDoesNotExist", ...
+                      "The variables " + string(mat2str(list)) + " do not exist.")
             end
-            var = obj.SamplesTable.(var_name)(1:obj.SamplesTableSize);
+            var = obj.SamplesTable{1:obj.SamplesTableSize, list(idx)};
         end
         function [features, names, units, types] = get_features(obj, list)
-        %GET_FEATURES returnsa table of all features (anthropometric data) in 
+        %GET_FEATURES returns a table of all features (anthropometric data) in 
         % list from the samples table.
         % Input :
         %   list - list of features to return
@@ -431,74 +430,94 @@ classdef ROSAnalyzer < handle
             % Get Data
             [features, feature_names, feature_units, feature_types] = obj.get_features(features_list);
             [labels, label_names, label_units, label_types] = obj.get_labels(labels_list);
+            n_features = numel(feature_names);
+            n_labels = numel(label_names);
             if nargin < 4
                 number_of_axes_in_fig = length(label_names);
             end
-            % Get grouping parameter for plot
-            groups = obj.get_sample_var("Side");
-            groups = categorical(groups);
-            n_groups = length(groups);
             
-            % Initialize plot parameters
-            marker_size = 5;
-            color_right = summer(n_groups);
-            color_left = autumn(n_groups);
-            if groups(1) == categorical("left")
-                group_color = [color_left(1, :); color_right(1, :)];
-            else
-                group_color = [color_right(1, :); color_left(1, :)];
-            end
-                group_marker = "oo";
+            % Get Sides
+            sides = obj.get_sample_var("Side");
+            
+            % Get Residuals
+            residuals = obj.get_sample_var("Residual");
+            r_left  = residuals(sides=="left");
+            r_right = residuals(sides=="right");
+
+            % Normalize inverse residuals for reasonable marker sizes
+            inv_left  = 1 ./ r_left;
+            inv_right = 1 ./ r_right;
+            norm_left = (inv_left  / max(inv_left));
+            norm_right = (inv_right / max(inv_right));
+          
+            % Scale marker sizes (adjust 200 as needed)
+            sz_left  = 200 * norm_left;
+            sz_right = 200 * norm_right;
+            
+            % Define colors for sides
+            color_left  = [0 0.7 0];   % greenish
+            color_right = [0.85 0 0];  % reddish
+
+            % Define Marker Parameters
+            marker = "o";
 
             % Start plotting
-            n_features = length(feature_names);
-            n_labels = length(label_names);
             axes_counter = 0;
             fig_counter = 0;
             for feature_index=1:n_features
-                for label_index=1:n_labels         
+                for label_index=1:n_labels
+                    % Get feature data
+                    x = features{:, feature_index};
+                    x_left  = x(sides=="left");
+                    x_right = x(sides=="right");
+                    x_unit = replace(feature_units{feature_index}, "_", " ");
+                    x_name = replace(feature_names{feature_index}, "_", " ");
+                    x_type = feature_types{feature_index};
+                    x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
+                    
+                    % Get label data
+                    y = labels{:, label_index};
+                    y_left  = y(sides=="left");
+                    y_right = y(sides=="right");
+                    y_unit = replace(label_units{label_index}, "_", " ");
+                    y_name = replace(label_names{label_index}, "_", " ");
+                    y_type = label_types{label_index};
+                    y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
+                                                           
                     % Create new figure for new set of axes
                     if axes_counter == 0
                         fig_counter = fig_counter + 1;
-                        fig  = figure(Name="Feature vs Label Plot " + fig_counter);
+                        fig  = figure(Name=x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + " Plot " + fig_counter);
                         tiledlayout(fig)
+                        sgtitle(fig, fig.Name)
                     end
                     
                     % Initialize axis
                     ax = nexttile;
+                    hold(ax, "on");
                     
-                    % Get feature data
-                    x = features{:, feature_index};
-                    x_unit = feature_units{feature_index};
-                    x_type = feature_types{feature_index};
-                    x_name = feature_names{feature_index};
-                    x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
-
-                    % Get label data
-                    y = labels{:, label_index};
-                    y_unit = label_units{label_index};
-                    y_type = label_types{label_index};
-                    y_name = label_names{label_index};
-                    y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
-                                        
                     % Set axis labels
-                    x_label = replace(x_name, "_", " ");
+                    x_label = x_name;
                     if ~isempty(x_unit)
-                       x_label = x_label + " [" + replace(x_unit, "_", " ") + "]";
+                       x_label = x_label + " [" + x_unit + "]";
                     end
-                    y_label = replace(y_name, "_", " ");
+                    y_label = y_name;
                     if ~isempty(y_unit)
-                       y_label = y_label  + " [" + replace(y_unit, "_", " ") + "]";
+                       y_label = y_label + " [" + y_unit + "]";
                     end
 
                     % Plot
-                    if ~x_numeric && ~iscategorical(x)
-                        x = categorical(replace(string(x), "_", " "));
-                    end
-                    if ~y_numeric && ~iscategorical(y)
-                        y = categorical(replace(string(y), "_", " "));
-                    end
-                    h = gscatter(ax, x, y, groups, group_color, group_marker, marker_size, "off", "filled");
+                    % if ~x_numeric && ~iscategorical(x)
+                    %     x = categorical(replace(string(x), "_", " "));
+                    % end
+                    % if ~y_numeric && ~iscategorical(y)
+                    %     y = categorical(replace(string(y), "_", " "));
+                    % end
+
+                    % Plot both sides
+                    h_left = scatter(x_left,  y_left,  sz_left,  color_left, marker, 'filled', MarkerFaceAlpha=0.6);
+                    h_right = scatter(x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=0.6);
+
                     xlim padded
                     ylim padded
                     xlabel(x_label);
@@ -508,10 +527,9 @@ classdef ROSAnalyzer < handle
                     % Increment counter
                     axes_counter = axes_counter + 1;
 
-                    % Create legend
+                    % % Create legend/colorbar
                     if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
-                        lgd = legend(h, categories(groups), FontSize=9);
-                        lgd.Layout.Tile = 'east';
+                        legend([h_left h_right], ["Left" "Right"], Location="east", FontSize=12)
                         axes_counter = 0;
                     end
                 end
@@ -656,7 +674,7 @@ classdef ROSAnalyzer < handle
             X = [];
             X_continuous = features{:, strcmp(features_types, 'double')};
            
-            X = [X_continuous dummyvar(features.Gender) dummyvar(categorical(features.Is_shod))];
+            X = [X_continuous dummyvar(features.Gender) dummyvar(features.Is_shod)];
             % for k = 1:numel(feature_names)
             %     feature = features.(feature_names(k));
             % 
@@ -1288,14 +1306,27 @@ classdef ROSAnalyzer < handle
         %   anatomical_side - the anatomical side for the requested entry. Could
         %                     be a vector of multiple anatomical sides.
         %                     Default: ["lateral", "medial", "mean"].
+        % OR :
+        %   entry_flag - 'e', indicates the samples are identified by entry.
+        %   entry_numbers - entry numbers in table to delete.
+        % Example usage :
+        %   obj.delete_from_samples_table(1, [1 2 3], "left")
+        %   obj.delete_from_samples_table(1)
+        %   obj.delete_from_samples_table('e', [1 10 25])
             
-            [~, entries] = obj.get_sample_entry(varargin);    
-            if isnan(entries)
+            % Extract Inputs
+            if length(varargin) == 2 && strcmp(varargin{1}, 'e')
+                entry_numbers = varargin{2};
+            else
+                [~, entry_numbers] = obj.get_sample_entry(varargin{:});
+            end
+
+            if isempty(entry_numbers)
                 return
             end
-            obj.SamplesTable(entries, :) = [];
-            obj.SamplesTableSize = obj.SamplesTableSize - length(entries);
-            obj.PointClouds(entries) = [];
+            obj.SamplesTable(entry_numbers, :) = [];
+            obj.SamplesTableSize = obj.SamplesTableSize - length(entry_numbers);
+            obj.PointClouds(entry_numbers) = [];
         end
         function add_to_ignore_list(obj, ignore)
         %ADD_TO_IGNORE_LIST
@@ -1321,10 +1352,9 @@ classdef ROSAnalyzer < handle
         
             tf =  ~isempty(find(obj.SummaryTable.Dataset_id == dataset_id, 1, 'first'));
         end
-        function clean_data(obj, ignore_list)
-
+        function ignore_data(obj, ignore_list)
             % Delete sample table trials from ignore list
-            obj.ignore_list = ignore_list;
+            obj.IgnoreList = ignore_list;
             for idx=1:height(ignore_list)
                 dataset_id = ignore_list{idx, 1};
                 participants_left = ignore_list{idx, 2};
@@ -1332,9 +1362,21 @@ classdef ROSAnalyzer < handle
                 obj.delete_from_samples_table(dataset_id, participants_left, "left");
                 obj.delete_from_samples_table(dataset_id, participants_right, "right");
             end
-            
-            % 
         end
+        function filter_data(obj, list, method)
+            if nargin < 3
+                method = "median";
+            end
+
+            % Filter outlier parameters
+            idx = ismember(list, string(obj.SamplesTable.Properties.VariableNames));
+            if ~any(idx)
+                return
+            end
+            outliers = any(isoutlier(obj.get_sample_var(list(idx)), method), 2);
+            entry_numbers = find(outliers);
+            obj.delete_from_samples_table('e', entry_numbers)
+         end
     end
     
     %% STATIC METHODS
@@ -1369,16 +1411,29 @@ classdef ROSAnalyzer < handle
             good_steps = good_steps(1:counter - 1);
         end
         function [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side)
-        %GET_METADATA get metadata parameters
-        % -----------------------------------------------------------------
-            age                = metadata.Age.value; assert(metadata.Age.unit == "years"); % [years]
-            gender             = categorical(metadata.Gender.value); % "Male" or "Female"
-            height             = metadata.Height.value; assert(metadata.Height.unit == "m"); % [m]
-            mass               = metadata.Mass.value; assert(metadata.Mass.unit == "kg"); % [kg]
-            leg_length         = metadata.Leg_length.(side).value; assert(metadata.Leg_length.unit == "m"); % [m]
-            thigh_length       = metadata.Thigh_length.(side).value; assert(metadata.Thigh_length.unit == "m"); % [m]
-            shank_length       = metadata.Shank_length.(side).value; assert(metadata.Shank_length.unit == "m"); % [m]
-            is_shod            = metadata.Is_shod.value; % 0 - barefoot, 1 - with shoes
+        %GET_METADATA get anthropometric metadata parameters.
+        % Input :
+        %   metadata - struct with the anthropometric data of a participant.
+        %   side - the side of the leg measurements (leg, thigh or shank 
+        %          lengths) to return. Either"right" or "left".
+        % Output :
+        %   age - the participant's age in years.
+        %   gender - the participant's gender (Male or Female).
+        %   height - the participant's height in m.
+        %   mass - the participant's weight in kg.
+        %   leg_length - the participant's leg length in m of side "side".
+        %   thigh_length - the participant's thigh length in m of side "side".
+        %   shank_length - the participant's shank length in m of side "side".
+        %   is_shod - whether the participant was shod (Yes) or barefoot (No).
+
+            age = metadata.Age.value; assert(metadata.Age.unit == "years"); % [years]
+            gender = categorical(metadata.Gender.value); % "Male" or "Female"
+            height = metadata.Height.value; assert(metadata.Height.unit == "m"); % [m]
+            mass = metadata.Mass.value; assert(metadata.Mass.unit == "kg"); % [kg]
+            leg_length = metadata.Leg_length.(side).value; assert(metadata.Leg_length.unit == "m"); % [m]
+            thigh_length = metadata.Thigh_length.(side).value; assert(metadata.Thigh_length.unit == "m"); % [m]
+            shank_length = metadata.Shank_length.(side).value; assert(metadata.Shank_length.unit == "m"); % [m]
+            is_shod = metadata.Is_shod.value; % "Yes" (shod) or "No" (barefoot)
         end
         function shank_cop = cop_to_shank_frame(step, anatomical_side)
         %COP_TO_SHANK_FRAME transforms the COP of the step to the shank

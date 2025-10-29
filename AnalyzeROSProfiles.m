@@ -11,7 +11,6 @@ set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows
 
 %% Build data
 db_list = ["DB_1", "./DB1/DB_1.mat"; "DB_2", "./DB2/DB_2.mat"; "DB_3", "./DB3/DB_3.mat"];
-% db_list = ["DB_3", "./DB3/DB_3.mat"];
 
 var_names = db_list(:, 1);
 dataset_paths = split(db_list(:, 2), "/");
@@ -44,25 +43,30 @@ close all
 %                 participant. A cell array of the form:
 %                 {"DB Name", [participants_to_ignore_left], [participants_to_ignore_right]}
 load_list = {DB_1, "DB_1"; DB_3, "DB_3"; DB_2, "DB_2"};
-ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
+% ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
 
 %% Create ROS analysis object
-[obj, dataset_ids] = ROSAnalyzer(load_list, ignore_list);
+[obj, dataset_ids] = ROSAnalyzer(load_list);
 DB_1_ID = dataset_ids(1);
 DB_3_ID = dataset_ids(2);
 DB_2_ID = dataset_ids(3);
 
-
+%% Clean data
+ignore_list = {DB_1_ID, [3 5 14 15 16], [5 14 15 16]; DB_2_ID, [31], []; DB_3_ID, [43, 47], []};
+obj.ignore_data(ignore_list);
+%%
+obj.filter_data(["Radius"])
 %% Plot data
 % close all
 obj.plot_ros({}, 6);
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
-figure(Name="Residual Histogram");
+figure(Name="Residuals Histogram vs Normal Distribution Comparison");
 residuals = obj.get_sample_var("Residual");
-shod_residuals = residuals(obj.get_sample_var("Is_shod"));
-not_shod_residuals = residuals(~obj.get_sample_var("Is_shod"));
+is_shod = obj.get_sample_var("Is_shod");
+shod_residuals = residuals(is_shod == "Yes");
+not_shod_residuals = residuals(is_shod == "No");
 
 h_shod = histogram(shod_residuals);
 h_shod.Normalization = 'pdf';
@@ -91,13 +95,12 @@ sigma_not_shod = std(not_shod_residuals);
 f_not_shod = exp(-(y_not_shod - mu_not_shod).^2 ./ (2*sigma_not_shod^2)) ./ (sigma_not_shod*sqrt(2*pi));
 plot(y_not_shod, f_not_shod, LineWidth=1.5, Color=h_not_shod.FaceColor, DisplayName="Not Shod")
 
-title("Residuals Histogram")
+title("Residuals Histogram vs Normal Distribution Comparison")
 xlabel("Residual [mm]")
 legend
 
 %% Plot Features vs Labels
 obj.plot_features_vs_labels([], ["Radius" "Center_x"])
-
 
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();

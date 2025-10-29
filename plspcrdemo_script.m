@@ -32,7 +32,7 @@ for idx=1:length(db_list)
     end
 end
 
-load_list = {DB_3, "DB_3"};
+load_list = {DB_1, "DB_1"; DB_2, "DB_2"; DB_3, "DB_3"};
 ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
 obj = ROSAnalyzer(load_list, ignore_list);
 [features, feature_names, feature_units, feature_types] = obj.get_features(["Age" "Height" "Mass" "Leg_length" "Thigh_length" "Shank_length" "Gender"]);

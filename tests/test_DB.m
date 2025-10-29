@@ -4,7 +4,7 @@ clc
 
 addpath("../Helper Functions/")
 addpath("../")
-set(0, 'DefaultFigureWindowStyle', 'docked');
+set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
 
 % if ~exist("DB_1", "var")
 %     load("..\DB1\DB_1.mat");
