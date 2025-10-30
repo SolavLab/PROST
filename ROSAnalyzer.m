@@ -55,7 +55,7 @@ classdef ROSAnalyzer < handle
     
             if nargin == 0 || isempty(load_list)
                 disp("Creating empty ROS object...")
-                obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_explained', {}, 'Experiment_explained', {}, 'Data', {});
+                obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
                 obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
                 obj.SamplesTable = table('Size', [0 samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
                 obj.SamplesTable.Properties.VariableUnits = samples_var_units;
@@ -1177,8 +1177,8 @@ classdef ROSAnalyzer < handle
             obj.DataRecords(index).Dataset_id = dataset_id;
             obj.DataRecords(index).Dataset_name = dataset_name;
             obj.DataRecords(index).Article_data = dataset.Article_data;
-            obj.DataRecords(index).Lab_explained = dataset.Lab_explained;
-            obj.DataRecords(index).Experiment_explained = dataset.Experiment_explained;
+            obj.DataRecords(index).Lab_system = dataset.Lab_system;
+            obj.DataRecords(index).Experiment_protocol = dataset.Experiment_protocol;
             
             participants = fieldnames(dataset.Data);
             n_participants = length(participants);
@@ -1238,9 +1238,9 @@ classdef ROSAnalyzer < handle
             obj.SummaryTable.Article_url(entry_number) = dataset.Article_data.link_to_paper;
             obj.SummaryTable.Dataset_url(entry_number) = dataset.Article_data.link_to_dataset;
             obj.SummaryTable.Published_year(entry_number) = dataset.Article_data.published_year;
-            obj.SummaryTable.Speed_categories(entry_number) = {dataset.Experiment_explained.speed_categories};
-            obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_explained.num_participants;
-            obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_explained.num_forceplates;
+            obj.SummaryTable.Speed_categories(entry_number) = {dataset.Experiment_protocol.speed_categories};
+            obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_protocol.num_participants;
+            obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
 
             % Example participant for existing data to check if participants are 
             % shod and medial markers exist

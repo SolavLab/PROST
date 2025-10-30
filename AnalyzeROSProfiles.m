@@ -55,10 +55,10 @@ DB_2_ID = dataset_ids(3);
 ignore_list = {DB_1_ID, [3 5 14 15 16], [5 14 15 16]; DB_2_ID, [31], []; DB_3_ID, [43, 47], []};
 obj.ignore_data(ignore_list);
 %%
-obj.filter_data(["Radius"])
+% obj.filter_data(["Radius"])
 %% Plot data
 % close all
-obj.plot_ros({}, 6);
+% obj.plot_ros({}, 6);
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
@@ -106,4 +106,4 @@ obj.plot_features_vs_labels([], ["Radius" "Center_x"])
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-save_all_open_figures("./figures/ROS Analysis")
+% save_all_open_figures("./figures/ROS Analysis")

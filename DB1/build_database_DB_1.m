@@ -20,7 +20,7 @@ addpath(genpath("..\Helper Functions"));
 % DB_1 / article_data :
 %       -------------
 Article_data.article_name = "Lower limb kinematic, kinetic, and EMG data from young healthy humans during walking at controlled speeds";
-Article_data.authors = "Luís Moreira, Joana Figueiredo, Pedro Fonseca, João P. Vilas-Boas & Cristina P. Santos ";
+Article_data.authors = "Luís Moreira, Joana Figueiredo, Pedro Fonseca, João P. Vilas-Boas & Cristina P. Santos";
 Article_data.link_to_paper = "https://doi.org/10.1038/s41597-021-00881-3";
 Article_data.link_to_dataset = "https://doi.org/10.6084/m9.figshare.c.4923162.v1";
 Article_data.published_year = 2021;
@@ -68,25 +68,26 @@ Markers_guide.reference_guide = dictionary(keys, values);
 DB_1.Markers_guide = Markers_guide;
 
 %       --------------------
-% DB_1 / Lab_frame_explained :
+% DB_1 / Lab_system :
 %       --------------------
-Lab_explained.lab_frame.x="X Direction : \n" + ...
+Lab_system.lab_frame.x="X Direction : \n" + ...
     "For COP and marker trajectories: right direction \n..." + ...
     "for GRF data: walking direction";  %"perpendicular to the sagittal plane (pointing sideways?)";
-Lab_explained.lab_frame.y="Y Direction : \n" + ...
+Lab_system.lab_frame.y="Y Direction : \n" + ...
     "For COP and marker trajectories: walking direction \n..." + ...
     "For GRF data: looks like it's the medial direction (but this would result in a coordinate system that is not always right handed";  %"perpendicular to the coronal plane (pointing forwards?)";
-Lab_explained.lab_frame.z="Z Direction : \n" + ...
+Lab_system.lab_frame.z="Z Direction : \n" + ...
     "The z direction is pointing up.";  %"perpendicular to the coronal plane (pointing up?)";
-Lab_explained.num_forceplates = 6;
+Lab_system.num_forceplates = 6;
 
-DB_1.Lab_explained = Lab_explained;
+DB_1.Lab_system = Lab_system;
 
 %       ---------------------
-% DB_1 / Experiment_explained :
+% DB_1 / Experiment_protocol :
 %       ---------------------
 % Explanation for how the experiment was conducted generally.
-Experiment_explained.explanation_txt = ...
+Experiment_protocol.explanation_txt = ...
+    "Relevant text taken from Moreira et al.:\n\n" + ...
     "The participants were asked to wear tight shorts and a standard type of tennis shoes that properly fits the user’s feet.\n\n" + ...
     "A standing static calibration trial was performed with the arms crossed in front of the chest, looking forward, and with the feet in a comfortable position, aligned with the shoulders.\n\n" + ...
     "All participants were instructed to perform ten rectilinear walking trials on a 10-meter flat surface with six embedded force platforms, at seven different speeds (1.0, 1.5, 2.0, 2.5, 3.0, 3.5, and 4.0 km/h) controlled with a metronome.\n" + ...
@@ -97,16 +98,16 @@ Experiment_explained.explanation_txt = ...
     "During a single trial, the right and left leg performed two and one strides, respectively, since the participants step the first force platform with the right foot.\n" + ...
     "Overall, 1120 trials were collected, containing 1120 and 2240 strides for the left and right leg, respectively.\n\n" + ...
     "We only used the raw data that was aquired.";
-Experiment_explained.speed_categories.V1 = "V1 is a speed of 1.0 km/h.";
-Experiment_explained.speed_categories.V15 = "V15 is a speed of 1.5 km/h.";
-Experiment_explained.speed_categories.V2 = "V2 is a speed of 2.0 km/h.";
-Experiment_explained.speed_categories.V25 = "V25 is a speed of 2.5 km/h.";
-Experiment_explained.speed_categories.V3 = "V3 is a speed of 3.0 km/h.";
-Experiment_explained.speed_categories.V35 = "V35 is a speed of 3.5 km/h.";
-Experiment_explained.speed_categories.V4 = "V4 is a speed of 4.0 km/h.";
-Experiment_explained.num_participants = 16;
+Experiment_protocol.speed_categories.V1 = "V1 is a speed of 1.0 km/h.";
+Experiment_protocol.speed_categories.V15 = "V15 is a speed of 1.5 km/h.";
+Experiment_protocol.speed_categories.V2 = "V2 is a speed of 2.0 km/h.";
+Experiment_protocol.speed_categories.V25 = "V25 is a speed of 2.5 km/h.";
+Experiment_protocol.speed_categories.V3 = "V3 is a speed of 3.0 km/h.";
+Experiment_protocol.speed_categories.V35 = "V35 is a speed of 3.5 km/h.";
+Experiment_protocol.speed_categories.V4 = "V4 is a speed of 4.0 km/h.";
+Experiment_protocol.num_participants = 16;
 
-DB_1.Experiment_explained = Experiment_explained;
+DB_1.Experiment_protocol = Experiment_protocol;
     
     
 %% -----------------------------

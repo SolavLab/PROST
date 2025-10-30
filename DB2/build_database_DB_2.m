@@ -83,27 +83,28 @@ markers_guide.reference_guide = dictionary(keys, values);
 DB_2.Markers_guide = markers_guide;
 
 %       --------------------
-% DB_2 / Lab_frame_explained :
+% DB_2 / Lab_system :
 %       --------------------
-Lab_explained.lab_frame.x = ...
+Lab_system.lab_frame.x = ...
     "The x direction is the direction in the lab from the first force-plate to the second force-plate.\n" + ...
     "(this is the walking direction for trials where the first force-plate was stepped on first,\n" + ...
     "and minus the walking direction for trials where the second force-plate was stepped on first).";
-Lab_explained.lab_frame.y = ...
+Lab_system.lab_frame.y = ...
     "The y direction is pointing in the direction that completes a right handed coordinate system \n" + ...
     "(this is towards the left (of the body) for trials where the first force-plate was stepped on first,\n" + ...
     "and towards the right (of the body) for trials where the second force-plate was stepped on first).";
-Lab_explained.lab_frame.z ="The z direction is pointing up.";
-Lab_explained.num_forceplates = 2;
+Lab_system.lab_frame.z ="The z direction is pointing up.";
+Lab_system.num_forceplates = 2;
 
-DB_2.Lab_explained = Lab_explained;
+DB_2.Lab_system = Lab_system;
 
 %       ---------------------
-% DB_2 / Experiment_explained :
+% DB_2 / Experiment_protocol :
 %       ---------------------
 
 % Explanation for how the experiment was conducted generally.
-Experiment_explained.explanation_txt = ...
+Experiment_protocol.explanation_txt = ...
+    "Relevant text taken from Schreiber and Moissenet:\n\n" + ...
     "For each participant, the entire data collection was acquired in a single session which lasted approximately 2 hours.\n" + ...
     "All the sessions were managed by the same experienced operator.\n" + ...
     "The following procedure was adopted: calibration of the systems, introduction to the participant, interview, preparation of the participant, static record, walking trials and session ending.\n\n" + ...
@@ -122,14 +123,14 @@ Experiment_explained.explanation_txt = ...
     "Conditions C1, C2 and C3 were induced by a metronome and correspond to the three groups described by Perry (i.e. household ambulators, limited community ambulators and community ambulators).\n" + ...
     "An adaptation time to the imposed cadence was foreseen for these 3 conditions and the velocity of the first trial was checked to be in the expected range of speed.\n" + ...
     "C4 and C5 were self-selected conditions in response to the instructions to walk respectively ""as usual"" and ""fast but not running"".";
-Experiment_explained.speed_categories.C1 = "C1 is a speed between 0 and 0.4 m.s−1.";
-Experiment_explained.speed_categories.C2 = "C2 is a speed between 0.4 and 0.8 m.s−1.";
-Experiment_explained.speed_categories.C3 = "C3 is a speed between 0.8 and 1.2 m.s−1.";
-Experiment_explained.speed_categories.C4 = "C4 is a self-selected spontaneous speed.";
-Experiment_explained.speed_categories.C5 = "C5 is a self-selected fast speed.";
-Experiment_explained.num_participants = 50;
+Experiment_protocol.speed_categories.C1 = "C1 is a speed between 0 and 0.4 m.s−1.";
+Experiment_protocol.speed_categories.C2 = "C2 is a speed between 0.4 and 0.8 m.s−1.";
+Experiment_protocol.speed_categories.C3 = "C3 is a speed between 0.8 and 1.2 m.s−1.";
+Experiment_protocol.speed_categories.C4 = "C4 is a self-selected spontaneous speed.";
+Experiment_protocol.speed_categories.C5 = "C5 is a self-selected fast speed.";
+Experiment_protocol.num_participants = 50;
 
-DB_2.Experiment_explained = Experiment_explained;
+DB_2.Experiment_protocol = Experiment_protocol;
 
 %% Create List of Trials to Keep
 % Bad trials are missing crucial info so we only keep those that aren't.
