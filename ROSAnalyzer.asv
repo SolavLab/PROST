@@ -12,7 +12,7 @@ classdef ROSAnalyzer < handle
     % ___________________________
     properties(Constant)
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
-        NUM_ANATOMICAL_SIDES = 3; % Number of possible anatomical side ("lateral", "medial", "mean")
+        % NUM_ANATOMICAL_SIDES = 1; % Number of possible anatomical side ("lateral", "medial", "mean")
     end
     properties(Access=public) % TODO: Make private at end of debugging
         DataRecords = struct([]); % Data records
@@ -29,7 +29,7 @@ classdef ROSAnalyzer < handle
     %% PUBLIC METHODS
     methods
         %% --------- Constructor ------------------------------------------
-        function [obj, dataset_ids] = ROSAnalyzer(load_list, ignore_list)
+        function [obj, dataset_ids] = ROSAnalyzer(load_list)
         %ROS Constructor
         % Input :
         %   load_list - a cell array where each row contains pairs of 
@@ -37,10 +37,6 @@ classdef ROSAnalyzer < handle
         %               Example:
         %               {"DB Name 1", "path/to/DB1.mat"; "DB Name", 
         %               "path/to/DB2.mat"}
-        %   ignore_list - list of trials to ignore (left and right steps 
-        %                 per participant. A cell array of the form: 
-        %                 {"DB Name", [participants_to_ignore_left], 
-        %                 [participants_to_ignore_right]}
 
             % Pre Initialization
             samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
@@ -55,7 +51,7 @@ classdef ROSAnalyzer < handle
     
             if nargin == 0 || isempty(load_list)
                 disp("Creating empty ROS object...")
-                obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_explained', {}, 'Experiment_explained', {}, 'Data', {});
+                obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
                 obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
                 obj.SamplesTable = table('Size', [0 samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
                 obj.SamplesTable.Properties.VariableUnits = samples_var_units;
@@ -63,14 +59,7 @@ classdef ROSAnalyzer < handle
                 dataset_ids = [];
                 return
             end
-            
-            % Object Initialization
-            if ~(nargin < 2 || isempty(ignore_list))
-                % Saving ignore list
-                disp("Saving ignore list...")
-                obj.IgnoreList = ignore_list;
-            end
-    
+                
             % Loading data records
             disp("Saving all datasets from load list...")
             n_datasets = size(load_list, 1);
@@ -111,8 +100,7 @@ classdef ROSAnalyzer < handle
             numRows = 0;
             for index=1:n_datasets
                 numRows = numRows + obj.NUM_SIDES*length(obj.DataRecords(index).Data);
-                ignore_num = obj.get_num_ignored(index);
-                numRows = numRows - ignore_num;
+                numRows = numRows;
             end
             % Create an empty table for the data with the desired variable names:
             samples_table = table('Size', [numRows samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
@@ -179,14 +167,14 @@ classdef ROSAnalyzer < handle
         %          Default: ["left", "right"].
         %   anatomical_side - the anatomical side for the requested entry. Could
         %                     be a vector of multiple anatomical sides.
-        %                     Default: ["lateral", "medial", "mean"].
+        %                     Default: "lateral".
         % Output :
         %   samples - the entry/entries in the samples table.
         %   entry_numbers - the row number/s of the entry/entries in the samples 
         %                   table. 
             
             if nargin < 5
-                anatomical_side = ["lateral" "medial" "mean"];
+                anatomical_side = "lateral";
             end
             if nargin < 4
                 side = ["left" "right"];
@@ -321,8 +309,7 @@ classdef ROSAnalyzer < handle
         % Output :
         %   ignore_num - number of ignored trials.
         
-            dataset_name = obj.get_dataset_name(dataset_id);
-            ignore_num = length([obj.IgnoreList{strcmp(string(obj.IgnoreList(:, 1)), dataset_name), 2:3}]);
+            ignore_num = numel([obj.IgnoreList{obj.IgnoreList{:, 1} == dataset_id, 2:3}]);
         end
 
         %% --------- Modifiers --------------------------------------------
@@ -337,14 +324,7 @@ classdef ROSAnalyzer < handle
         %   steps respectively.
 
             disp("Adding dataset " + dataset_name + "...")
-            % Add to ignore list if there are participants to ignore
-            if nargin == 4
-                participants_to_ignore_right = [];
-            end
-            if nargin > 3 && (~isempty(participants_to_ignore_left) || ~isempty(participants_to_ignore_right)) 
-                obj.add_to_ignore_list({dataset_name, participants_to_ignore_left, participants_to_ignore_right, participants_to_ignore_right});
-            end
-
+           
             % Add to data records
             index = obj.add_to_data_records(dataset_name, dataset);
             dataset_id = obj.DataRecords(index).Dataset_id;
@@ -354,6 +334,14 @@ classdef ROSAnalyzer < handle
             
             % Add to samples table
             obj.add_to_samples_table(dataset_id);
+
+            % Add to ignore list if there are participants to ignore
+            if nargin == 4
+                participants_to_ignore_right = [];
+            end
+            if nargin > 3 && (~isempty(participants_to_ignore_left) || ~isempty(participants_to_ignore_right)) 
+                obj.add_to_ignore_list({dataset_id, participants_to_ignore_left, participants_to_ignore_right});
+            end
 
         end
         function delete_dataset(obj, dataset_id)
@@ -455,8 +443,8 @@ classdef ROSAnalyzer < handle
             sz_right = 200 * norm_right;
             
             % Define colors for sides
-            color_left  = [0 0.7 0];   % greenish
-            color_right = [0.85 0 0];  % reddish
+            color_right  = [0 0.7 0];   % greenish
+            color_left = [0.85 0 0];  % reddish
 
             % Define Marker Parameters
             marker = "o";
@@ -487,7 +475,7 @@ classdef ROSAnalyzer < handle
                     % Create new figure for new set of axes
                     if axes_counter == 0
                         fig_counter = fig_counter + 1;
-                        fig  = figure(Name=x_name + " vs " + strjoin(label_names, ", ") + " Plot " + fig_counter);
+                        fig  = figure(Name=x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + " Plot " + fig_counter);
                         tiledlayout(fig)
                         sgtitle(fig, fig.Name)
                     end
@@ -501,20 +489,20 @@ classdef ROSAnalyzer < handle
                     if ~isempty(x_unit)
                        x_label = x_label + " [" + x_unit + "]";
                     end
-                    y_label = y_name
+                    y_label = y_name;
                     if ~isempty(y_unit)
                        y_label = y_label + " [" + y_unit + "]";
                     end
 
                     % Plot
-                    if ~x_numeric && ~iscategorical(x)
-                        x = categorical(replace(string(x), "_", " "));
-                    end
+                    % if ~x_numeric && ~iscategorical(x)
+                    %     x = categorical(replace(string(x), "_", " "));
+                    % end
+                    % if ~y_numeric && ~iscategorical(y)
+                    %     y = categorical(replace(string(y), "_", " "));
+                    % end
 
-                    if ~y_numeric && ~iscategorical(y)
-                        y = categorical(replace(string(y), "_", " "));
-                    end
-                     % Plot both sides
+                    % Plot both sides
                     h_left = scatter(x_left,  y_left,  sz_left,  color_left, marker, 'filled', MarkerFaceAlpha=0.6);
                     h_right = scatter(x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=0.6);
 
@@ -636,7 +624,8 @@ classdef ROSAnalyzer < handle
                         ang_vec = linspace(ang_start, ang_end, length(x));
                         arc_points = [center_x + radius*sind(ang_vec); center_z - radius*cosd(ang_vec)];
                         plot(ax, arc_points(1, :), arc_points(2, :), '-', Color=color2, LineWidth=line_width, DisplayName=string(side) + " fitted arc")
-                        text(ax, 0.5*(x_limits(1) + x_limits(2)), y_limits(2) - 10 - (i - 1)*15, "residual: " + sample.Residual, Color=color_arc{side}, FontSize=9, FontName="FixedWidth", FontWeight="bold")
+                        txt = "residual: " + sample.Residual;
+                        text(ax, 0.5*(x_limits(1) + x_limits(2)), y_limits(2) - 10 - (i - 1)*15, txt, Color=color_arc{side}, FontSize=9, FontName="FixedWidth", FontWeight="bold")
                     end
 
                     axes_counter = axes_counter + 1;
@@ -674,7 +663,7 @@ classdef ROSAnalyzer < handle
             X = [];
             X_continuous = features{:, strcmp(features_types, 'double')};
            
-            X = [X_continuous dummyvar(features.Gender) dummyvar(categorical(features.Is_shod))];
+            X = [X_continuous dummyvar(features.Gender) dummyvar(features.Is_shod)];
             % for k = 1:numel(feature_names)
             %     feature = features.(feature_names(k));
             % 
@@ -795,13 +784,13 @@ classdef ROSAnalyzer < handle
         %                    positive integer number.
         %   side - Either "left" or "right".
         %   anatomical_side - the anatomical side(s). Either "lateral", "medial" 
-        %                     or "mean".
+        %                     or "mean". Default: "lateral"
         % Output :
         %   tf - true (logical 1) if trial is in the samples table and false 
         %        (logical 0) otherwise.
 
             if nargin < 5
-                anatomical_side = ["lateral" "medial" "mean"];
+                anatomical_side = "lateral";
             end
             if nargin < 4
                 side = ["left" "right"];
@@ -868,7 +857,7 @@ classdef ROSAnalyzer < handle
                       "Participant ID should be a positive integer number.")
             end            
 
-            % Convert side to relevant index in ignore_list
+            % Convert side to relevant index in ignoreList
             if strcmp(side, "left")
                 side = 2;
             elseif strcmp(side, "right")
@@ -879,8 +868,7 @@ classdef ROSAnalyzer < handle
 
             % Check if participant is a member of the ignore list for the 
             % given dataset and side
-            dataset_name = obj.get_dataset_name(dataset_id);
-            ignore_index = find(strcmp(string(obj.IgnoreList(:, 1)), dataset_name), 1);
+            ignore_index = find(obj.IgnoreList{:, 1} == dataset_id, 1);
             if isempty(ignore_index)
                 tf = false;
                 return
@@ -1014,9 +1002,8 @@ classdef ROSAnalyzer < handle
         %                    multiple measurements for a given participant.
         %       entry_number - the row in the samples table that the point
         %                      cloud corresponds to.
-        %       anatomical_side - the side to use for fitting. Either
-        %                         lateral, medial or mean. 
-        %                         (Default = lateral).
+        %       anatomical_side - the anatomical side to use for fitting. Either
+        %                         lateral, medial or mean. Default: lateral.
 
             n_temporal = 101;
             cut_length = 15;
@@ -1062,16 +1049,16 @@ classdef ROSAnalyzer < handle
             end
             obj.PointClouds(entry_number) = {point_cloud};
         end
-        function populate_table(obj, dataset_id, start_row, anatomical_sides)
+        function populate_table(obj, dataset_id, start_row, anatomical_side)
         %POPULATE_TABLE processes the dataset and adds new rows to 
         % samples table.
         %  Input :
         %   dataset_id - the ID of the dataset to add to the samples table. 
         %                A positive integer number.
         %   start_row - the row where the new data starts in samples table.
-        %   anatomical_sides - which anatomical side to to use for the
-        %                      samples table. either "lateral", "medial" or 
-        %                      "mean".
+        %   anatomical_side - which anatomical side to to use for the
+        %                     samples table. Either "lateral", "medial" or 
+        %                     "mean". Default: lateral
 
             % Check that dataset is in data records.
             dataset = obj.get_dataset(dataset_id);
@@ -1082,17 +1069,23 @@ classdef ROSAnalyzer < handle
             
             % Default anthropometric side is just lateral
             if nargin < 4
-                anatomical_sides = "lateral";
+                anatomical_side = "lateral";
             end
 
             % Check table is large enough for new data
             n_participants = length(dataset.Data);
-            if size(obj.SamplesTable, 1) < start_row + obj.NUM_SIDES*n_participants - obj.get_num_ignored(dataset_id) - 1
-                error("ROSAnalyzer:DataTable:NotEnoughRows", ...
+            if size(obj.SamplesTable, 1) < start_row + obj.NUM_SIDES*n_participants - 1
+                error("ROSAnalyzer:SamplesTable:NotEnoughRows", ...
                       "Not enough rows allocated to samples table.\n""" + ...
-                      "Expected at least %d rows, but actual table size is %d", start_row + n_participants*2 - 1, size(obj.SamplesTable, 1));
+                      "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.SamplesTable, 1));
             end
             
+            % Check if anatomical_side exists
+            if ~obj.has_medial(dataset_id) && anatomical_side == "medial"
+                error("ROSAnalyzer:SamplesTable:MissingMedial", ...
+                      "Dataset does not contain medial markers.")
+            end
+
             % Loop over participants of dataset and process data of each
             % one
             entry_num = start_row;
@@ -1103,11 +1096,6 @@ classdef ROSAnalyzer < handle
                 anthropometric_data = data.Anthropometric_data;
 
                 for side=["right", "left"]
-                    % Check in ignore list
-                    if obj.is_ignored(dataset_id, participant_id, side)
-                        continue
-                    end
-
                     % Get data
                     steps = processed_data.(side).step; % get the steps
                     % Not all participants have measurements from both
@@ -1127,35 +1115,28 @@ classdef ROSAnalyzer < handle
 
                     % Get anthropometric data
                     [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = obj.get_metadata(anthropometric_data, side); % get anthropometric data
-                    
-                    for anatomical_side=anatomical_sides
-                        % Check if anatomical_side exists
-                        if ~obj.has_medial(dataset_id) && anatomical_side == "medial"
-                            continue
-                        end
 
-                        % Add trial parameters to data entry
-                        obj.SamplesTable(entry_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
-    
-                        % Add features to data entry
-                        new_row_features = {age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod};
-                        obj.SamplesTable(entry_num, {'Age', 'Gender', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
-    
-                        % Make all the "good steps" into a 2D point cloud in the XZ plane (the sagital plane)
-                        obj.make_point_cloud(good_steps, entry_num, anatomical_side);
-    
-                        % Fit the point cloud to a circular arc
-                        % (notice that the angles ang_start and ang_end are relative to a vector pointing straight down from the center of the arc)
-                        % try
-                        obj.fit_to_circular_arc(entry_num);
-                        % catch ME
-                            % disp(ME.message)
-                            % error("something's wrong with the fit function")
-                        % end
-    
-                        % Advance row number
-                        entry_num = entry_num + 1;
-                    end
+                    % Add trial parameters to data entry
+                    obj.SamplesTable(entry_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
+
+                    % Add features to data entry
+                    new_row_features = {age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod};
+                    obj.SamplesTable(entry_num, {'Age', 'Gender', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
+
+                    % Make all the "good steps" into a 2D point cloud in the XZ plane (the sagital plane)
+                    obj.make_point_cloud(good_steps, entry_num, anatomical_side);
+
+                    % Fit the point cloud to a circular arc
+                    % (notice that the angles ang_start and ang_end are relative to a vector pointing straight down from the center of the arc)
+                    % try
+                    obj.fit_to_circular_arc(entry_num);
+                    % catch ME
+                        % disp(ME.message)
+                        % error("something's wrong with the fit function")
+                    % end
+
+                    % Advance row number
+                    entry_num = entry_num + 1;
                 end
             end
 
@@ -1177,8 +1158,8 @@ classdef ROSAnalyzer < handle
             obj.DataRecords(index).Dataset_id = dataset_id;
             obj.DataRecords(index).Dataset_name = dataset_name;
             obj.DataRecords(index).Article_data = dataset.Article_data;
-            obj.DataRecords(index).Lab_explained = dataset.Lab_explained;
-            obj.DataRecords(index).Experiment_explained = dataset.Experiment_explained;
+            obj.DataRecords(index).Lab_system = dataset.Lab_system;
+            obj.DataRecords(index).Experiment_protocol = dataset.Experiment_protocol;
             
             participants = fieldnames(dataset.Data);
             n_participants = length(participants);
@@ -1238,9 +1219,9 @@ classdef ROSAnalyzer < handle
             obj.SummaryTable.Article_url(entry_number) = dataset.Article_data.link_to_paper;
             obj.SummaryTable.Dataset_url(entry_number) = dataset.Article_data.link_to_dataset;
             obj.SummaryTable.Published_year(entry_number) = dataset.Article_data.published_year;
-            obj.SummaryTable.Speed_categories(entry_number) = {dataset.Experiment_explained.speed_categories};
-            obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_explained.num_participants;
-            obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_explained.num_forceplates;
+            obj.SummaryTable.Speed_categories(entry_number) = {dataset.Experiment_protocol.speed_categories};
+            obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_protocol.num_participants;
+            obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
 
             % Example participant for existing data to check if participants are 
             % shod and medial markers exist
@@ -1274,8 +1255,6 @@ classdef ROSAnalyzer < handle
                 start_row = 1;
             end
             numRows = obj.NUM_SIDES*n_participants - (height(obj.SamplesTable) - obj.SamplesTableSize);
-            ignore_num = obj.get_num_ignored(dataset_id);
-            numRows = numRows - ignore_num;
 
             % Allocate new rows to samples table
             if numRows > 0
@@ -1305,7 +1284,7 @@ classdef ROSAnalyzer < handle
         %          Default: ["left", "right"].
         %   anatomical_side - the anatomical side for the requested entry. Could
         %                     be a vector of multiple anatomical sides.
-        %                     Default: ["lateral", "medial", "mean"].
+        %                     Default: "lateral".
         % OR :
         %   entry_flag - 'e', indicates the samples are identified by entry.
         %   entry_numbers - entry numbers in table to delete.
@@ -1329,15 +1308,19 @@ classdef ROSAnalyzer < handle
             obj.PointClouds(entry_numbers) = [];
         end
         function add_to_ignore_list(obj, ignore)
-        %ADD_TO_IGNORE_LIST
+        %ADD_TO_IGNORE_LIST adds ignore entry to ignoreList.
+        % Input :
+        %   ignore
+
             % Check input format
             if all(size(ignore) == [1 3]) && ...
-               (isStringScalar(ignore{1}) || (~ischar(ignore{1}) && isrow(ignore{1}))) && ...
+               (isnumeric(ignore{1}) && isscalar(ignore{1})) && ...
                (isnumeric(ignore{2}) && isnumeric(ignore{3}))
-                obj.IgnoreList(end, :) = ignore;
+                % Append to ignore list
+                obj.IgnoreList(end+1, :) = ignore;
             else
                 error("ROSAnalyzer:IgnoreList:WrongFormat", ...
-                      "Ignore should be in the format: {""DB Name"", [participants_to_ignore_left], [participants_to_ignore_right]}")
+                      "Ignore should be in the format: {""DB ID"", [participants_to_ignore_left], [participants_to_ignore_right]}")
             end
         end
         function tf = is_in_summary(obj, dataset_id)
@@ -1353,6 +1336,11 @@ classdef ROSAnalyzer < handle
             tf =  ~isempty(find(obj.SummaryTable.Dataset_id == dataset_id, 1, 'first'));
         end
         function ignore_data(obj, ignore_list)
+        %IGNORE_DATA Ignore all data in ignore list.
+        % Input :
+        %   ignore_list - list of trials to ignore. A cell array in the format:
+        %   {dataset_id, [participants_to_ignore_left], [participants_to_ignore_right]}
+        
             % Delete sample table trials from ignore list
             obj.IgnoreList = ignore_list;
             for idx=1:height(ignore_list)

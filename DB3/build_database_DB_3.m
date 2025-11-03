@@ -76,7 +76,7 @@ Lab_system.lab_frame.x = ...
     "(this is the walking direction for trials where the first force-plate was stepped on first, \n"+...
     "and minus the walking direction for trials where the second force-plate was stepped on first).";
 Lab_system.lab_frame.y = ...
-    "\nThe y direction is pointing up.";
+    "The y direction is pointing up.";
 Lab_system.lab_frame.z = ...
     "The z direction is pointing in the direction that completes a right handed coordinate system\n"+...
     "(this is towards the right (of the body) for trials where the first force-plate was stepped on first,\n"+...
@@ -150,7 +150,7 @@ for participant_number = 1:n_participants
     elseif contains(s.Gender, 'F')
         metadata.Gender.value = "Female";
     end
-    metadata.Gender.unit = "Male\Female";
+    metadata.Gender.unit = "Male/Female";
     metadata.Gender.method = "given";
 
     % height
@@ -165,7 +165,7 @@ for participant_number = 1:n_participants
     
     % Is_shod
     metadata.Is_shod.value = "No";
-    metadata.Is_shod.unit = "Yes\No";
+    metadata.Is_shod.unit = "Yes/No";
     metadata.Is_shod.method = "given";
 
     % standing trial

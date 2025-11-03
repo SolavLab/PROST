@@ -42,7 +42,7 @@ close all
 %   ignore_list - list of trials to ignore (left and right steps per 
 %                 participant. A cell array of the form:
 %                 {"DB Name", [participants_to_ignore_left], [participants_to_ignore_right]}
-load_list = {DB_1, "DB_1"; DB_3, "DB_3"; DB_2, "DB_2"};
+load_list = {DB_1, "Moreira et. al.(2021)"; DB_3, "Lencioni et. al.(2019)"; DB_2, "Schreiber & Moissenet(2019)"};
 % ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
 
 %% Create ROS analysis object
@@ -56,9 +56,10 @@ ignore_list = {DB_1_ID, [3 5 14 15 16], [5 14 15 16]; DB_2_ID, [31], []; DB_3_ID
 obj.ignore_data(ignore_list);
 %%
 % obj.filter_data(["Radius"])
+
 %% Plot data
 % close all
-% obj.plot_ros({}, 6);
+obj.plot_ros({}, 12);
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
@@ -97,7 +98,7 @@ plot(y_not_shod, f_not_shod, LineWidth=1.5, Color=h_not_shod.FaceColor, DisplayN
 
 title("Residuals Histogram vs Normal Distribution Comparison")
 xlabel("Residual [mm]")
-legend
+legend(FontSize=12)
 
 %% Plot Features vs Labels
 obj.plot_features_vs_labels([], ["Radius" "Center_x"])
@@ -106,4 +107,4 @@ obj.plot_features_vs_labels([], ["Radius" "Center_x"])
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-% save_all_open_figures("./figures/ROS Analysis")
+save_all_open_figures("./figures/ROS Analysis", "png")

@@ -39,11 +39,9 @@ function print_non_struct(obj)
         fprintfWrap(obj);
     elseif strcmp(class(obj), "dictionary")
         print_dictionary(obj);
-    elseif isscalar(obj) && ~isnumeric(obj)
-        disp(obj);
-    elseif isvector(obj)
+    elseif isvector(obj) && isnumeric(obj)
         print_vector(obj, max_elem_size)
-    elseif ismatrix(obj)
+    elseif ismatrix(obj) && isnumeric(obj)
         n_rows = size(obj, 1);  
         for idx=1:n_rows
             print_vector(obj(idx, :), max_elem_size);
@@ -52,8 +50,10 @@ function print_non_struct(obj)
                 break
             end
         end
+    elseif isnumeric(obj) && ndims(obj) > 2
+        fprintfWrap("%d matrix...", ndims(obj));
     else
-        fprintfWrap("$d matrix...", ndims(obj));
+        disp(obj);
     end
 end
 
@@ -63,18 +63,18 @@ function print_vector(v, max_elem_size)
 %   Input :
 %       v - the vector to print.
     
-    % Only prints rows
-    if iscolumn(v)
-        v = v';
-    end
     if isnumeric(v)
-        s = string(num2str(v', 3))';
+        s = string(round(v, 3));
     else
         s = string(v);
     end
     s(ismissing(s)) = "NaN";
     if length(v) > max_elem_size
-        s = [s(1:max_elem_size) "..."];
+        if isrow(s)
+            s = [s(1:max_elem_size) "..."];
+        else
+            s = [s(1:max_elem_size); "..."];
+        end
     end
     fprintfWrap("%s", join(s, ", "))
 end
@@ -145,17 +145,21 @@ function print_struct(s, data_flag, indent)
     fields = fieldnames(s);
     n_fields = numel(fields);
 
-    if all(strcmp(fields, fields{1}))
+    k = strfind(fields{1}, '_');
+    first_field = fields{1};
+    % if strcmp(first_field, 'participant_1')
+    %     disp("!!!")
+    % end
+    if ~isempty(k) && isscalar(k) && all(contains(fields, first_field(1:k)))
         n_fields = min(max_elem_size, n_fields);
     end
-
     for idx=1:n_fields
         field = fields{idx};
         field_str = sprintf("%s%s :", indent, field);
         value = s.(field);
 
         % Do we want to print data fields?
-        if ~data_flag && strcmpi(field, "data")
+        if ~data_flag && strcmpi(field, "Data")
             continue
         end
 

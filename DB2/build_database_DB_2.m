@@ -37,7 +37,7 @@ markers_guide.explanation_txt = "The field reference_guide containes a dictionar
                                 "The keys: the names we gave each marker for cohesiveness between the different databases.\n" + ...
                                 "The values: a cell array with the data of that marker in the original database.\n" + ...
                                 "Column 1: the name they gave this marker in the article / original database.\n" + ...
-                                "Column 2: the number of the column in the original trajectories database for the x, y, z coordinates." + ...
+                                "Column 2: the number of the column in the original trajectories database for the X, Y and Z coordinates." + ...
                                 "----------------------------------------------------------- \n";
 % Important markers reference guide
 keys = ["Right Lateral Ankle"; ...
@@ -473,7 +473,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     else
         metadata.Gender.value = "Female";
     end
-    metadata.unit = "Male\Female";
+    metadata.unit = "Male/Female";
     metadata.Gender.calculation_meathod = "given";
     
     % height
@@ -490,7 +490,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     
     % Is_shod
     metadata.Is_shod.value = "No";
-    metadata.Is_shod.unit = "Yes\No";
+    metadata.Is_shod.unit = "Yes/No";
     metadata.Is_shod.method = "given";
     
     % leg length - from ASIS to medial ankle 
