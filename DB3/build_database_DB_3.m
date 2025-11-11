@@ -2,18 +2,18 @@
 %  build a matlab structure containing the third database data
 %  Created by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
-clc; close all; clearvars -except DB_1 DB_2 DB_3;
+clc; close all; clearvars -except DB_1 DB_2
 
 % Turn off a few of the specific warnings:
 warning('off', 'MATLAB:colon:nonIntegerIndex');
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
 
 % Add path to data files
-data_path = ".\Data files";
-addpath(data_path);
+data_path = "C:\Users\chenr\Documents\PROST\DB3\Data files";
+addpath(genpath(data_path));
 
 % Add path to helper functions
-addpath(genpath("..\Helper Functions"));
+addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
 
 %% -----------------------------
 %  General Database info:
@@ -442,7 +442,7 @@ for participant_number = 1:n_participants
             if isempty(added_IC)
                 added_IC = 0;
                 DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.step_quality = "bad";
-                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no CoP initial contact detected', participant_ID, c, t, step_num);
+                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no CoP initial contact detected', participant_ID, c, t, 1);
             else
                 % change the IC of this good step:
                 new_forceplate_IC = IC_index + added_IC - 1;
@@ -569,10 +569,25 @@ for participant_number = 1:n_participants
                 foot = "Left";
             end
 
-            %                                                                      ------------------------
-            % DB_3 / Data / participant_# / processed_data / right,left / step(#) / source / original trial
-            %                                                                      ------------------------
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_trial = trial_number;
+            %                                                                      ---------
+            % DB_3 / Data / participant_# / processed_data / right,left / step(#) / source /
+            %                                                                      ---------
+              %                                                                             ---------------
+            %                                                                               / original trial
+            %                                                                               ---------------
+            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_trial = string(trial_number);
+            %                                                                               ----------------------------------
+            %                                                                               / original trial number in database
+            %                                                                               ----------------------------------
+            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_trial_number_in_database = trial_number;
+            %                                                                               ---------------------
+            %                                                                               / step number in trial
+            %                                                                               ---------------------
+            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.step_number = 1;
+            %                                                                               -------------
+            %                                                                               / plate number
+            %                                                                               -------------
+            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.plate_number = step_info.plate;
             
             %-----------------------------------------
             % add:

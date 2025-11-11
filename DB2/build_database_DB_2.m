@@ -4,17 +4,20 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clc; close all; clearvars -except good_trials DB_1 DB_2 DB_3;
+clearvars -except good_trials DB_1 DB_3;
+% close all
+clc
 
 % Turn off a few of the specific warnings:
 warning('off', 'MATLAB:colon:nonIntegerIndex');
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
 
 % Add path to helper functions
-addpath(genpath("..\Helper Functions"));
+addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
 
 % Add path to data files
-dataset_path = ".\c3d files";
+dataset_path = "C:\Users\chenr\Documents\PROST\DB2\c3d files";
+addpath(genpath(dataset_path));
 
 %% -----------------------------
 %  General Database info:
@@ -33,11 +36,14 @@ DB_2.Article_data = article_data;
 %       -------------
 % DB_2 / marker_names :
 %       -------------
-markers_guide.explanation_txt = "The field reference_guide containes a dictionary.\n" + ...
-                                "The keys: the names we gave each marker for cohesiveness between the different databases.\n" + ...
-                                "The values: a cell array with the data of that marker in the original database.\n" + ...
-                                "Column 1: the name they gave this marker in the article / original database.\n" + ...
+markers_guide.explanation_txt = "The field reference_guide containes a dictionary that defines the names and indices of important markers in the original dataset.\n" + ...
+                                "The keys: which part each marker is reffering to for cohesiveness between the different datasets.\n" + ...
+                                "The values: a cell array with the data of that marker in the original dataset.\n" + ...
+                                "Column 1: the name they gave this marker in the article / original dataset.\n" + ...
                                 "Column 2: the number of the column in the original trajectories database for the X, Y and Z coordinates." + ...
+                                "The field virtual_markers contains a dictionary that defines the names of the virtual markers we estimate from the markers in the original dataset." + ...
+                                "The keys: which part each marker is reffering to for cohesiveness between the different datasets.\n" + ...
+                                "The values: the name of each virtual marker.\n" + ...
                                 "----------------------------------------------------------- \n";
 % Important markers reference guide
 keys = ["Right Lateral Ankle"; ...
@@ -46,8 +52,6 @@ keys = ["Right Lateral Ankle"; ...
         "Right Medial Above Knee"; ...
         "Right Lateral Below Knee"; ...
         "Right Medial Below Knee"; ...
-        "Right Lateral Knee"; ...
-        "Right Medial Knee"; ...
         "Right Hip"; ...
         "Left Lateral Ankle"; ...
         "Left Medial Ankle"; ...
@@ -55,8 +59,6 @@ keys = ["Right Lateral Ankle"; ...
         "Left Medial Above Knee"; ...
         "Left Lateral Below Knee"; ...
         "Left Medial Below Knee"; ...
-        "Left Lateral Knee"; ...
-        "Left Medial Knee"; ...
         "Left Hip"; ...
         "Walking Direction Marker"];
 values = {{"R_FAL",  21};...
@@ -65,8 +67,6 @@ values = {{"R_FAL",  21};...
           {"R_FME",  18};...
           {"R_FAX",  19};...
           {"R_TTC",  20};...
-          {"R_LatVirtualKnee", NaN};...
-          {"R_MedVirtualKnee", NaN};...
           {"R_FTC",  16};...
           {"L_FAL",  10};...
           {"L_TAM",  11};...
@@ -74,11 +74,11 @@ values = {{"R_FAL",  21};...
           {"L_FME",  7};...
           {"L_FAX",  8};...
           {"L_TTC",  9};...
-          {"L_LatVirtualKnee", NaN};...
-          {"L_MedVirtualKnee", NaN};...
           {"L_FTC",  5};...
           {"SXS",  29}};
 markers_guide.reference_guide = dictionary(keys, values);
+markers_guide.virtual_markers = dictionary(["Right Lateral Knee" "Right Medial Knee" "Left Lateral Knee" "Left Medial Knee"], ...
+                                ["R_LatVirtualKnee"   "R_MedVirtualKnee"  "L_LatVirtualKnee"  "L_MedVirtualKnee"]);
 
 DB_2.Markers_guide = markers_guide;
 
@@ -185,7 +185,7 @@ good_participants = unique(good_trials(:, 1));
 n_participants = length(good_participants);
 
 % Get relevant marker names in original dataset
-markers_guide = DB_2.Markers_guide.reference_guide;
+markers_guide = DB_2.Markers_guide;
 
 for participant_number=1:n_participants
     % Get participant name and original ID from number
@@ -239,7 +239,8 @@ for participant_number=1:n_participants
 
         % Get the data of this trial
         trial_path = fullfile(dataset_path, participant_ID, good_trials_file_name(trial_number));
-        [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide);
+
+        [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide.reference_guide);
         n_steps = forceplate_data.n_forceplates;
         steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps);
         
@@ -286,7 +287,7 @@ for participant_number=1:n_participants
         %                                                            ------------------
         % we will check the walking direction by checking if the direction
         % that the SXS marker is moving is +x (+1) or -x (-1)
-        direction_marker = trajectories.(markers_guide{"Walking Direction Marker"}{1}).x;
+        direction_marker = trajectories.(markers_guide.reference_guide{"Walking Direction Marker"}{1}).x;
         walking_direction = sign(direction_marker(end) - direction_marker(1));
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.value = walking_direction;
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.explenation=...
@@ -297,7 +298,7 @@ for participant_number=1:n_participants
         % DB_2 / Data / participant_# / unprocessed_data / trial(#) / speed
         %                                                            ------
         % get the data from steps files:
-        speed = calculate_speed(trajectories, event_data, markers_guide{"Walking Direction Marker"}{1});  
+        speed = calculate_speed(trajectories, event_data, markers_guide.reference_guide{"Walking Direction Marker"}{1});  
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.value = speed;
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.calculation_meathod = ...
@@ -379,7 +380,7 @@ for participant_number=1:n_participants
             %                                                                               ---------------------
             %                                                                               / step number in trial
             %                                                                               ---------------------
-            DB_2.Data.(participant_name).processed_data.(side).step(step_index).source.step_number_in_original_trial = step_number;
+            DB_2.Data.(participant_name).processed_data.(side).step(step_index).source.step_number = step_number;
             %                                                                               -------------
             %                                                                               / plate number
             %                                                                               -------------
@@ -473,7 +474,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     else
         metadata.Gender.value = "Female";
     end
-    metadata.unit = "Male/Female";
+    metadata.Gender.unit = "Male/Female";
     metadata.Gender.calculation_meathod = "given";
     
     % height
@@ -510,22 +511,22 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % hip - Greater Trochanter (FTC)
     
         % ankle
-    right_ankle = standing_trial.data(:, markers_guide{"Right Lateral Ankle"}{2}); % R_FAL
-    left_ankle = standing_trial.data(:, markers_guide{"Left Lateral Ankle"}{2}); % L_FAL
+    right_ankle = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Ankle"}{2}); % R_FAL
+    left_ankle = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Ankle"}{2}); % L_FAL
     
         % calculating virtual knee markers
-    right_above_knee = standing_trial.data(:, markers_guide{"Right Lateral Above Knee"}{2}); % R_FLE
-    left_above_knee = standing_trial.data(:, markers_guide{"Left Lateral Above Knee"}{2}); % L_FLE
-    right_below_knee = standing_trial.data(:, markers_guide{"Right Lateral Below Knee"}{2}); % R_FAX
-    left_below_knee = standing_trial.data(:, markers_guide{"Left Lateral Below Knee"}{2}); % L_FAX
+    right_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Above Knee"}{2}); % R_FLE
+    left_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Above Knee"}{2}); % L_FLE
+    right_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Below Knee"}{2}); % R_FAX
+    left_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Below Knee"}{2}); % L_FAX
     right_virtual_knee = get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
     right_knee = [right_virtual_knee.x; right_virtual_knee.y; right_virtual_knee.z];
     left_virtual_knee = get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x; left_virtual_knee.y; left_virtual_knee.z];
     
         % hip
-    right_hip = standing_trial.data(:, markers_guide{"Right Hip"}{2}); % R_FTC
-    left_hip = standing_trial.data(:,  markers_guide{"Left Hip"}{2}); % L_FTC
+    right_hip = standing_trial.data(:, markers_guide.reference_guide{"Right Hip"}{2}); % R_FTC
+    left_hip = standing_trial.data(:,  markers_guide.reference_guide{"Left Hip"}{2}); % L_FTC
     
     % thigh length
     metadata.Thigh_length.right.value = convert_units(norm(right_hip - right_knee), standing_trial.unit, "m");
@@ -550,7 +551,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % DB_2.Data.(participant_name).metadata.effective_foot_length.calculation_meathod="calculated from average COP in walking direction which is 0.83 of foot length.";
 end
 
-function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide)
+function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, reference_guide)
 %GET_TRIAL_DATA reads the marker and force plate measurements and event 
 % information from the data file of a trial.
 % Input :
@@ -580,7 +581,7 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path,
     assert(marker_data.n_markers == size(marker_data.data, 2))
     assert(3 == size(marker_data.data, 1))
     if marker_data.n_markers ~= 52
-        important_markers = string(cellfun(@(x) x{1}, markers_guide.values, 'UniformOutput', false));
+        important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
         important_markers(contains(important_markers, "Virtual")) = [];
         if ~all(ismember(important_markers, marker_data.marker_names))
             error("Bad Trial: " + trial_path)
@@ -719,6 +720,13 @@ function steps_info = check_step(steps_info, forceplate_data, feet)
                (step_quality == "bad" || ...
                 (abs(step_IC_time - fp_times(step_plate, 1) > abs(step_IC_time - fp_times(fp_num, 1)) && ...
                  abs(step_TO_time - fp_times(step_plate, 2)) > abs(step_TO_time - fp_times(fp_num, 2)))))
+                % cop_x = forceplate_data.plate(fp_num).cop(1, :);
+                % x = cop_x(~isnan(cop_x));
+                % dx = diff(x);
+                % zero_cross_idx = find(diff(sign(dx)) ~= 0);
+                % if ~isempty(zero_cross_idx) && any(diff(zero_cross_idx) > 300)
+                %     disp(evalin('base', 'participant_ID') + ", " + evalin('base', 'original_category_number') + "_" + evalin('base', 'original_trial_number') + ": plate = " + fp_num + " step = " + step_number_IC)
+                % end
                 steps_info(step_number_IC).step_quality = "good";
                 steps_info(step_number_IC).plate = fp_num;
                 steps_info(step_number_IC).foot = feet(step_number_IC);
@@ -858,7 +866,6 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
     end
 end
 
-
 function trajectories = save_marker_data(marker_data, standing_trial, markers_guide)
 %SAVE_MARKER_DATA saves the measurement data of a single trial from the markers 
 % to our preferred structure format for easier access later. Also saves virtual 
@@ -889,29 +896,33 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
 
     % Lateral Virtual Knee calculated from Fibula Head (FAX) and
     % Lateral Femoral Epicondyle (FLE)
-    right_ST_above_knee = standing_trial.data(:, markers_guide{"Right Lateral Above Knee"}{2}); % R_FLE
-    left_ST_above_knee = standing_trial.data(:, markers_guide{"Left Lateral Above Knee"}{2}); % L_FLE
-    right_ST_below_knee = standing_trial.data(:, markers_guide{"Right Lateral Below Knee"}{2}); % R_FAX
-    left_ST_below_knee = standing_trial.data(:, markers_guide{"Left Lateral Below Knee"}{2}); % L_FAX
-    trajectories.R_LatVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Right Lateral Below Knee"}{1}), ... % R_FAX
-        trajectories.(markers_guide{"Right Lateral Ankle"}{1}), ...      % R_FAL
-        right_ST_below_knee, right_ST_above_knee);
-    trajectories.L_LatVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Left Lateral Below Knee"}{1}), ... % L_FAX
-        trajectories.(markers_guide{"Left Lateral Ankle"}{1}), ...      % L_FAL
-        left_ST_below_knee, left_ST_above_knee);
+    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Above Knee"}{2}); % R_FLE
+    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Above Knee"}{2}); % L_FLE
+    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Below Knee"}{2}); % R_FAX
+    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Below Knee"}{2}); % L_FAX
+    trajectories.(markers_guide.virtual_markers("Right Lateral Knee")) = ...
+        get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Lateral Below Knee"}{1}), ... % R_FAX
+                        trajectories.(markers_guide.reference_guide{"Right Lateral Ankle"}{1}), ...      % R_FAL
+                        right_ST_below_knee, right_ST_above_knee);
+    trajectories.(markers_guide.virtual_markers("Left Lateral Knee")) = ...
+        get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Lateral Below Knee"}{1}), ... % L_FAX
+                        trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...      % L_FAL
+                        left_ST_below_knee, left_ST_above_knee);
 
     % Medial Virtual Knee calculated from Tibial Tuberosity (TTC) and
     % Medial Femoral Epicondyle (FME)
-    right_ST_above_knee = standing_trial.data(:, markers_guide{"Right Medial Above Knee"}{2}); % R_FME
-    left_ST_above_knee = standing_trial.data(:, markers_guide{"Left Medial Above Knee"}{2}); % L_FME
-    right_ST_below_knee = standing_trial.data(:, markers_guide{"Right Medial Below Knee"}{2}); % R_TTC
-    left_ST_below_knee = standing_trial.data(:, markers_guide{"Left Medial Below Knee"}{2}); % L_TTC
-    trajectories.R_MedVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Right Medial Below Knee"}{1}), ... % R_TTC
-        trajectories.(markers_guide{"Right Medial Ankle"}{1}), ...      % R_TAM
-        right_ST_below_knee, right_ST_above_knee);
-    trajectories.L_MedVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Left Medial Below Knee"}{1}), ...  % L_TTC
-        trajectories.(markers_guide{"Left Medial Ankle"}{1}), ...       % L_TAM
-        left_ST_below_knee, left_ST_above_knee);
+    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Medial Above Knee"}{2}); % R_FME
+    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Medial Above Knee"}{2}); % L_FME
+    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Medial Below Knee"}{2}); % R_TTC
+    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Medial Below Knee"}{2}); % L_TTC
+    trajectories.(markers_guide.virtual_markers("Right Medial Knee")) = ...
+    get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Medial Below Knee"}{1}), ... % R_TTC
+                    trajectories.(markers_guide.reference_guide{"Right Medial Ankle"}{1}), ...      % R_TAM
+                    right_ST_below_knee, right_ST_above_knee);
+    trajectories.(markers_guide.virtual_markers("Left Medial Knee")) = ...
+    get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Medial Below Knee"}{1}), ...  % L_TTC
+                    trajectories.(markers_guide.reference_guide{"Left Medial Ankle"}{1}), ...       % L_TAM
+                    left_ST_below_knee, left_ST_above_knee);
 end
 
 function [GRF, COP] = save_forceplate_data(forceplate_data)
@@ -1145,20 +1156,20 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     % --------------------------------------------------
     % get the markers data :
     % For the ankle:
-    interpolated_Markers.Ankle.lateral.x = walking_direction*trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).x;
-    interpolated_Markers.Ankle.lateral.y = walking_direction*trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).y;
-    interpolated_Markers.Ankle.lateral.z = trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).z;
-    interpolated_Markers.Ankle.medial.x = walking_direction*trajectories.(markers_guide{foot + " Medial Ankle"}{1}).x;
-    interpolated_Markers.Ankle.medial.y = walking_direction*trajectories.(markers_guide{foot + " Medial Ankle"}{1}).y;
-    interpolated_Markers.Ankle.medial.z = trajectories.(markers_guide{foot + " Medial Ankle"}{1}).z;
+    interpolated_Markers.Ankle.lateral.x = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).x;
+    interpolated_Markers.Ankle.lateral.y = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).y;
+    interpolated_Markers.Ankle.lateral.z = trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).z;
+    interpolated_Markers.Ankle.medial.x = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Medial Ankle"}{1}).x;
+    interpolated_Markers.Ankle.medial.y = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Medial Ankle"}{1}).y;
+    interpolated_Markers.Ankle.medial.z = trajectories.(markers_guide.reference_guide{foot + " Medial Ankle"}{1}).z;
 
     % For the knee:
-    interpolated_Markers.Knee.lateral.x = walking_direction*trajectories.(markers_guide{foot + " Lateral Knee"}{1}).x;
-    interpolated_Markers.Knee.lateral.y = walking_direction*trajectories.(markers_guide{foot + " Lateral Knee"}{1}).y;
-    interpolated_Markers.Knee.lateral.z = trajectories.(markers_guide{foot + " Lateral Knee"}{1}).z;
-    interpolated_Markers.Knee.medial.x = walking_direction*trajectories.(markers_guide{foot + " Medial Knee"}{1}).x;
-    interpolated_Markers.Knee.medial.y = walking_direction*trajectories.(markers_guide{foot + " Medial Knee"}{1}).y;
-    interpolated_Markers.Knee.medial.z = trajectories.(markers_guide{foot + " Medial Knee"}{1}).z;
+    interpolated_Markers.Knee.lateral.x = walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).x;
+    interpolated_Markers.Knee.lateral.y = walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).y;
+    interpolated_Markers.Knee.lateral.z = trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).z;
+    interpolated_Markers.Knee.medial.x = walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Medial Knee")).x;
+    interpolated_Markers.Knee.medial.y = walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Medial Knee")).y;
+    interpolated_Markers.Knee.medial.z = trajectories.(markers_guide.virtual_markers(foot + " Medial Knee")).z;
 
     % Cut the ankle markers data from IC to OIC and temporally align it to 101 points :
     interpolated_Markers.Ankle.lateral.x = interp1(IC_index:OIC_index, interpolated_Markers.Ankle.lateral.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
@@ -1192,13 +1203,14 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.OIC_index = n_temporal_alignment;
 end
 
-function good_trials = get_good_trials(dataset_path, markers_guide)
+function good_trials = get_good_trials(dataset_path, reference_guide)
 %GET_GOOD_TRIALS Returns a list of the file names of good trials. Good trials 
 % are defined as trials that exist in the dataset and include all the important 
 % markers needed for our dataset.
 % Input : 
 %   dataset_path - the path to the data files.
-%   markers_guide - the reference guide for all the important markers.
+%   reference_guide - the reference guide for all the important markers in the 
+%                     dataset.
 % Output :
 %   good_trials - an nx3 array with the participant IDs, speed condition and
 %                 trial number of good trials.
@@ -1223,7 +1235,7 @@ function good_trials = get_good_trials(dataset_path, markers_guide)
         participant_ID = string(participant_IDs(participant_number));
 
         % find which of the trials exist and are good for this participant
-        % Some of the participants have less then the maximum amount of trials.
+        % Some of the participants have less than the maximum amount of trials.
         % Some trials are missing markers that are needed.
         % good_trials = strings(25, 1);    
         
@@ -1239,11 +1251,11 @@ function good_trials = get_good_trials(dataset_path, markers_guide)
                     n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
                     data = c3d.data.points; % Trial measurements
                     marker_names = string(c3d.parameters.POINT.LABELS.DATA);
-                    
+                    important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
+                    important_markers(contains(important_markers, "Virtual")) = [];
+
                     if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
                         if n_markers ~= 52
-                            important_markers = string(cellfun(@(x) x{1}, markers_guide.values, 'UniformOutput', false));
-                            important_markers(contains(important_markers, "Virtual")) = [];
                             if ~all(ismember(important_markers, marker_names))
                                 continue
                             end
@@ -1258,4 +1270,26 @@ function good_trials = get_good_trials(dataset_path, markers_guide)
         end
     end
     good_trials = good_trials(1:counter-1, :);
+
+    % Filter trials manually
+    % good_trials(good_trials(:, 1) == "2014040" & good_trials(counter, 2) == "C5" & ismember(good_trials(counter, 3), ["03" "04" "05"])) = [];
+end
+
+function tf = is_good_trial(c3d, reference_guide)
+    % Get trajectory data
+    data = c3d.data.points; % Trial measurements
+    n_samples = size(data, 3); % Number of samples in trial
+    n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
+    marker_names = string(c3d.parameters.POINT.LABELS.DATA);
+    important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
+
+    if n_markers == size(data, 2) && 3 == size(data, 1)
+        if n_markers ~= 52
+            if ~all(ismember(important_markers, marker_names))
+                tf = false;
+            end
+        end
+    else
+        tf = false;
+    end
 end

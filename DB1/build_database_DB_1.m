@@ -4,14 +4,14 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clc; close all; clearvars -except DB_1 DB_2 DB_3;
+clc; close all; clearvars -except DB_2 DB_3;
 
 % Add path to data files
-data_path = ".\Subjects_Data";
-addpath(data_path);
+data_path = "C:\Users\chenr\Documents\PROST\DB1\Subjects_Data";
+addpath(genpath(data_path));
 
 % Add path to helper functions
-addpath(genpath("..\Helper Functions"));
+addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
 
 %% -----------------------------
 %  General Database info:
@@ -69,13 +69,13 @@ DB_1.Markers_guide = Markers_guide;
 % DB_1 / Lab_system :
 %       --------------------
 Lab_system.lab_frame.x= ...
-    "For COP and marker trajectories: right direction \n" + ...
-    "for GRF data: walking direction";  %"perpendicular to the sagittal plane (pointing sideways?)";
+    "For COP and marker trajectories: pointing in the direction that completes a right handed coordinate system.\n" + ...
+    "for GRF data: the direction in the lab from the first forceplate to the last forceplate (walking direction).";
 Lab_system.lab_frame.y= ...
-    "For COP and marker trajectories: walking direction \n" + ...
-    "For GRF data: looks like it's the medial direction (but this would result in a coordinate system that is not always right handed";  %"perpendicular to the coronal plane (pointing forwards?)";
+    "For COP and marker trajectories: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
+    "For GRF data: pointing in the direction that completes a right handed coordinate system.";
 Lab_system.lab_frame.z= ...
-    "The z direction is pointing up.";  %"perpendicular to the coronal plane (pointing up?)";
+    "For GRF, COP and marker trajectories the z direction is pointing up.";
 Lab_system.num_forceplates = 6;
 
 DB_1.Lab_system = Lab_system;
@@ -111,8 +111,8 @@ DB_1.Experiment_protocol = Experiment_protocol;
 %% -----------------------------
 %  participant specific info:
 % ------------------------------
-
-for participant_number=1:16
+participant_numbers = 1:16;
+for participant_number=participant_numbers
 
     participant_name= "participant_" + string(participant_number);
     %                              -------------------------------------
@@ -124,7 +124,7 @@ for participant_number=1:16
     %                              ---------
     % DB_1 / Data / participant_# / metadata :
     %                              ---------
-    temp_MD_array = split(string(fileread("Subjects_Data/Participant" + string(participant_number) + "/Metadata.txt")));
+    temp_MD_array = split(string(fileread("Participant" + string(participant_number) + "/Metadata.txt")));
     
     % age
     DB_1.Data.(participant_name).metadata.Age.value = double(temp_MD_array(4));
@@ -208,7 +208,7 @@ for participant_number=1:16
 
         available_num_trials=length(COP_data);
 
-        for num_trial=1:available_num_trials %1:2
+        for num_trial=1:available_num_trials
 
             trials_counter=trials_counter+1;
 
@@ -274,7 +274,7 @@ for participant_number=1:16
                 %                                                             -------
                 % DB_1 / Data / participant_# / unprocessed_data / trials(#) / events
                 %                                                             -------
-                % now find the eventss indexes and times:
+                % now find the events indexes and times:
                 COP_indexes=1:length(x_cop);
                 COP_indexes=COP_indexes(~isnan(x_cop));
                 % save IC:
@@ -380,21 +380,21 @@ for participant_number=1:16
                 % DB_2 / Data / participant_# / processed_data / right,left / step(#) / source
                 %                                                                      -------
                 %                                                                               -------------------------
-                %                                                                              / trial_number_in_database
+                %                                                                              / original_trial_number_in_database
                 %                                                                               -------------------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.trial_number_in_database=trials_counter;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.original_trial_number_in_database = trials_counter;
                 %                                                                               ---------------
-                %                                                                              / speed_catagory
+                %                                                                              / original_trial
                 %                                                                               ---------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.speed_catagory="V"+num2str(speed);
-                %                                                                               -------------------------------------
-                %                                                                              / number_of_trial_under_speed_catagory
-                %                                                                               -------------------------------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.number_of_trial_under_speed_catagory=num_trial;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.original_trial = "V" + speed + "_" + num_trial;
                 %                                                                               ------------
                 %                                                                              / step_number
                 %                                                                               ------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.step_number=1;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.step_number = 1;
+                %                                                                               ------------
+                %                                                                              / PLATE_number
+                %                                                                               ------------
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.plate_number = 1;
                 %                                                                               -----------------------
                 %                                                                              / original_IC_index/time
                 %                                                                               -----------------------
@@ -418,7 +418,7 @@ for participant_number=1:16
                  % and the original x to be the new -y (so the z direction will still point up)
                 one_step_COP.x=DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(1).y;
                 one_step_COP.y=-DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(1).x;
-                % cut the COP data from IC to OIC (single support) and iterpulate it to 101 points :
+                % cut the COP data from IC to OIC (single support) and interpolate it to 101 points :
                 original_indexes=1:length(one_step_COP.x);
                 original_indexes=original_indexes(~isnan(one_step_COP.x));
                 one_step_COP.x=interp1(original_indexes,one_step_COP.x(original_indexes),linspace(IC_index,OIC_index,101));
@@ -443,13 +443,13 @@ for participant_number=1:16
                 %                          Z * X = Y
                 % and with the directions of the x axis and z axis
                 % the y axis should be pointing to the Left!
-                % so for steps 1 and 3 (right foot), the GRF shold stay the same
-                % but for steps 2 and 4 (left foot), the direction of the GRF neads to be flipped.
+                % so for steps 1 and 3 (right foot), the GRF should stay the same
+                % but for steps 2 and 4 (left foot), the direction of the GRF needs to be flipped.
                 one_step_GRF.y=DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).GRF.Right.y;
                                                                                                                                     % ^
                                                                                                               % this here should be Right for steps 1 and 3
                                                                                                                               % and Left for steps 2 and 4
-                % cut the GRF data from IC to TO and iterpulate it to 101 points :
+                % cut the GRF data from IC to TO and interpolate it to 101 points :
                 one_step_GRF.x=interp1(original_indexes,one_step_GRF.x(original_indexes),linspace(IC_index,TO_index,101));
                 one_step_GRF.y=interp1(original_indexes,one_step_GRF.y(original_indexes),linspace(IC_index,TO_index,101));
                 one_step_GRF.z=interp1(original_indexes,one_step_GRF.z(original_indexes),linspace(IC_index,TO_index,101));
@@ -554,21 +554,21 @@ for participant_number=1:16
                 % DB_2 / Data / participant_# / processed_data / right,left / step(#) / source
                 %                                                                      -------
                 %                                                                               -------------------------
-                %                                                                              / trial_number_in_database
+                %                                                                              / original_trial_number_in_database
                 %                                                                               -------------------------
-                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.trial_number_in_database=trials_counter;
+                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.original_trial_number_in_database = trials_counter;
                 %                                                                               ---------------
-                %                                                                              / speed_catagory
+                %                                                                              / original_trial
                 %                                                                               ---------------
-                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.speed_catagory="V"+num2str(speed);
-                %                                                                               -------------------------------------
-                %                                                                              / number_of_trial_under_speed_catagory
-                %                                                                               -------------------------------------
-                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.number_of_trial_under_speed_catagory=num_trial;
+                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.original_trial = "V" + speed + "_" + num_trial;
                 %                                                                               ------------
                 %                                                                              / step_number
                 %                                                                               ------------
-                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.step_number=2;
+                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.step_number = 2;
+                %                                                                               ------------
+                %                                                                              / PLATE_number
+                %                                                                               ------------
+                DB_1.Data.(participant_name).processed_data.left.step(left_steps_counter).source.plate_number = 2;
                 %                                                                               -----------------------
                 %                                                                              / original_IC_index/time
                 %                                                                               -----------------------
@@ -592,7 +592,7 @@ for participant_number=1:16
                  % and the original x to be the new -y (so the z direction will still point up)
                 one_step_COP.x=DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(2).y;
                 one_step_COP.y=-DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(2).x;
-                % cut the COP data from IC to OIC (single support) and iterpulate it to 101 points :
+                % cut the COP data from IC to OIC (single support) and interpolate it to 101 points :
                 original_indexes=1:length(one_step_COP.x);
                 original_indexes=original_indexes(~isnan(one_step_COP.x));
                 one_step_COP.x=interp1(original_indexes,one_step_COP.x(original_indexes),linspace(IC_index,OIC_index,101));
@@ -614,13 +614,13 @@ for participant_number=1:16
                 %                          Z * X = Y
                 % and with the directions of the x axis and z axis
                 % the y axis should be pointing to the Left!
-                % so for steps 1 and 3 (right foot), the GRF shold stay the same
-                % but for steps 2 and 4 (left foot), the direction of the GRF neads to be flipped in the y axis.
+                % so for steps 1 and 3 (right foot), the GRF should stay the same
+                % but for steps 2 and 4 (left foot), the direction of the GRF needs to be flipped in the y axis.
                 one_step_GRF.y=-DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).GRF.Left.y;
                                                                                                                                     % ^
                                                                                                               % this here should be Right for steps 1 and 3
                                                                                                                               % and Left for steps 2 and 4
-                % cut the GRF data from IC to TO and iterpulate it to 101 points :
+                % cut the GRF data from IC to TO and interpolate it to 101 points :
                 one_step_GRF.x=interp1(original_indexes,one_step_GRF.x(original_indexes),linspace(IC_index,TO_index,101));
                 one_step_GRF.y=interp1(original_indexes,one_step_GRF.y(original_indexes),linspace(IC_index,TO_index,101));
                 one_step_GRF.z=interp1(original_indexes,one_step_GRF.z(original_indexes),linspace(IC_index,TO_index,101));
@@ -703,21 +703,21 @@ for participant_number=1:16
                 % DB_2 / Data / participant_# / processed_data / right,left / step(#) / source
                 %                                                                      -------
                 %                                                                               -------------------------
-                %                                                                              / trial_number_in_database
+                %                                                                              / original_trial_number_in_database
                 %                                                                               -------------------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.trial_number_in_database=trials_counter;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.original_trial_number_in_database = trials_counter;
                 %                                                                               ---------------
-                %                                                                              / speed_catagory
+                %                                                                              / original_trial
                 %                                                                               ---------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.speed_catagory="V"+num2str(speed);
-                %                                                                               -------------------------------------
-                %                                                                              / number_of_trial_under_speed_catagory
-                %                                                                               -------------------------------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.number_of_trial_under_speed_catagory=num_trial;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.original_trial = "V" + speed + "_" + num_trial;
                 %                                                                               ------------
                 %                                                                              / step_number
                 %                                                                               ------------
-                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.step_number=3;
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.step_number = 3;
+                %                                                                               ------------
+                %                                                                              / PLATE_number
+                %                                                                               ------------
+                DB_1.Data.(participant_name).processed_data.right.step(right_steps_counter).source.plate_number = 3;
                 %                                                                               -----------------------
                 %                                                                              / original_IC_index/time
                 %                                                                               -----------------------
@@ -741,7 +741,7 @@ for participant_number=1:16
                  % and the original x to be the new -y (so the z direction will still point up)
                 one_step_COP.x=DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(3).y;
                 one_step_COP.y=-DB_1.Data.(participant_name).unprocessed_data.("trial_"+string(trials_counter)).COP.FP(3).x;
-                % cut the COP data from IC to OIC (single support) and iterpulate it to 101 points :
+                % cut the COP data from IC to OIC (single support) and interpolate it to 101 points :
                 original_indexes=1:length(one_step_COP.x);
                 original_indexes=original_indexes(~isnan(one_step_COP.x));
     %           [one_step_COP.x(original_indexes)' ; one_step_COP.y(original_indexes)']
@@ -773,7 +773,7 @@ for participant_number=1:16
                                                                                                                                     % ^
                                                                                                               % this here should be Right for steps 1 and 3
                                                                                                                               % and Left for steps 2 and 4
-                % cut the GRF data from IC to TO and iterpulate it to 101 points :
+                % cut the GRF data from IC to TO and interpolate it to 101 points :
     %            [one_step_GRF.x(original_indexes)' , one_step_GRF.y(original_indexes)' , one_step_GRF.z(original_indexes)']
                 one_step_GRF.x=interp1(original_indexes,one_step_GRF.x(original_indexes),linspace(IC_index,TO_index,101));
                 one_step_GRF.y=interp1(original_indexes,one_step_GRF.y(original_indexes),linspace(IC_index,TO_index,101));
