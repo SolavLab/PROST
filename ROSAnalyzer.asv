@@ -12,7 +12,7 @@ classdef ROSAnalyzer < handle
     % ___________________________
     properties(Constant)
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
-        % NUM_ANATOMICAL_SIDES = 1; % Number of possible anatomical side ("lateral", "medial", "mean")
+        % NUM_ANATOMICAL_SIDES = 1; % Number of possible anatomical sides from "lateral", "medial", "mean"
     end
     properties(Access=public) % TODO: Make private at end of debugging
         DataRecords = struct([]); % Data records
@@ -28,7 +28,7 @@ classdef ROSAnalyzer < handle
 
     %% PUBLIC METHODS
     methods
-        %% --------- Constructor ------------------------------------------
+        %% Constructor
         function [obj, dataset_ids] = ROSAnalyzer(load_list)
         %ROS Constructor
         % Input :
@@ -116,7 +116,7 @@ classdef ROSAnalyzer < handle
             end
         end
 
-        %% --------- Getters/Setters --------------------------------------
+        %% Getters/Setters
         function dataset = get_dataset(obj, dataset_id)
         %GET_DATASET returns the dataset object from the data records with 
         % the given ID. If there is no dataset with the ID, returns an 
@@ -132,6 +132,21 @@ classdef ROSAnalyzer < handle
                 dataset = obj.DataRecords(index);
             else
                 dataset = struct([]);
+            end
+        end
+        function set_dataset(obj, dataset_id, dataset)
+        %SET_DATASET sets the dataset object with the given ID in the data 
+        % records. If there is no dataset with the ID, raises error.
+        % Input :
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   dataset - the dataset object.
+            
+            if obj.dataset_exists(dataset_id)
+                index = obj.DataRecordsIDLookup(dataset_id);
+                obj.DataRecords(index) = dataset;
+            else
+                error("ROSAnalyzer:DataRecords:MissingDataset", ...
+                      "Dataset %d not in data records.", dataset_id)
             end
         end
         function dataset_name = get_dataset_name(obj, dataset_id)
@@ -312,7 +327,7 @@ classdef ROSAnalyzer < handle
             ignore_num = numel([obj.IgnoreList{obj.IgnoreList{:, 1} == dataset_id, 2:3}]);
         end
 
-        %% --------- Modifiers --------------------------------------------
+        %% Modifiers
         function dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right)
         %ADD_DATASET Adds a new dataset to data_records and to the feature 
         % table.
@@ -322,12 +337,13 @@ classdef ROSAnalyzer < handle
         %   participants_to_ignore_left, participants_to_ignore_right -
         %   vectors of participant numbers to ignore for left and right 
         %   steps respectively.
+        % Output :
+        %   dataset_id - the unique ID of the added dataset.
 
             disp("Adding dataset " + dataset_name + "...")
            
             % Add to data records
-            index = obj.add_to_data_records(dataset_name, dataset);
-            dataset_id = obj.DataRecords(index).Dataset_id;
+            dataset_id = obj.add_to_data_records(dataset_name, dataset);
             
             % Add to summary table
             obj.add_to_summary_table(dataset_id);
@@ -397,7 +413,7 @@ classdef ROSAnalyzer < handle
         % end
         % TODO: Create delete_participant function
 
-        %% --------- Plot Functions --------------------------------------- 
+        %% Plot Functions
         function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig)
         %PLOT_FEATURES_VS_LABELS plots the features (anthropometric parameters)
         % v.s. the labels (ROS parameters).
@@ -461,7 +477,7 @@ classdef ROSAnalyzer < handle
                     x_unit = replace(feature_units{feature_index}, "_", " ");
                     x_name = replace(feature_names{feature_index}, "_", " ");
                     x_type = feature_types{feature_index};
-                    x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
+                    % x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
                     
                     % Get label data
                     y = labels{:, label_index};
@@ -470,7 +486,7 @@ classdef ROSAnalyzer < handle
                     y_unit = replace(label_units{label_index}, "_", " ");
                     y_name = replace(label_names{label_index}, "_", " ");
                     y_type = label_types{label_index};
-                    y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
+                    % y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
                                                            
                     % Create new figure for new set of axes
                     if axes_counter == 0
@@ -503,14 +519,17 @@ classdef ROSAnalyzer < handle
                     % end
 
                     % Plot both sides
-                    h_left = scatter(x_left,  y_left,  sz_left,  color_left, marker, 'filled', MarkerFaceAlpha=0.6);
-                    h_right = scatter(x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=0.6);
+                    h_left = scatter(ax, x_left,  y_left,  sz_left,  color_left, marker, 'filled', MarkerFaceAlpha=0.6);
+                    h_right = scatter(ax, x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=0.6);
 
-                    xlim padded
-                    ylim padded
-                    xlabel(x_label);
-                    ylabel(y_label);
+                    xlim(ax, 'padded');
+                    ylim(ax, 'padded');
+                    xlabel(ax, x_label);
+                    ylabel(ax, y_label);
                     grid(ax, "on");
+                    if strcmp(x_unit, y_unit)
+                        axis(ax, 'equal');
+                    end
 
                     % Increment counter
                     axes_counter = axes_counter + 1;
@@ -524,17 +543,21 @@ classdef ROSAnalyzer < handle
             end
         end
         function plot_ros(obj, who_to_plot, number_of_axes_in_fig)
-        %PLOT_ROS plots the ros of all given data with their fitted arcs.
+        %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc for all
+        % participants in who_to_plot.
         % Input :
         %   who_to_plot - a cell array with pairs of dataset id and 
-        %                 list of participants to plot. Example:
-        %                 {1, [1 2 3 4]}
-        %   number_of_axes_in_fig - number of axes per figure to plot.
+        %                 list of participants to plot. Example: {1, [1 2 3 4]}
+        %                 plots the data and ROS arc of the left and right feet
+        %                 for participant 1, 2, 3 and 4 in dataset 1. Plots all
+        %                 participants of all datasets if non are provided.
+        %   number_of_axes_in_fig - number of axes per figure to plot. 
+        %                           Default: 6.
             
             % Prep plotting list
             disp("Plotting ROS...")
             if nargin < 3
-                number_of_axes_in_fig = 10;
+                number_of_axes_in_fig = 6;
             end
             if nargin < 2 || isempty(who_to_plot)
                 n_data_records = length(obj.DataRecords);
@@ -552,11 +575,10 @@ classdef ROSAnalyzer < handle
             % Set plot parameters
             x_limits = [-100 200];
             y_limits = [-100 50];
-            color_scatter = dictionary(["right" "left"], {[0 0.5 0.4] [0.5, 0.0, 0.4]});
-            color_arc = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
+            color_arc = dictionary(["right" "left"], {[0 0.5 0.4] [0.5, 0.0, 0.4]});
+            color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
             marker_size = 7;
             line_width = 2;
-            markers = '.o+*xsd^v><ph';
             x_label = "x [mm]";
             y_label = "z [mm]";
 
@@ -594,8 +616,9 @@ classdef ROSAnalyzer < handle
                     yticks(ax, y_limits(1):50:y_limits(2));
                     ax.XLim = x_limits;
                     ax.YLim = y_limits;
-                    text(ax, x_limits(1), y_limits(2) - 10, erase(dataset_name, "_") + "P" + participant_id, FontSize=9, FontWeight="bold")
-  
+                    text(ax, x_limits(1), y_limits(2) - 10, erase(dataset_name, "_") + " P" + participant_id, FontSize=9, FontWeight="bold")
+                    plot(0, 0, MarkerSize=marker_size, Marker='o', MarkerEdgeColor="black", MarkerFaceColor="black")
+
                     % Plot trials of participant
                     for i=1:height(samples)
                         entry_number = entry_numbers(i);
@@ -609,23 +632,30 @@ classdef ROSAnalyzer < handle
                         z = point_cloud(:, 2);
                        
                         % Get arc parameters
-                        arc_data = num2cell(sample{:, ["Radius", "Center_x", "Center_z", "Ang_start", "Ang_end"]});
-                        [radius, center_x, center_z, ang_start, ang_end] = arc_data{:};
+                        [radius, center_x, center_z, ang_start, ang_end, residual] = ...
+                            deal(sample.Radius, sample.Center_x, sample.Center_z, sample.Ang_start, sample.Ang_end, sample.Residual);
 
-                        % Set color
+                        % Get side
                         side = sample.Side;
-
-                        % Plot point cloud and arc
-                        color1 = color_scatter{side};
-                        color2 = color_arc{side};
-                        scatter(ax, x, z, marker_size, color1 , markers(1));
-                        xlabel(ax, x_label);
-                        ylabel(ax, y_label);
+                        
+                        % Calculate arc values
                         ang_vec = linspace(ang_start, ang_end, length(x));
                         arc_points = [center_x + radius*sind(ang_vec); center_z - radius*cosd(ang_vec)];
-                        plot(ax, arc_points(1, :), arc_points(2, :), '-', Color=color2, LineWidth=line_width, DisplayName=string(side) + " fitted arc")
-                        txt = "residual: " + sample.Residual;
-                        text(ax, 0.5*(x_limits(1) + x_limits(2)), y_limits(2) - 10 - (i - 1)*15, txt, Color=color_arc{side}, FontSize=9, FontName="FixedWidth", FontWeight="bold")
+                        circle_vec = linspace(0, 360, length(x));
+                        circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
+
+                        % Plot point cloud and arc                       
+                        % scatter(ax, x, z, marker_size, color_scatter{side}, '.'); % point cloud
+                        plot(ax, arc_points(1, :), arc_points(2, :), '-', Color= color_arc{side}, LineWidth=line_width); % fitted arc
+                        % plot(ax, circle_points(1, :), circle_points(2, :), '--', Color= color_arc{side}, LineWidth=line_width); % fitted circle
+                        plot(ax, center_x, min(circle_points(2, :)), 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size); % nadir
+                        
+                        % Print parameter values and residual
+                        txt = sprintf("radius: %.2f [mm], center: (%.2f, %.2f) [mm], residual: %.2f [mm]", radius, center_x, center_z, residual);
+                        text(ax, x_limits(1), y_limits(2) - 10 - i*10, txt, Color=color_arc{side}, FontSize=9, FontName="FixedWidth", FontWeight="bold")
+
+                        xlabel(ax, x_label);
+                        ylabel(ax, y_label);
                     end
 
                     axes_counter = axes_counter + 1;
@@ -634,13 +664,14 @@ classdef ROSAnalyzer < handle
                     if axes_counter == number_of_axes_in_fig || participant_id == participants(end)
                         % Dummy plots for legend in last axes
                         sides = ["right", "left"];
-                        h = gobjects(4, 1);
-                        for i=1:2
+                        n_sides = length(sides);
+                        h = gobjects(n_sides*4, 1);
+                        for i=1:n_sides
                             side = sides(i);
-                            color1 = color_scatter{side};
-                            color2 = color_arc{side};
-                            h(i) = scatter(ax, NaN, NaN, marker_size, color1(1, :), "filled", DisplayName=side);
-                            h(i + 2) = plot(ax, NaN, NaN, '-', Color=color2(1, :), LineWidth=line_width, DisplayName=string(side) + " fitted arc");
+                            h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}, '.', DisplayName=side);
+                            h(i + 2) = plot(ax, NaN, NaN, '-', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted arc");
+                            h(i + 4) = plot(ax, NaN, NaN, '--', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted circle");
+                            h(i + 6) = plot(ax,  NaN, NaN, 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size, DisplayName=string(side) + " nadir");
                         end                   
                         
                         lgd = legend(h, FontSize=9);
@@ -756,7 +787,7 @@ classdef ROSAnalyzer < handle
             end
         end
 
-        %% --------- Is Functions -----------------------------------------
+        %% Is Functions
         function tf = dataset_exists(obj, dataset_id)
         %DATASET_EXISTS returns whether the dataset with the ID dataset_id
         % exists in the data records.
@@ -943,7 +974,6 @@ classdef ROSAnalyzer < handle
             % 2) Optimize the solution:
                 % Initial guess from linear least squares approach
             initial_guess = [center_x; center_y; ros_rad];
-            options = optimoptions('lsqnonlin', 'Display', 'off');
             % options = optimoptions(options,'TolFun',1e-10,'TolX',1e-10,'MaxFunEvals',100000,'MaxIter',40000);
             % Ensure initial guess does not contain NaN or Inf values
             if any(isnan(initial_guess)) || any(isinf(initial_guess))
@@ -953,14 +983,18 @@ classdef ROSAnalyzer < handle
 
                 % Function that calculates non-linear LSQ residual.
                 % (this function is also copied from Dana's code)
-            circle_fit_fun = @(params)(params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2));
+            % objective_func = @(params)(params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2));
+            objective_func = @(params)sum((params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2)).^2);
             
                 % Unconstrained Least squares nonlinear fit algorithm
-            [params, residual_norm, residual] = lsqnonlin(circle_fit_fun, initial_guess,[],[], options);
+            % options = optimoptions('lsqnonlin', 'Display', 'off');
+            % [params, residual] = lsqnonlin(objective_func, initial_guess,[],[], options);
+            options = optimoptions('fminunc', 'Display', 'off');
+            [params, residual] = fminunc(objective_func, initial_guess, options);
             % obj.PointClouds{entry_number}(:, 3) = residual;
                 
                 % Normalize residual by number of data points
-            residual_norm = sqrt(residual_norm / n_points);
+            residual_norm = sqrt(residual / n_points);
 
             % 3) Get ROS parameters: angles, arc length:
                 % find ROS start point and end point
@@ -1144,11 +1178,13 @@ classdef ROSAnalyzer < handle
             % there are extra rows in table which are empty
             obj.SamplesTableSize = entry_num - 1;
         end
-        function index = add_to_data_records(obj, dataset_name, dataset)
+        function dataset_id = add_to_data_records(obj, dataset_name, dataset)
         %ADD_TO_DATA_RECORDS adds new dataset to data records.
         % Input : 
         %   dataset_name - the name of the dataset.
         %   dataset - the dataset to load.
+        % Output :
+        %   dataset_id - the unique dataset ID generated.
 
             index = length(obj.DataRecords) + 1;
             dataset_id = obj.FirstUniqueDatasetId;
@@ -1164,17 +1200,18 @@ classdef ROSAnalyzer < handle
             participants = fieldnames(dataset.Data);
             n_participants = length(participants);
             obj.DataRecords(index).Data(n_participants) = struct;
-            for participant_id = 1:n_participants
-                participant_name = participants{participant_id};
+            for participant_num = 1:n_participants
+                participant_name = participants{participant_num};
                 original_participant_name = dataset.Data.(participant_name).participant_ID_in_original_structure;
                 processed_data = dataset.Data.(participant_name).processed_data;
                 metadata = dataset.Data.(participant_name).metadata;
 
-                obj.DataRecords(index).Data(participant_id).Participant_id = participant_id;
-                obj.DataRecords(index).Data(participant_id).Participant_name = original_participant_name;
-                obj.DataRecords(index).Data(participant_id).Anthropometric_data = metadata;
-                obj.DataRecords(index).Data(participant_id).Processed_data = processed_data;
+                obj.DataRecords(index).Data(participant_num).Participant_id = participant_num;
+                obj.DataRecords(index).Data(participant_num).Participant_name = original_participant_name;
+                obj.DataRecords(index).Data(participant_num).Anthropometric_data = metadata;
+                obj.DataRecords(index).Data(participant_num).Processed_data = processed_data;
             end
+            obj.filter_data_by_bad_steps(dataset_id)
         end
         function delete_from_data_records(obj, dataset_id, index)
             obj.DataRecords(index) = [];
@@ -1195,8 +1232,8 @@ classdef ROSAnalyzer < handle
             
             dataset = obj.get_dataset(dataset_id);
             if isempty(dataset)
-                error("ROSAnalyzer:DataRecords:MissingEntry", ...
-                      "dataset entry %d doesn't exist in data records.", dataset_id)
+                error("ROSAnalyzer:DataRecords:MissingDataset", ...
+                      "dataset %d not in data records.", dataset_id)
             end
             
             % If summary table has no empty rows, allocate new row
@@ -1335,8 +1372,8 @@ classdef ROSAnalyzer < handle
         
             tf =  ~isempty(find(obj.SummaryTable.Dataset_id == dataset_id, 1, 'first'));
         end
-        function ignore_data(obj, ignore_list)
-        %IGNORE_DATA Ignore all data in ignore list.
+        function filter_data_by_id(obj, ignore_list)
+        %FILTER_DATA_BY_ID Ignore all data in ignore list.
         % Input :
         %   ignore_list - list of trials to ignore. A cell array in the format:
         %   {dataset_id, [participants_to_ignore_left], [participants_to_ignore_right]}
@@ -1349,9 +1386,17 @@ classdef ROSAnalyzer < handle
                 participants_right = ignore_list{idx, 3};
                 obj.delete_from_samples_table(dataset_id, participants_left, "left");
                 obj.delete_from_samples_table(dataset_id, participants_right, "right");
+                
             end
         end
-        function filter_data(obj, list, method)
+        function filter_data_by_outliers(obj, list, method)
+        %FILTER_DATA_BY_OUTLIERS Filter all data entries in the samples table by
+        % outliers in the given variables. Filters entries if at least one of 
+        % the variables' value is an outlier.
+        % Input :
+        %   list - list of variables to filter the outliers.
+        %   method - the method for calculating the outliers. Default: 'median'.
+
             if nargin < 3
                 method = "median";
             end
@@ -1365,6 +1410,64 @@ classdef ROSAnalyzer < handle
             entry_numbers = find(outliers);
             obj.delete_from_samples_table('e', entry_numbers)
          end
+        function filter_data_by_bad_steps(obj, dataset_id)
+        %FILTER_DATA_BY_BAD_STEPS Filter data in records by bad steps. Bad steps
+        % are steps where the CoP in shank frame does not have the circular arc
+        % shape.
+        % Input :
+        %   dataset_id - the ID of the dataset to filter.
+
+            dataset = obj.get_dataset(dataset_id);
+            if isempty(dataset)
+                error("ROSAnalyzer:DataRecords:MissingDataset", ...
+                      "Dataset %d not in data records.", dataset_id)
+            end
+            dataset_name = dataset.Dataset_name;
+            n_participants = length(dataset.Data);
+            for participant_num=1:n_participants
+                participant_name = dataset.Data(participant_num).Participant_name;
+                for side=["left" "right"]
+                     trials = dataset.Data(participant_num).Processed_data.(side).step;
+                    n_trials = length(trials);
+                    bad_trials = [];
+                    for trial_num=1:n_trials
+                        step = trials(trial_num);
+                        trial_name = step.source.original_trial;
+                        try
+                        step_number = step.source.step_number;
+                        catch
+                            disp("!!!")
+                        end
+                        plate_number = step.source.plate_number;
+                        s = sprintf("DB%d (%s) P%d (%s) %s, T%d (%s), Step %d FP%d\n", dataset_id, dataset_name, participant_num, participant_name, side, trial_num, replace(trial_name, "_", " "),step_number, plate_number);
+                        
+                        shank_cop = obj.cop_to_shank_frame(step, "lateral");
+                        
+                        x = shank_cop.x(~isnan(shank_cop.x));
+                        dx = diff(x);
+                        sign_d = sign(dx);
+                        idx_switch = find(diff(sign_d) ~= 0);
+                        if isempty(idx_switch)
+                            if sign_d(1) < 0
+                                bad_trials = [bad_trials trial_num];
+                                % fprintf("-1 **** " + s)
+                            end
+                            continue
+                        else
+                            idx_switch = [0 idx_switch];
+                            idx_switch = [idx_switch length(sign_d)];
+                            k=1:length(idx_switch)-1;
+                            if  any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
+                                bad_trials = [bad_trials trial_num];
+                                % fprintf(s)
+                            end
+                        end
+                    end
+                    dataset.Data(participant_num).Processed_data.(side).step(bad_trials) = [];
+                end
+            end
+            obj.set_dataset(dataset_id, dataset);
+        end
     end
     
     %% STATIC METHODS
@@ -1458,8 +1561,7 @@ classdef ROSAnalyzer < handle
             shank_cop.y = dot(cop, new_y);
             shank_cop.z = dot(cop, new_z);
 
-            is_in = ~isoutlier(shank_cop.x) & ~isoutlier(shank_cop.y) & ~isoutlier(shank_cop.z);
-        end
- 
+        end 
     end
 end
+

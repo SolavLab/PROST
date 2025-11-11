@@ -33,33 +33,30 @@ end
 % end
  
 clearvars -except DB_1 DB_2 DB_3
-close all
+close all 
 
 %% Load and ignore lists
 %   load_list - a cell array where each row contains pairs of dataset name and 
 %               path to the dataset. Example:
-%               {"DB Name 1", "path/to/DB1.mat"; "DB Name 2", "path/to/DB2.mat"}
-%   ignore_list - list of trials to ignore (left and right steps per 
-%                 participant. A cell array of the form:
-%                 {"DB Name", [participants_to_ignore_left], [participants_to_ignore_right]}
-load_list = {DB_1, "Moreira et. al.(2021)"; DB_3, "Lencioni et. al.(2019)"; DB_2, "Schreiber & Moissenet(2019)"};
-% ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
+%               {"DB 1 Name", "path/to/DB1.mat"; "DB 2 Name", "path/to/DB2.mat"}
+load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)"; DB_3, "Lencioni et. al. (2019)"};
 
 %% Create ROS analysis object
 [obj, dataset_ids] = ROSAnalyzer(load_list);
 DB_1_ID = dataset_ids(1);
-DB_3_ID = dataset_ids(2);
-DB_2_ID = dataset_ids(3);
+DB_2_ID = dataset_ids(2);
+DB_3_ID = dataset_ids(3);
 
 %% Clean data
+%   ignore_list - list of trials to ignore (left and right steps per 
+%                 participant. A cell array of the form:
+%                 {DB ID, [participants_to_ignore_left], [participants_to_ignore_right]}
 ignore_list = {DB_1_ID, [3 5 14 15 16], [5 14 15 16]; DB_2_ID, [31], []; DB_3_ID, [43, 47], []};
-obj.ignore_data(ignore_list);
-%%
-% obj.filter_data(["Radius"])
+% obj.filter_data_by_id(ignore_list);
 
 %% Plot data
 % close all
-obj.plot_ros({}, 6);
+obj.plot_ros({2, [2 19 20 27 29 30 33 42 48 50]; 3 [11 14 17 18 22 25 27 28 30 34 38 39 40 42 48]}, 1);
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
@@ -85,20 +82,55 @@ h_not_shod.FaceColor = [0.8500 0.3250 0.0980];
 h_not_shod.DisplayName = "Not Shod";
 
 y_shod = 0:0.1:5.5;
-mu_shod = mean(shod_residuals(~isoutlier(shod_residuals)));
-sigma_shod = std(shod_residuals(~isoutlier(shod_residuals)));
-f_shod = exp(-(y_shod - mu_shod).^2 ./ (2*sigma_shod^2)) ./ (sigma_shod*sqrt(2*pi));
+mu_shod = mean(shod_residuals);
+sigma_shod = std(shod_residuals);
+f_shod = normpdf(y_shod, mu_shod, sigma_shod);
 plot(y_shod, f_shod, LineWidth=1.5, Color=h_shod.FaceColor, DisplayName="Shod")
 
 y_not_shod = y_shod;
 mu_not_shod = mean(not_shod_residuals);
 sigma_not_shod = std(not_shod_residuals);
-f_not_shod = exp(-(y_not_shod - mu_not_shod).^2 ./ (2*sigma_not_shod^2)) ./ (sigma_not_shod*sqrt(2*pi));
+f_not_shod = normpdf(y_not_shod, mu_not_shod, sigma_not_shod);
 plot(y_not_shod, f_not_shod, LineWidth=1.5, Color=h_not_shod.FaceColor, DisplayName="Not Shod")
 
 title("Residuals Histogram vs Normal Distribution Comparison")
 xlabel("Residual [mm]")
 legend(FontSize=12)
+
+%% Analyze Radius and Center x
+disp("Plotting histogram of normalized radius and center x (by hight)")
+radius = obj.get_sample_var("Radius");
+center_x = obj.get_sample_var("Center_x");
+height = convert_units(obj.get_sample_var("Height"), "m", "mm");
+normalized_radius = radius./height;
+normalized_center_x = center_x./height;
+
+f = figure(Name="Normalized Radius Histogram vs Normal Distribution Comparison");
+h_radius = histogram(normalized_radius);
+h_radius.Normalization = 'count';
+h_radius.BinWidth = 0.1;
+h_radius.DisplayName = "Radius";
+
+h = findobj(gcf, 'Type', 'histogram');
+edges = 0.1:0.01:1;  % Define your desired bin edges (range and bin width)
+h.BinEdges = edges;
+
+title(replace(f.Name, "_", " "))
+xlabel("Normalized Radius [m/m]")
+
+f = figure(Name="Normalized Center x Histogram vs Normal Distribution Comparison");
+h_center_x = histogram(normalized_center_x);
+h_center_x.Normalization = 'count';
+h_center_x.BinWidth = 0.1;
+h_center_x.DisplayName = "Center x";
+
+
+h = findobj(gcf, 'Type', 'histogram');
+edges = -0.5:0.01:0.5;  % Define your desired bin edges (range and bin width)
+h.BinEdges = edges;
+
+title(replace(f.Name, "_", " "))
+xlabel("Normalized Center x [m/m]")
 
 %% Plot Features vs Labels
 obj.plot_features_vs_labels([], ["Radius" "Center_x"])
@@ -107,4 +139,4 @@ obj.plot_features_vs_labels([], ["Radius" "Center_x"])
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-save_all_open_figures("./figures/ROS Analysis", "pdf")
+% save_all_open_figures("./figures/ROS Analysis/FMinUnc", "fig")
