@@ -1,44 +1,38 @@
-clear variables -except DB_1 DB_2 DB_3; 
+clear variables -except DB_3; 
 close all; 
 clc
 
-addpath("../Helper Functions/")
-addpath("../")
+addpath("../../Helper Functions/")
+addpath("../../")
 set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
 
-% if ~exist("DB_1", "var")
-%     load("..\DB1\DB_1.mat");
-% end
-if ~exist("DB_2", "var")
-    load("..\DB2\DB_2.mat");
+if ~exist("DB_3", "var")
+    load("..\DB_3.mat");
 end
-% if ~exist("DB_3", "var")
-%     load("..\DB3\DB_3.mat");
-% end
 %% Change accordingly to your test
 % What database to test
-DB = DB_2;
+DB = DB_3;
 
 % Database relevant marker names
-ankle_marker_name = "FAL";
+ankle_marker_name = "LatMal";
 knee_marker_name = "LatVirtualKnee";
 % Database parameters
-step_nums = [1 2]; % number of steps per trial
-db_axis = ["x", "y", "z"]; % lab frame axis: [walking direction, other direction, up]
+step_nums = [1]; % number of steps per trial
+db_axis = ["x", "z", "y"]; % lab frame axis: [walking direction, other direction, up]
 
 % Which participant to test?
-participants = [1 25 49];
+participants = [24];
 n_participants = length(participants);
 sides.processed = ["right", "left"];
 cmaps = dictionary("right", "green", "left", "red");
-sides.unprocessed = ["R_", "L_"]; % How are the sides delineated in the database
+sides.unprocessed = ["Rx", "Lx"]; % How are the sides delineated in the database
 
-% How many trials to test?
-n_trials = 3;
-trials_test = [];
 
 %% Check Shank Frame Transformation
-close all
+% close all
+% How many trials to test?
+n_trials = 3;
+trials_test = [15];
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
     f = figure(Name=p + " Shank Frame");
@@ -84,6 +78,9 @@ end
 
 %% Loop over processed data
 % close all
+% How many trials to test?
+n_trials = 3;
+trials_test = [15];
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
     f = figure(Name=p + " Processed");
@@ -151,6 +148,9 @@ end
 
 %% Loop over unprocessed data
 % close all
+% How many trials to test?
+n_trials = 3;
+trials_test = [22];
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
     f = figure(Name=p + " Unprocessed");
