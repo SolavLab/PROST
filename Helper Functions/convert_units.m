@@ -1,8 +1,8 @@
-function [converted_value] = convert_units(value, unit_in_name, unit_out_name)
+ function [converted_value] = convert_units(value, unit_in_name, unit_out_name)
 %CONVERT_UNITS converts value from unit_in_name to unit_out_name.
 % Works for time, frequency, length, mass units.
 % Example usage:
-% converted_value = convert_units(value, "mm", "m");
+% converted_value = convert_units(value, "mm", "m"); % [mm] -> [m]
 
 
     length_units = dictionary(["mm" "cm" "decm" "m" "km" "inch" "foot" "mile"], [1000 100 10 1 0.001 39.3701 3.28084 0.000621371]);
@@ -26,5 +26,5 @@ function [converted_value] = convert_units(value, unit_in_name, unit_out_name)
         error("Both units need to be either of mass or of length.\n" + ...
               "The unit to convert from is %s and the unit to convert to is %s", unit_in_name, unit_out_name);
     end
-    converted_value = value * unit_out / unit_in;
+    converted_value = value .* unit_out / unit_in;
 end

@@ -1,24 +1,23 @@
 function virtual_knee = get_knee_marker(below_knee, ankle, ST_below, ST_above)
     % GET_KNEE_MARKER Calculates the trajectory of the knee from the 
-    % trajectories of the markers above and below the knee.
+    % trajectories of the markers above and below the knee for either the medial
+    % and lateral case.
     %   Input :
-    %       below_knee - trajectory of either the marker on the tibial
-    %       condyle (either lateral or medial) or the fibular head (for the
-    %       lateral case).
-    %       ankle - trajectory of the ankle for calculating the direction in
-    %       time of the knee.
-    %       ST_below, ST_above - marker locations above and below the knee
-    %       measured during standing trial.
+    %       below_knee - trajectory of the Tibial Tuberosity marker (medial) or 
+    %                    the Fibular Head marker (lateral).
+    %       ankle - trajectory of the (medial or lateral) ankle for calculating 
+    %               the direction in time of the knee.
+    %       ST_below - marker location below the knee (lateral - Fibular Head,
+    %                  medial - Tibial Tuberosity) measured during standing 
+    %                  trial.
+    %       ST_above - marker location above the knee (medial or lateral Femoral
+    %                  Epicondyle) measured during standing trial.
     %
     %       All marker trajectories are in global frame.
     %
     %   Output :
     %       virtual_knee - the trajectory of the virtual knee marker
-    %
-    % NOTE: Can I use the fibular head the same way as the tibial condyle
-    % markers? - for now yes. maybe in the future I can find some
-    % correction factor from fibular head to tibial condyle.
-    %
+
 
     % Changing trajectories to vectors in 3D space.
     if isstruct(ankle)
