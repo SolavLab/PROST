@@ -13,15 +13,16 @@ set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows
 db_list = ["DB_1", "./DB1/DB_1.mat"; "DB_2", "./DB2/DB_2.mat"; "DB_3", "./DB3/DB_3.mat"];
 
 var_names = db_list(:, 1);
-dataset_paths = split(db_list(:, 2), "/");
-if iscolumn(dataset_paths)
-    dataset_paths = dataset_paths';
-end
 for index = 1:length(var_names)
     if ~exist(var_names(index), "var")
         load(db_list(index, 2))
     end
 end
+
+% dataset_paths = split(db_list(:, 2), "/");
+% if iscolumn(dataset_paths)
+%     dataset_paths = dataset_paths';
+% end
 % build_names = replace("build_database_" + dataset_paths(:, end), "mat", "m");
 % dataset_paths(:, end) = build_names(:);
 % for index = 1:length(var_names)
@@ -40,29 +41,40 @@ close all
 %               path to the dataset. Example:
 %               {"DB 1 Name", "path/to/DB1.mat"; "DB 2 Name", "path/to/DB2.mat"}
 load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)"; DB_3, "Lencioni et. al. (2019)"};
+n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
-[obj, dataset_ids] = ROSAnalyzer(load_list);
+[obj, dataset_ids] = ROSAnalyzer.ROSAnalyzer(load_list);
 DB_1_ID = dataset_ids(1);
 DB_2_ID = dataset_ids(2);
 DB_3_ID = dataset_ids(3);
 
 %% Clean data
-%   ignore_list - list of trials to ignore (left and right steps per 
-%                 participant. A cell array of the form:
-%                 {DB ID, [participants_to_ignore_left], [participants_to_ignore_right]}
-ignore_list = {DB_1_ID, [3 5 14 15 16], [5 14 15 16]; DB_2_ID, [31], []; DB_3_ID, [43, 47], []};
-% obj.filter_data_by_id(ignore_list);
+% Some participants have bad data and should be ignored so we add them to an
+% ignored list
+ignore_list = ROSAnalyzer.ROSIgnore();
+ignore_list.add_ignored(DB_1_ID, [3 5 14 15 16], [], "Left");
+ignore_list.add_ignored(DB_1_ID, [5 14 15 16], [], "Right");
+ignore_list.add_ignored(DB_2_ID, [31], [], "Left");
+ignore_list.add_ignored(DB_3_ID, [43, 47], [], "Left");
+
+obj.IgnoreList = ignore_list;
+obj.clean_data();
+%% Add to samples table data from datasets
+for index=1:n_datasets
+    dataset_name = obj.get_dataset_name(dataset_ids(index));
+    obj.add_samples(dataset_ids(index));
+end
 
 %% Plot data
 % close all
-obj.plot_ros({2, [2 19 20 27 29 30 33 42 48 50]; 3 [11 14 17 18 22 25 27 28 30 34 38 39 40 42 48]}, 1);
+obj.plot_ros({}, 1, 'off');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
-figure(Name="Residuals Histogram vs Normal Distribution Comparison");
-residuals = obj.get_sample_var("Residual");
-is_shod = obj.get_sample_var("Is_shod");
+figure(Name="Histogram:Residuals Histogram vs Normal Distribution Comparison");
+residuals = table2array(obj.get_samples("Residual");
+is_shod = obj.get_samples("Is_shod");
 shod_residuals = residuals(is_shod == "Yes");
 not_shod_residuals = residuals(is_shod == "No");
 
@@ -105,7 +117,7 @@ height = convert_units(obj.get_sample_var("Height"), "m", "mm");
 normalized_radius = radius./height;
 normalized_center_x = center_x./height;
 
-f = figure(Name="Normalized Radius Histogram vs Normal Distribution Comparison");
+f = figure(Name="Histogram:Normalized Radius Histogram vs Normal Distribution Comparison");
 h_radius = histogram(normalized_radius);
 h_radius.Normalization = 'count';
 h_radius.BinWidth = 0.1;
@@ -118,7 +130,7 @@ h.BinEdges = edges;
 title(replace(f.Name, "_", " "))
 xlabel("Normalized Radius [m/m]")
 
-f = figure(Name="Normalized Center x Histogram vs Normal Distribution Comparison");
+f = figure(Name="Histogram:Normalized Center x Histogram vs Normal Distribution Comparison");
 h_center_x = histogram(normalized_center_x);
 h_center_x.Normalization = 'count';
 h_center_x.BinWidth = 0.1;
@@ -139,4 +151,4 @@ obj.plot_features_vs_labels([], ["Radius" "Center_x"])
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-% save_all_open_figures("./figures/ROS Analysis/FMinUnc", "fig")
+save_all_open_figures("./figures/ROS Analysis", [], "fig")
