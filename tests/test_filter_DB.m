@@ -10,7 +10,7 @@ side = "left";
 participant_name = dataset.Data(participant_id).Participant_name;
 
 step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
-shank_cop = ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
 x = shank_cop.x(~isnan(shank_cop.x));
 y = shank_cop.y(~isnan(shank_cop.y));
 z = shank_cop.z(~isnan(shank_cop.z));
@@ -56,13 +56,13 @@ ylabel("dx [mm]")
 %%
 participant_id = 24; % 2014001
 participant_name = dataset.Data(participant_id).Participant_name;
-for side = ["left"]
+for side = ["right"]
     trials = dataset.Data(participant_id).Processed_data.(side).step;
     n_trials = length(trials);
     for trial_num=1:n_trials
         step = trials(trial_num);
         trial_name = step.source.original_trial;
-        shank_cop = ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+        shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
         
         figure
         tiledlayout(2,2)
@@ -122,7 +122,7 @@ for participant_id=1:n_participants
         for trial_num=1:n_trials
             step = trials(trial_num);
             trial_name = step.source.original_trial;
-            shank_cop = ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+            shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
 
             x = shank_cop.x(~isnan(shank_cop.x));
             y = shank_cop.y(~isnan(shank_cop.y));
@@ -160,7 +160,7 @@ for i=1:length(bad_trials)
     participant_name = dataset.Data(participant_id).Participant_name;
     step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
     trial_name = step.source.original_trial;
-    shank_cop = ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+    shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
 
     figure
     tiledlayout(2,2)
