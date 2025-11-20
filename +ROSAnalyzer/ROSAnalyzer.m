@@ -12,9 +12,8 @@ classdef ROSAnalyzer < handle
     % ___________________________
     properties(Constant)
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
-        % NUM_ANATOMICAL_SIDES = 1; % Number of possible anatomical sides from "lateral", "medial", "mean"
     end
-    properties(Access=public) % TODO: Make private at end of debugging
+    properties(Access=public)
         DataRecords = struct([]); % Data records
         SamplesTable = table; % Unified table of all participant data
         SummaryTable = table; % Summary information of the datasets
@@ -22,13 +21,13 @@ classdef ROSAnalyzer < handle
         SamplesTableSize = 0; % Size of the populated part of the samples table
         SummaryTableSize = 0; % Size of the populated part of the summary table
         PointClouds = {}; % Cell array of all point clouds.
-        IgnoreList = cell(0, 3); % Cell array of all ignored participants
+        IgnoreList = ROSAnalyzer.ROSIgnore(); % List of ignored trials
         FirstUniqueDatasetId = 1; % Counter for generating unique dataset IDs.
     end
 
     %% PUBLIC METHODS
     methods
-        %% Constructor
+        %% Constructor and Destructor
         function [obj, dataset_ids] = ROSAnalyzer(load_list)
         %ROS Constructor
         % Input :
@@ -72,9 +71,9 @@ classdef ROSAnalyzer < handle
                     dataset = load_list{index, 2};
                     dataset_name = load_list{index, 1};
                 else
-                    error("ROSAnalyzer:LoadList:WrongFormat", ...
+                    error(ROSError("LoadList", "WrongFormat", ...
                         "Load list is not in the correct format.\n" + ...
-                        "Each element should be a pair of dataset and dataset name.")
+                        "Each element should be a pair of dataset and dataset name."));
                 end
                 disp("Adding dataset " + dataset_name + " to data records...")
                 dataset_ids(index) = obj.add_to_data_records(dataset_name, dataset);
@@ -108,15 +107,9 @@ classdef ROSAnalyzer < handle
             samples_table.Properties.VariableDescriptions = samples_var_descriptions;
             obj.SamplesTable = samples_table;
             obj.SamplesTableSize = 0;
-            % Add to samples table data from datasets
-            for index=1:n_datasets
-                dataset_name = obj.get_dataset_name(dataset_ids(index));
-                disp("Adding dataset " + dataset_name + " to samples table...")
-                obj.add_to_samples_table(dataset_ids(index));
-            end
         end
 
-        %% Getters/Setters
+        %% Getters and Setters
         function dataset = get_dataset(obj, dataset_id)
         %GET_DATASET returns the dataset object from the data records with 
         % the given ID. If there is no dataset with the ID, returns an 
@@ -141,13 +134,12 @@ classdef ROSAnalyzer < handle
         %   dataset_id - the ID of the dataset. A positive integer number.
         %   dataset - the dataset object.
             
-            if obj.dataset_exists(dataset_id)
-                index = obj.DataRecordsIDLookup(dataset_id);
-                obj.DataRecords(index) = dataset;
-            else
-                error("ROSAnalyzer:DataRecords:MissingDataset", ...
-                      "Dataset %d not in data records.", dataset_id)
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
             end
+            index = obj.DataRecordsIDLookup(dataset_id);
+            obj.DataRecords(index) = dataset;
         end
         function dataset_name = get_dataset_name(obj, dataset_id)
         %GET_DATASET_NAME returns the name of the dataset with the given 
@@ -162,73 +154,61 @@ classdef ROSAnalyzer < handle
                 index = obj.DataRecordsIDLookup(dataset_id);
                 dataset_name = obj.DataRecords(index).Dataset_name;
             else
-                dataset_name = "";
+                dataset_name = missing;
             end
         end
-        function [samples, entry_numbers] = get_sample_entry(obj, dataset_id, participant_id, side, anatomical_side)
-        %GET_SAMPLE_ENTRY returns the entry numbers and sample entries from the 
-        % samples table given the dataset IDs, participant IDs, sides and 
-        % anatomical sides. Returns empty table and empty array if does not 
-        % exist.
+        function set_dataset_name(obj, dataset_id, dataset_name)
+        %SET_DATASET_NAME sets the name of the dataset with the given 
+        % dataset ID to the new name.
         % Input :
-        %   dataset_id - the dataset ID for the requested entry. A positive 
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   dataset_name - the new name to set.
+       
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                    "Dataset %d not in data records.", dataset_id));
+            end
+            index = obj.DataRecordsIDLookup(dataset_id);
+            obj.DataRecords(index).Dataset_name = dataset_name;
+        end
+        function [samples, row_numbers, var_names] = get_samples(obj, var_list, varargin)
+        %GET_SAMPLES returns the sample entries and row numbers of all variables 
+        % in 'var_list' from the samples table given the dataset IDs, 
+        % participant IDs and sides. 
+        % Returns empty table and empty array if does not exist.
+        % Input :
+        %   var_list - the variable name or list of variable names. Must be a 
+        %              string array or character cell array.
+        %   dataset_id - the dataset ID for the requested entries. A positive
         %                integer number. Could be a vector of IDs.
-        %   participant_id - the participant ID for the requested entry. A 
+        %   participant_id - the participant ID for the requested entry. A
         %                    positive integer number. Could be a vector of IDs.
-        %                    Default: all participants of the dataset with 
-        %                    ID dataset_id (except those ignored).
-        %   side - the side for the requested entry. Could be a vector of both
-        %          "left" and "right".
-        %          Default: ["left", "right"].
-        %   anatomical_side - the anatomical side for the requested entry. Could
-        %                     be a vector of multiple anatomical sides.
-        %                     Default: "lateral".
+        %                    Default: all participants of the dataset with
+        %                    ID dataset_id included in the samples data.
+        %   side - the side for the requested entry. Either "left", "right" or
+        %          both ["left", "right"]. Default: ["left", "right"]
         % Output :
-        %   samples - the entry/entries in the samples table.
-        %   entry_numbers - the row number/s of the entry/entries in the samples 
-        %                   table. 
-            
-            if nargin < 5
-                anatomical_side = "lateral";
-            end
-            if nargin < 4
-                side = ["left" "right"];
-            end
-            if nargin == 2
-                dataset = obj.get_dataset(dataset_id);
-                if isempty(dataset)
-                    entry_numbers = [];
-                    samples = table;
-                    return
-                end
-                participant_id = [dataset.Data(:).Participant_id];
-            end
-            side_rows = ismember(obj.SamplesTable.Side, side);
-            anatomical_side_rows = ismember(obj.SamplesTable.Anatomical_side, anatomical_side);
-            participant_rows = ismember(obj.SamplesTable.Participant_id, participant_id);
-            dataset_rows = ismember(obj.SamplesTable.Dataset_id, dataset_id);
-            entry_numbers = find(dataset_rows & participant_rows & side_rows & anatomical_side_rows);
-            if isempty(entry_numbers)
-                samples = table;
-            else
-                samples = obj.SamplesTable(entry_numbers, :);
-            end
-        end
-        function var = get_sample_var(obj, list)
-        %GET_SAMPLE_VAR returns a table of all variables in list from the 
-        % samples table.
-        % Input :
-        %   list - the variable name or list of variable names. Must be a string 
-        %          array or character cell array.
-        % Output :
-        %   var - the sample table entries for the variables in list.
+        %   samples - the entries in the samples table.
+        %   row_numbers - the row numbers of the entries in the samples table.
+        %   var_names - the names of the variables that are returned.
+        % Usage :
+        %   get_samples(var_list, dataset_id, participant_id, side)
+        %   get_samples(var_list, dataset_id, participant_id)
+        %   get_samples(var_list, dataset_id)
+        %   get_samples(var_list)
+        %   get_samples([], dataset_id, participant_id, side)
+        %   get_samples([], dataset_id, participant_id)
+        %   get_samples([], dataset_id)
 
-            idx = ismember(list, string(obj.SamplesTable.Properties.VariableNames));
-            if ~any(idx)
-                error("ROSAnalyzer:SamplesTable:VariableDoesNotExist", ...
-                      "The variables " + string(mat2str(list)) + " do not exist.")
+            row_numbers = 1:obj.SamplesTableSize;
+            var_names = string(obj.SamplesTable.Properties.VariableNames);
+            if nargin > 2 && ~isempty(varargin)
+                [~, row_numbers] = obj.get_sample_entry(varargin{:});
             end
-            var = obj.SamplesTable{1:obj.SamplesTableSize, list(idx)};
+            if ~isempty(var_list)
+                [~, var_names] = obj.get_sample_var(var_list);
+            end
+                samples = obj.SamplesTable(row_numbers, var_names);
         end
         function [features, names, units, types] = get_features(obj, list)
         %GET_FEATURES returns a table of all features (anthropometric data) in 
@@ -246,8 +226,8 @@ classdef ROSAnalyzer < handle
                 idx = idx & ismember(string(obj.SamplesTable.Properties.VariableNames), list);
             end
             if ~any(idx)
-                error("ROSAnalyzer:SamplesTable:FeatureDoesNotExist", ...
-                      "The features " + string(mat2str(list)) + " do not exist.")
+                error(ROSError("SamplesTable", "FeatureDoesNotExist", ...
+                               "The features %s do not exist.", string(mat2str(list))));
             end
             names = obj.SamplesTable.Properties.VariableNames(idx);
             units = obj.SamplesTable.Properties.VariableUnits(idx);
@@ -270,8 +250,8 @@ classdef ROSAnalyzer < handle
                 idx = idx & ismember(string(obj.SamplesTable.Properties.VariableNames), list);
             end
             if ~any(idx)
-                error("ROSAnalyzer:SamplesTable:LabelDoesNotExist", ...
-                      "The labels " + string(mat2str(list)) + " do not exist.")
+                error(ROSError("SamplesTable", "LabelDoesNotExist", ...
+                      "The labels %s do not exist.", string(mat2str(list))));
             end
             names = obj.SamplesTable.Properties.VariableNames(idx);
             units = obj.SamplesTable.Properties.VariableUnits(idx);
@@ -308,24 +288,15 @@ classdef ROSAnalyzer < handle
         %   var - the summary table entries for variable var_name.
 
             if ~isStringScalar(var_name) && (~ischar(var_name) || isrow(var_name))
-                error("ROSAnalyzer:SummaryTable:WrongFormat", ...
-                      "Summary table variable name must be a string scalar or character row vector.")
+                error(ROSError("SummaryTable", "WrongFormat", ...
+                               "Summary table variable name must be a string scalar or character row vector."));
             elseif ~ismember(var_name, obj.SummaryTable.Properties.VariableNames)
-                error("ROSAnalyzer:SummaryTable:UnrecognizedVariableName", ...
-                      "'%s' is not a variable name of the summary table.", var_name)
+                error(ROSError("SummaryTable", "UnrecognizedVariableName", ...
+                               "'%s' is not a variable name of the summary table.", var_name));
             end
             var = obj.SummaryTable.(var_name)(1:obj.SummaryTableSize);
         end
-        function ignore_num = get_num_ignored(obj, dataset_id)
-        %GET_NUM_IGNORED returns the number of ignored trials (both left
-        % and right) in ignored list of the given dataset.
-        % Input : 
-        %   dataset_id - the ID of the dataset. A positive integer number.
-        % Output :
-        %   ignore_num - number of ignored trials.
         
-            ignore_num = numel([obj.IgnoreList{obj.IgnoreList{:, 1} == dataset_id, 2:3}]);
-        end
 
         %% Modifiers
         function dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right)
@@ -349,7 +320,7 @@ classdef ROSAnalyzer < handle
             obj.add_to_summary_table(dataset_id);
             
             % Add to samples table
-            obj.add_to_samples_table(dataset_id);
+            obj.add_samples(dataset_id);
 
             % Add to ignore list if there are participants to ignore
             if nargin == 4
@@ -381,49 +352,107 @@ classdef ROSAnalyzer < handle
             obj.delete_from_summary_table(index);
 
             % Delete from samples table
-            obj.delete_from_samples_table(dataset_id);
+            obj.delete_samples(dataset_id);
             
         end
-        
-        % TODO: add functionality to add_participant. I need to figure our
-        % how I add label parameters to samples table.
-        % function add_participant(obj, dataset_id, participant_name, metadata, processed_data, participant_id)
-        %     dataset = obj.get_dataset(dataset_id);
-        %     if isempty(dataset)
-        %         error("ROSAnalyzer:DataRecords:MissingDataset", ...
-        %               "Dataset %d not in data records.", dataset_id)
-        %     end
-        % 
-        %     disp("Adding to datarecords: participant " + participant_id + " to dataset " + dataset_id + "...")
-        %     participant_ids = [obj.data_records(dataset_id).Data(:).Participant_id];
-        %     if nargin < 6 || ~ismember(participant_id, participant_ids)
-        %         participant_id = length(participant_ids) + 1;
-        %     end
-        %     obj.data_records(dataset_id).Data(participant_id).Participant_id = participant_id;
-        %     obj.data_records(dataset_id).Data(participant_id).Participant_name = participant_name;
-        %     obj.data_records(dataset_id).Data(participant_id).Anthropometric_data = metadata;
-        %     obj.data_records(dataset_id).Data(participant_id).Processed_data = processed_data;
-        % 
-        %     disp("Updating number of participants in summary table for dataset " + dataset_id + "...")
-        %     [~, index] = obj.get_summary_entry(dataset_id);
-        %     obj.summary_table.Num_Participants(index) = obj.summary_table.Num_Participants(index) + 1;
-        % 
-        %     disp("Adding to samples table: participant " + participant_id + " to dataset " + dataset_id + "...")
-        %     obj.populate_table
-        % end
+        function clean_data(obj)
+            disp("Filtering ignored data...")
+            obj.filter_data_by_ignore();
+        end
+        function add_samples(obj, dataset_id)
+            %ADD_SAMPLES processes the dataset and adds to samples table.
+            % Input :
+            %   dataset_id - the ID of the dataset to add to the samples
+            %                table. A positive integer number.
+
+            % Get the dataset
+            dataset = obj.get_dataset(dataset_id);
+            dataset_name = dataset.Dataset_name;
+            disp("Adding dataset " + dataset_name + " to samples table...")
+            % Calculate number of rows needed to add to table
+            n_participants = length(dataset.Data);
+            start_row = obj.SamplesTableSize + 1;
+            if isempty(start_row)
+                start_row = 1;
+            end
+            numRows = obj.NUM_SIDES*n_participants - (height(obj.SamplesTable) - obj.SamplesTableSize);
+
+            % Allocate new rows to samples table
+            if numRows > 0
+                new_table = table('Size', [numRows, width(obj.SamplesTable)], ...
+                    'VariableTypes', replace(obj.SamplesTable.Properties.VariableTypes, 'double', 'doublenan'), ...
+                    'VariableNames', obj.SamplesTable.Properties.VariableNames);
+                obj.SamplesTable = [obj.SamplesTable; new_table];
+            end
+
+            % Add new data
+            obj.populate_table(dataset_id, start_row);
+        end
+        function delete_samples(obj, flag, varargin)
+        %DELETE_SAMPLES deletes the sample entries from the samples table given 
+        % the dataset IDs, participant IDs, sides.
+        % Input :
+        %   flag - indicates whether the samples are identified by row_number or
+        %          by ('dataset_id', 'participant_id', 'side'). 'r' for row
+        %          number, 'i' for IDs.
+        %   dataset_id - the dataset ID for the requested entry. A positive 
+        %                integer number. Could be a vector of IDs.
+        %   participant_id - the participant ID for the requested entry. A 
+        %                    positive integer number. Could be a vector of IDs.
+        %                    Default: all participants of the dataset with 
+        %                    ID dataset_id (except those ignored).
+        %   side - the side for the requested entry. Could be a vector of both
+        %          "left" and "right".
+        %          Default: ["left", "right"].
+        %   anatomical_side - the anatomical side for the requested entry. Could
+        %                     be a vector of multiple anatomical sides.
+        %                     Default: "lateral".
+        %   row_number - row numbers in samples table to delete.
+        % Usage :
+        %   delete_from_samples_table(1, [1 2 3], "left")
+        %   delete_from_samples_table(1)
+        %   delete_from_samples_table('r', [1 10 25])
+            
+            
+            % Extract Inputs
+            if strcmp(flag, 'r')
+                row_numbers = varargin;
+            elseif strcmp(flag, 'i')
+                [~, row_numbers] = obj.get_sample_entry(varargin{:});
+            end
+
+            if isempty(row_numbers)
+                return
+            end
+            dataset_name = unique(obj.SamplesTable.Dataset_name(row_numbers));
+            disp("Deleting dataset " + join(dataset_name, ", ") + " from samples table...")
+            obj.SamplesTable(row_numbers, :) = [];
+            obj.SamplesTableSize = obj.SamplesTableSize - length(row_numbers);
+            obj.PointClouds(row_numbers) = [];
+        end
+        % TODO: add functionality to add_participant. I need to figure out
         % TODO: Create delete_participant function
 
         %% Plot Functions
-        function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig)
+        function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type)
         %PLOT_FEATURES_VS_LABELS plots the features (anthropometric parameters)
         % v.s. the labels (ROS parameters).
         % Input :
         %   features_list - list of anthropometric parameters to plot.
         %   labels_list - list of ROS parameters to plot.
         %   number_of_axes_in_fig - number of axes per figure to plot.
+        %   show - whether to show the figures or save them. Either 'on'
+        %          (default) for showing the figures or 'off' for saving them.
+        %   file_type - the type to save the figure if saved.
 
-            % Prep plotting list
-            disp("Plotting Features vs Labels...")
+           disp("Plotting Features vs Labels...")
+           % Prep Input Arguments
+           if nargin < 6
+                file_type = [];
+            end
+            if nargin < 5
+                show = 'on';
+            end
             if nargin < 3
                 labels_list = {};
             end 
@@ -436,15 +465,17 @@ classdef ROSAnalyzer < handle
             [labels, label_names, label_units, label_types] = obj.get_labels(labels_list);
             n_features = numel(feature_names);
             n_labels = numel(label_names);
+            
+            % Prep Input Arguments
             if nargin < 4
                 number_of_axes_in_fig = length(label_names);
             end
-            
+
             % Get Sides
-            sides = obj.get_sample_var("Side");
-            
+            sides = table2array(obj.get_sample_var("Side"));
+
             % Get Residuals
-            residuals = obj.get_sample_var("Residual");
+            residuals = table2array(obj.get_sample_var("Residual"));
             r_left  = residuals(sides=="left");
             r_right = residuals(sides=="right");
 
@@ -464,34 +495,40 @@ classdef ROSAnalyzer < handle
 
             % Define Marker Parameters
             marker = "o";
+            marker_face_alpha = 0.6;
+            line_width = 2;
+            line_style = "--";
+            line_color = "black";
 
             % Start plotting
             axes_counter = 0;
             fig_counter = 0;
+            if strcmp(show, 'off')
+                    disp("Saving figures...")
+            end
             for feature_index=1:n_features
                 for label_index=1:n_labels
                     % Get feature data
                     x = features{:, feature_index};
-                    x_left  = x(sides=="left");
-                    x_right = x(sides=="right");
+                    x_left  = x(sides == "left");
+                    x_right = x(sides == "right");
                     x_unit = replace(feature_units{feature_index}, "_", " ");
                     x_name = replace(feature_names{feature_index}, "_", " ");
                     x_type = feature_types{feature_index};
-                    % x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
+                    x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
                     
                     % Get label data
                     y = labels{:, label_index};
-                    y_left  = y(sides=="left");
-                    y_right = y(sides=="right");
                     y_unit = replace(label_units{label_index}, "_", " ");
                     y_name = replace(label_names{label_index}, "_", " ");
                     y_type = label_types{label_index};
-                    % y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
-                                                           
+                    y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
+                    
+
                     % Create new figure for new set of axes
                     if axes_counter == 0
                         fig_counter = fig_counter + 1;
-                        fig  = figure(Name=x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + " Plot " + fig_counter);
+                        fig  = figure(Name="Features vs Labels: " + x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + " Plot " + fig_counter, Visible=show);
                         tiledlayout(fig)
                         sgtitle(fig, fig.Name)
                     end
@@ -507,27 +544,51 @@ classdef ROSAnalyzer < handle
                     end
                     y_label = y_name;
                     if ~isempty(y_unit)
-                       y_label = y_label + " [" + y_unit + "]";
+                       y_label = y_label +  " [" + y_unit + "]";
                     end
 
-                    % Plot
-                    % if ~x_numeric && ~iscategorical(x)
-                    %     x = categorical(replace(string(x), "_", " "));
-                    % end
-                    % if ~y_numeric && ~iscategorical(y)
-                    %     y = categorical(replace(string(y), "_", " "));
-                    % end
+                    % Normalize and calculate linear regression if numeric
+                    if x_numeric && y_numeric
+                        % Normalize label values
+                        height = convert_units(table2array(obj.get_samples("Height")), "m", "mm");
+                        y_norm = y ./ height; % normalized label
+                        y_left  = y_norm(sides == "left");
+                        y_right = y_norm(sides == "right");
+                        y_label = y_name + " / height";
 
+                        % Create linear model
+                        X = [ones(size(x)), x];   % intercept + predictor
+                        b = X \ y_norm;           % regression coefficients
+    
+                        y_pred = X * b;
+    
+                        SSres = sum((y_norm - y_pred).^2);
+                        SStot = sum((y_norm - mean(y_norm)).^2);
+                        Rsquared = 1 - SSres/SStot;
+                    end
+                    
                     % Plot both sides
-                    h_left = scatter(ax, x_left,  y_left,  sz_left,  color_left, marker, 'filled', MarkerFaceAlpha=0.6);
-                    h_right = scatter(ax, x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=0.6);
-
+                    h_left = scatter(ax, x_left, y_left, sz_left, color_left, marker, 'filled', MarkerFaceAlpha=marker_face_alpha);
+                    h_right = scatter(ax, x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=marker_face_alpha);
+                    
+                    % Set axis limits
                     xlim(ax, 'padded');
                     ylim(ax, 'padded');
+
+                    % Plot regression model if numeric
+                    if x_numeric && y_numeric
+                        plot(ax, x, y_pred, LineWidth=line_width, LineStyle=line_style, Color=line_color);
+                        x_limits = xlim(ax);
+                        y_limits = ylim(ax);
+                        text(ax, x_limits(1), y_limits(2) - 0.25, "Rsquared = " + Rsquared, FontSize=12, FontWeight="bold", Color=line_color)   
+                        % title(ax, "Rsquared: " + Rsquared)
+                    end
+
+                    % Set axis params
                     xlabel(ax, x_label);
                     ylabel(ax, y_label);
                     grid(ax, "on");
-                    if strcmp(x_unit, y_unit)
+                    if ~isempty(x_unit) && ~isempty(y_unit) && strcmp(x_unit, y_unit)
                         axis(ax, 'equal');
                     end
 
@@ -537,12 +598,20 @@ classdef ROSAnalyzer < handle
                     % % Create legend/colorbar
                     if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
                         legend([h_left h_right], ["Left" "Right"], Location="east", FontSize=12)
+
+                        if strcmp(show, 'off')
+                            obj.save_figure(fig, [], "Features vs Labels", file_type);
+                        end
+
                         axes_counter = 0;
                     end
                 end
             end
+            if strcmp(show, 'off')
+                disp("All figures saved.")
+            end
         end
-        function plot_ros(obj, who_to_plot, number_of_axes_in_fig)
+        function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
         %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc for all
         % participants in who_to_plot.
         % Input :
@@ -553,9 +622,18 @@ classdef ROSAnalyzer < handle
         %                 participants of all datasets if non are provided.
         %   number_of_axes_in_fig - number of axes per figure to plot. 
         %                           Default: 6.
+        %   show - whether to show the figures or save them. Either 'on'
+        %          (default) for showing the figures or 'off' for saving them.
+        %   file_type - the type to save the figure if saved.
             
-            % Prep plotting list
             disp("Plotting ROS...")
+            % Prep Input Arguments
+            if nargin < 5
+                file_type = [];
+            end
+            if nargin < 4
+                show = 'on';
+            end
             if nargin < 3
                 number_of_axes_in_fig = 6;
             end
@@ -571,22 +649,31 @@ classdef ROSAnalyzer < handle
                     who_to_plot{who_index, 2} = [dataset.Data.Participant_id];
                 end
             end
-            
+
             % Set plot parameters
             x_limits = [-100 200];
             y_limits = [-100 50];
             color_arc = dictionary(["right" "left"], {[0 0.5 0.4] [0.5, 0.0, 0.4]});
-            color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
-            marker_size = 7;
+            color_scatter = dictionary(["right" "left"], {summer autumn});
+            % color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
+            marker_size = 3;
+            markers = 'o+*.xsdv><phn';
             line_width = 2;
             x_label = "x [mm]";
             y_label = "z [mm]";
 
             % Start plotting
             fig_counter = 0;
+            if strcmp(show, 'off')
+                disp("Saving figures...")
+            end
             for who=who_to_plot'
                 axes_counter = 0;
                 dataset_id = who{1};
+                if ~obj.dataset_exists(dataset_id)
+                    error(ROSError("DataRecords", "MissingDataset", ...
+                        "Dataset %d not in data records.", dataset_id));
+                end
                 dataset_name = obj.get_dataset_name(dataset_id);
                 participants = who{2};
                 for participant_id=participants
@@ -598,10 +685,8 @@ classdef ROSAnalyzer < handle
                     % Create new figure for new set of axes
                     if axes_counter == 0
                         fig_counter = fig_counter + 1;
-                        fig  = figure(Name="ROS Plot " + fig_counter);
+                        fig  = figure(Name="ROS PLots: " + dataset_name + " Plot " + fig_counter, Visible=show);
                         tiledlayout(fig)
-                        % sgtitle_name = "Point Clouds and Fitted Arcs " + fig_counter;
-                        % sgtitle(fig, sgtitle_name)
                     end
 
                     % Initialize axis
@@ -630,6 +715,7 @@ classdef ROSAnalyzer < handle
                         % Assuming point_cloud is an Nx3 matrix with columns: x, z, num_trial
                         x = point_cloud(:, 1);
                         z = point_cloud(:, 2);
+                        trial_num = point_cloud(:, 3);
                        
                         % Get arc parameters
                         [radius, center_x, center_z, ang_start, ang_end, residual] = ...
@@ -640,14 +726,16 @@ classdef ROSAnalyzer < handle
                         
                         % Calculate arc values
                         ang_vec = linspace(ang_start, ang_end, length(x));
-                        arc_points = [center_x + radius*sind(ang_vec); center_z - radius*cosd(ang_vec)];
+                        ang_sign = sign(z - center_z);
+                        arc_points = [center_x + radius*sind(ang_vec); center_z + radius.*ang_sign.*cosd(ang_vec)];
                         circle_vec = linspace(0, 360, length(x));
                         circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
 
                         % Plot point cloud and arc                       
                         % scatter(ax, x, z, marker_size, color_scatter{side}, '.'); % point cloud
-                        plot(ax, arc_points(1, :), arc_points(2, :), '-', Color= color_arc{side}, LineWidth=line_width); % fitted arc
-                        % plot(ax, circle_points(1, :), circle_points(2, :), '--', Color= color_arc{side}, LineWidth=line_width); % fitted circle
+                        gscatter(x, z, trial_num, color_scatter{side}, markers, marker_size, 'off', "filled");
+                        plot(ax, arc_points(1, :), arc_points(2, :), '-', Color=color_arc{side}, LineWidth=line_width); % fitted arc
+                        plot(ax, circle_points(1, :), circle_points(2, :), '--', Color=color_arc{side}, LineWidth=line_width); % fitted circle
                         plot(ax, center_x, min(circle_points(2, :)), 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size); % nadir
                         
                         % Print parameter values and residual
@@ -668,7 +756,8 @@ classdef ROSAnalyzer < handle
                         h = gobjects(n_sides*4, 1);
                         for i=1:n_sides
                             side = sides(i);
-                            h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}, '.', DisplayName=side);
+                            % h(i) = gscatter(NaN, NaN(size, 1, color_scatter{side}, markers, marker_size, "filled");
+                            h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}(1, :), markers(1), DisplayName=side);
                             h(i + 2) = plot(ax, NaN, NaN, '-', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted arc");
                             h(i + 4) = plot(ax, NaN, NaN, '--', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted circle");
                             h(i + 6) = plot(ax,  NaN, NaN, 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size, DisplayName=string(side) + " nadir");
@@ -676,17 +765,37 @@ classdef ROSAnalyzer < handle
                         
                         lgd = legend(h, FontSize=9);
                         lgd.Layout.Tile = 'east';
+                        
+                        if strcmp(show, 'off')
+                            obj.save_figure(fig, [], "ROS PLots", file_type);
+                        end
+
                         axes_counter = 0;
                     end
                 end
             end
+            if strcmp(show, 'off')
+                disp("All figures saved.")
+            end
         end
-        function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj)
+        function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type)
         %PLS_ANALYSIS calculates the Partial Least Squares regression of
         % the sample data and plots percent variance.
+        % Input :
+        %   show - whether to show the figures or save them. Either 'on'
+        %          (default) for showing the figures or 'off' for saving them.
+        %   file_type - the type to save the figure if saved.
         % Output :
         %   XL, YL, XS, YS, BETA, PCTVAR, MSE, stats – PLS regression 
         %   parameters as described in the plsregress documentation.
+            
+            % Prep Input Arguments
+            if nargin < 3
+                file_type = [];
+            end
+            if nargin < 2
+                show = 'on';
+            end
 
             % Get features
             [features, feature_names, ~, features_types] = obj.get_features();
@@ -722,32 +831,47 @@ classdef ROSAnalyzer < handle
             [~, ~, ~, ~, ~, PCTVAR, MSE, ~] = plsregress(Xz, Yz, ncomp, Intercept=false);
             
             % Show percent variance explained in features
-            % figure(Name="PLS Percent Variance in X")
+            % fig = figure(Name="PLS:Percent Variance in X", Visible=show);
             % plot(1:ncomp, cumsum(100*PCTVAR(1, :)), '-bo');
             % xlabel('Number of PLS components');
             % ylabel('Percent Variance Explained in X');
             % grid on
+            % if strcmp(show, 'off')
+            %     disp("Saving figure...")
+            %     obj.save_figure(fig, [], "PLS", file_type);
+            %     disp("Figure saved.")
+            % end
 
             % Show percent variance explained in labels
-            figure(Name="PLS Percent Variance in Y")
+            fig = figure(Name="PLS:Percent Variance in Y", Visible=show);
             plot(1:ncomp, cumsum(100*PCTVAR(2, :)), '-bo');
             xlabel('Number of PLS components');
             ylabel('Percent Variance Explained in Y');
             grid on
+            if strcmp(show, 'off')
+                disp("Saving figure...")
+                obj.save_figure(fig, [], "PLS", file_type);
+                disp("Figure saved.")
+            end
             
-            figure
+            fig = figure(Name="PLS:MSE per Num Components", Visible=show);
             yyaxis left
             plot(0:ncomp, MSE(1,:),'-o')
             yyaxis right
             plot(0:ncomp, MSE(2,:),'-o')
             legend('MSE Predictors','MSE Response')
             xlabel('Number of Components')
+            if strcmp(show, 'off')
+                disp("Saving figure...")
+                obj.save_figure(fig, [], "PLS", file_type);
+                disp("Figure saved.")
+            end
 
             % Calculate PLS regression
             ncomp = 8;
             [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = plsregress(Xz, Yz, ncomp, Intercept=false);
                         
-            figure(Name="PLS Fit v.s. Data")
+            fig = figure(Name="PLS:Fit v.s. Data", Visible=show);
             tiledlayout
             cmap = lines(numel(label_names));
             marker_size = 5;
@@ -785,9 +909,14 @@ classdef ROSAnalyzer < handle
                 title(label_names(k))
                 grid(ax, "on");
             end
+            if strcmp(show, 'off')
+                disp("Saving figures...")
+                obj.save_figure(fig, [], "PLS", file_type);
+                disp("All figure saved.")
+            end
         end
 
-        %% Is Functions
+        %% TF Functions
         function tf = dataset_exists(obj, dataset_id)
         %DATASET_EXISTS returns whether the dataset with the ID dataset_id
         % exists in the data records.
@@ -798,12 +927,39 @@ classdef ROSAnalyzer < handle
         %   tf - true (logical 1) if the dataset exists and false (logical 1)
         %        otherwise.
 
-            if isnumeric(dataset_id) && isscalar(dataset_id)
+            if isscalar(dataset_id) && isnumeric(dataset_id) && dataset_id > 0 && dataset_id == floor(dataset_id)
                 tf = isKey(obj.DataRecordsIDLookup, dataset_id);
             else
-                error("ROSAnalyzer:DatasetID:WrongFormat",...
-                      "Dataset ID must be a positive integer number.");
+                error(ROSError("DatasetID", "WrongFormat",...
+                      "Dataset ID should be a positive integer number."));
             end
+        end
+        function tf = participant_exists(obj, dataset_id, participant_id)
+        %PARTICIPANT_EXISTS returns whether the participant with the ID 
+        % 'participant_id' of the dataset with ID 'dataset_id' exists in the 
+        % data records.
+        % Input :
+        %   dataset_id - the ID of the dataset to check. A positive integer
+        %                number.
+        %   participant_id - the ID of the participant to check. A positive
+        %                    integer number.
+        % Output :
+        %   tf - true (logical 1) if the participant exists in the dataset and 
+        %        false (logical 1) otherwise.
+            
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
+            end
+            if isscalar(participant_id) && isnumeric(participant_id) && participant_id > 0 && participant_id == floor(participant_id)
+                index = obj.DataRecordsIDLookup(dataset_id);
+                participants = [obj.DataRecords(index).Data(:).Participant_id];
+                tf = ismember(participant_id, participants);
+            else
+                error(ROSError("ParticipantID", "WrongFormat",...
+                               "Participant ID should be a positive integer number."));
+            end
+            
         end
         function tf = is_in_samples_table(obj, dataset_id, participant_id, side, anatomical_side)
         %IS_IN_SAMPLES_TABLE returns whether a trial is in the samples table. A 
@@ -826,12 +982,12 @@ classdef ROSAnalyzer < handle
             if nargin < 4
                 side = ["left" "right"];
             end
-            if nargin < 3
-                dataset = obj.dataset_exists(dataset_id);
+            if nargin < 3   
                 if ~obj.dataset_exists(dataset_id)
                     tf = false;
                     return
                 end
+                dataset = obj.get_dataset(dataset_id);
                 participant_id = [dataset.Data(:).Participant_id];
             end
             side_rows = ismember(obj.SamplesTable.Side, side);
@@ -849,63 +1005,14 @@ classdef ROSAnalyzer < handle
         %   tf - true (logical 1) if the dataset has an entry in the summary 
         %        table and false (logical 0) otherwise.
 
-            if isnumeric(dataset_id) && isscalar(dataset_id)
+            if isscalar(dataset_id) && isnumeric(dataset_id) && dataset_id > 0 && dataset_id == floor(dataset_id)
                 tf = ismember(obj.SummaryTable.Dataset_id, dataset_id);
             else
-                error("ROSAnalyzer:DatasetID:WrongFormat",...
-                      "Dataset ID must be a positive integer number.");
+                error(ROSError("DatasetID", "WrongFormat",...
+                               "Dataset ID should be a positive integer number."));
             end
         end
-        function tf = is_ignored(obj, dataset_id, participant_id, side)
-        %IS_IGNORED Returns whether a trial is in the ignore list and 
-        % should be ignored. A trial is a combination of dataset_id, 
-        % participant_id and side.
-        % Input :
-        %   dataset_id - the ID of the dataset. A positive integer number.
-        %   participant_id - the ID of the participant for the given 
-        %                    dataset. A positive integer number.
-        %   side - Either "left" or "right".
-        % Output :
-        %   tf - true (logical 1) if trial should be ignored and false 
-        %        (logical 0) otherwise.
-            
-            % Check if ignore_list exists
-            if isempty(obj.IgnoreList)
-                tf = false;
-                return
-            end
-            % Check that the dataset ID is in the right format and only
-            % a single ID was given
-            if ~isscalar(dataset_id) && ~isnumeric(dataset_id)
-                error("ROSAnalyzer:DatasetID:WrongFormat", ...
-                      "Dataset ID should be a positive integer number.")
-            end
-            
-            % Check that the participant ID is in the right format and only
-            % a single ID was given
-            if ~isscalar(participant_id) && ~isnumeric(participant_id)
-                error("ROSAnalyzer:ParticipantID:WrongFormat", ...
-                      "Participant ID should be a positive integer number.")
-            end            
 
-            % Convert side to relevant index in ignoreList
-            if strcmp(side, "left")
-                side = 2;
-            elseif strcmp(side, "right")
-                side = 3;
-            else
-                error("ROSAnalyzer:Side:WrongFormat", "Side should be either 'left' or 'right'.")
-            end
-
-            % Check if participant is a member of the ignore list for the 
-            % given dataset and side
-            ignore_index = find(obj.IgnoreList{:, 1} == dataset_id, 1);
-            if isempty(ignore_index)
-                tf = false;
-                return
-            end
-            tf = ismember(participant_id, obj.IgnoreList{ignore_index, side});
-        end
         function tf = has_medial(obj, dataset_id)
         %HAS_MEDIAL returns true if the given dataset has medial marker 
         % data and false otherwise.
@@ -919,10 +1026,102 @@ classdef ROSAnalyzer < handle
             summary = obj.get_summary_entry(dataset_id);
             tf = summary.Has_medial;
         end
+        
+        %% Analizing Functions
+        
+        %% Ignore List
+        function tf = is_ignored(obj, dataset_id, participant_id, trials, side)
+        %IS_IGNORED Returns whether a dataset, a participant or trials of a
+        % participant are in the ignore list and should be ignored.
+        % Input :
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   participant_id - the ID of the participant for the given 
+        %                    dataset. A positive integer number.
+        %   trials - the trials of the participant. A vector of positive integer 
+        %            numbers.
+        %   side - the side of the trials to delete. Either 'Left' or 'Right'.
+        % Output :
+        %   tf - logical 1 (true) if trials should be ignored and logical 0 
+        %        (false) otherwise.
+            
+           
+            % Check if ignore_list exists
+            if isempty(obj.IgnoreList)
+                tf = false;
+                return
+            end
+            
+            % Is specific dataset ignored
+            if nargin == 2 
+                tf = obj.IgnoreList.is_ignored_dataset(dataset_id);
+                return
+            end
+
+            % Is specific participant ignored
+            if nargin == 3 
+                tf = obj.IgnoreList.is_ignored_participants(dataset_id, participant_id);
+                return
+            end
+
+            % Is are specific trials ignored
+            side = capitalize(side);
+            tf = obj.IgnoreList.is_ignored_trials(dataset_id, participant_id, trials, side);
+        end
+        function add_to_ignore(obj, dataset_id, participants, trials, side)     
+        %ADD_TO_IGNORE a wrapper function that adds the 'trials' of 
+        % 'participants' in 'dataset_id' to the ignore list.
+        % Input :
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   participants - the ID or IDs of the participants. A positive integer 
+        %                  number or vector of integer numbers. 
+        %   trials - the trials for each participant of the dataset. A vector of 
+        %            positive integer numbers.
+        %   side - the side of the trials. Either 'Left' or 'Right'. If missing 
+        %          then adds to both Left and Right.
+
+           obj.IgnoreList.add_ignored(dataset_id, participants, trials, side);
+        end
+        function delete_from_ignore(obj, dataset_id, participants, trials, side)     
+        %ADD_TO_IGNORE a wrapper function that deletes the 'trials' of 
+        % 'participants' in 'dataset_id' to the ignore list.
+        % Input :
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   participants - the ID or IDs of the participants. A positive integer 
+        %                  number or vector of integer numbers. 
+        %   trials - the trials for each participant of the dataset. A vector of 
+        %            positive integer numbers.
+        %   side - the side of the trials. Either 'Left' or 'Right'. If missing 
+        %          then adds to both Left and Right.
+
+           obj.IgnoreList.delete_ignored(dataset_id, participants, trials, side);
+        end
+        function ignore_num = get_num_ignored(obj, dataset_id, participant_id, sides)
+        %GET_NUM_IGNORED returns the number of ignored trials (both left
+        % and right) in ignored list of the given dataset and given participant.
+        % If no participant is given, checks all of them.
+        % Input : 
+        %   dataset_id - the ID of the dataset. A positive integer number.
+        %   participant_id - the ID of the dataset. A positive integer number.
+        % Output :
+        %   ignore_num - number of ignored trials.
+
+            dataset = obj.get_dataset(dataset_id);
+            ignore_num = 0;
+            for p=1:length(participant_id)
+                for side=sides
+                steps = dataset.Data.Processed_data.(side).step;
+                if isempty(steps)
+                    continue
+                end
+                trials = 1:length(steps);
+                ignored = obj.IgnoreList.is_ignored_trials(dataset_id, participant_id(p), trials, side);
+                end
+            end
+        end
     end
 
     %% PRIVATE METHODS
-    methods (Access = public) % TODO: Change to private after testing
+    methods (Access = private)
         function fit_to_circular_arc(obj, entry_number)
         %FIT_TO_CIRCULAR_ARC circle fitting from BAPAT 2022 
         % First approximate solution based on linear least squares approach
@@ -947,24 +1146,26 @@ classdef ROSAnalyzer < handle
             
             % Check if participant exists
             if entry_number > size(obj.SamplesTable, 1)
-                error("ROSAnalyzer:DataTable:MissingParticipant", ...
-                      "Participant number %d is too large.\nSamples table has %d rows.", entry_number, size(obj.SamplesTable, 1));
+                error(ROSError("SamplesTable", "MissingParticipant", ...
+                               "Participant number %d is too large.\nSamples table has %d rows.", entry_number, size(obj.SamplesTable, 1)));
             end
 
             % Check for NaN or Inf values in the point cloud
             % get point cloud of corresponding entry in samples table.
             point_cloud = obj.PointClouds{entry_number};
-            % point_cloud = point_cloud(:, 1:2);
+            point_cloud = point_cloud(:, 1:2);
             if any(isnan(point_cloud(:))) || any(isinf(point_cloud(:)))
-                error("ROSAnalyzer:PointCloud:ContainsNaNInfs", ...
-                      "Point cloud contains NaN or Inf values");
+                error(ROSError("PointCloud", "ContainsNaNInfs", ...
+                               "Point cloud contains NaN or Inf values"));
             end
+            x = point_cloud(:, 1);
+            z = point_cloud(:, 2);
             
             % 1) Find first approximate solution based on LLS approach
             % Coope 1993 paper:
             n_points = size(point_cloud, 1);
-            B = [point_cloud'; ones(1, n_points)]';
-            d = point_cloud(:, 1).^2 + point_cloud(:, 2).^2;
+            B = [[x z]'; ones(1, n_points)]';
+            d = x.^2 + z.^2;
             y = (B'*B)\(B'*d); % B is rectangular matrix hence multiplied by B'
             center_x = y(1)/2;
             center_y = y(2)/2;
@@ -977,14 +1178,14 @@ classdef ROSAnalyzer < handle
             % options = optimoptions(options,'TolFun',1e-10,'TolX',1e-10,'MaxFunEvals',100000,'MaxIter',40000);
             % Ensure initial guess does not contain NaN or Inf values
             if any(isnan(initial_guess)) || any(isinf(initial_guess))
-                error("ROSAnalyzer:CircleFit:ContainsNaNInfs", ...
-                      "Initial guess contains NaN or Inf values");
+                error(ROSError("CircleFit", "ContainsNaNInfs", ...
+                               "Initial guess contains NaN or Inf values"));
             end
 
                 % Function that calculates non-linear LSQ residual.
                 % (this function is also copied from Dana's code)
             % objective_func = @(params)(params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2));
-            objective_func = @(params)sum((params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2)).^2);
+            objective_func = @(params)sum((params(3) - sqrt((x - params(1)).^2 + (z - params(2)).^2)).^2);
             
                 % Unconstrained Least squares nonlinear fit algorithm
             % options = optimoptions('lsqnonlin', 'Display', 'off');
@@ -998,25 +1199,29 @@ classdef ROSAnalyzer < handle
 
             % 3) Get ROS parameters: angles, arc length:
                 % find ROS start point and end point
-            [~, ind] = min(point_cloud(:, 1));
+            [~, ind] = min(x);
             ros_start = point_cloud(ind, :);
-            [~, ind] = max(point_cloud(:, 1));
+            [~, ind] = max(x);
             ros_end = point_cloud(ind, :);
         
-                % calculate vectors from center to start and end points
-            vec_start = ros_start - params(1:2)';
-            vec_end = ros_end - params(1:2)';
-        
-                % calculate the arc angles (relative to the vector from the center straight down) and arc length
-            cross_product = cross([0, -1, 0], [vec_start/norm(vec_start), 0]);
-            ang_start = rad2deg(asin(cross_product(3)));
-            cross_product = cross([0, -1, 0], [vec_end/norm(vec_end), 0]);
-            ang_end = rad2deg(asin(cross_product(3)));
-            arc_length = ang_end - ang_start;
+                % circle fitting parameters
             radius = params(3);
             center_x = params(1);
             center_z = params(2);
-            
+            center = [center_x center_z];
+
+                % calculate vectors from center to start and end points
+            vec_start = ros_start - center;
+            vec_end = ros_end - center;
+
+                % calculate the arc angles (relative to the vector from the center straight down) and arc length
+            cross_vec = [0, -1, 0];
+            cross_product = cross(cross_vec, [vec_start/norm(vec_start), 0]);
+            ang_start = asind(cross_product(3));
+            cross_product = cross(cross_vec, [vec_end/norm(vec_end), 0]);
+            ang_end = asind(cross_product(3));
+            arc_length = ang_end - ang_start;
+
             % 4) Fill samples table
             obj.SamplesTable.Radius(entry_number) = radius;
             obj.SamplesTable.Center_x(entry_number) = center_x;
@@ -1049,14 +1254,15 @@ classdef ROSAnalyzer < handle
             end
 
             % for each of the good steps we want to save the x and z values
-            point_cloud = zeros(length(good_steps)*trial_size, 2);
+            point_cloud = zeros(length(good_steps)*trial_size, 3);
             for step_num=1:length(good_steps)
                 step = good_steps(step_num);
                 % ROS = step.ROS.(anatomical_side);
                 ROS = obj.cop_to_shank_frame(step, anatomical_side);
 
                 % add this step to the point cloud.
-                point_cloud((1 + (step_num - 1)*trial_size):(step_num*trial_size), :) = [ROS.x(1+cut_length:end-cut_length)', ROS.z(1+cut_length:end-cut_length)'];
+                idx = (1+cut_length:numel(ROS.x)-cut_length);
+                point_cloud((1 + (step_num - 1)*trial_size):(step_num*trial_size), :) = [ROS.x(idx)', ROS.z(idx)', step.source.original_trial_number_in_database + 0.*idx'];
             end
             
             % Check for NaN or Inf values in the lateral point cloud
@@ -1078,8 +1284,8 @@ classdef ROSAnalyzer < handle
             % Add to point_clouds cell array. Each entry corresponds to the
             % entry number in the samples table and the
             if isempty(point_cloud)
-                error("ROSAnalyzer:PointCloud:EmptyPointCloud", ...
-                      "Something went wrong with the point cloud calculation. It is empty.")
+                error(ROSError("PointCloud", "EmptyPointCloud", ...
+                               "Something went wrong with the point cloud calculation. It is empty."));
             end
             obj.PointClouds(entry_number) = {point_cloud};
         end
@@ -1095,11 +1301,11 @@ classdef ROSAnalyzer < handle
         %                     "mean". Default: lateral
 
             % Check that dataset is in data records.
-            dataset = obj.get_dataset(dataset_id);
-            if isempty(dataset)
-                error("ROSAnalyzer:DataRecords:MissingDataset", ...
-                      "Dataset %d not in data records.", dataset_id)
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
             end
+            dataset = obj.get_dataset(dataset_id);
             
             % Default anthropometric side is just lateral
             if nargin < 4
@@ -1109,15 +1315,15 @@ classdef ROSAnalyzer < handle
             % Check table is large enough for new data
             n_participants = length(dataset.Data);
             if size(obj.SamplesTable, 1) < start_row + obj.NUM_SIDES*n_participants - 1
-                error("ROSAnalyzer:SamplesTable:NotEnoughRows", ...
-                      "Not enough rows allocated to samples table.\n""" + ...
-                      "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.SamplesTable, 1));
+                error(ROSError("SamplesTable", "NotEnoughRows", ...
+                               "Not enough rows allocated to samples table.\n""" + ...
+                               "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.SamplesTable, 1)));
             end
             
             % Check if anatomical_side exists
             if ~obj.has_medial(dataset_id) && anatomical_side == "medial"
-                error("ROSAnalyzer:SamplesTable:MissingMedial", ...
-                      "Dataset does not contain medial markers.")
+                error(ROSError("SamplesTable", "MissingMedial", ...
+                               "Dataset does not contain medial markers."));
             end
 
             % Loop over participants of dataset and process data of each
@@ -1137,9 +1343,9 @@ classdef ROSAnalyzer < handle
                     if isempty(steps)
                         continue
                     end
-
-                    % Get rid of the steps with a speed that is too low (lower 
-                    % than 2.5 km/hour)
+                    
+                    % Get rid of the steps with a speed that is too low or that
+                    % should be ignored
                     good_steps = obj.get_good_steps(steps);%, 2.5);
                     % If in general they were too slow, good_steps is empty so
                     % ignore participant
@@ -1162,12 +1368,7 @@ classdef ROSAnalyzer < handle
 
                     % Fit the point cloud to a circular arc
                     % (notice that the angles ang_start and ang_end are relative to a vector pointing straight down from the center of the arc)
-                    % try
                     obj.fit_to_circular_arc(entry_num);
-                    % catch ME
-                        % disp(ME.message)
-                        % error("something's wrong with the fit function")
-                    % end
 
                     % Advance row number
                     entry_num = entry_num + 1;
@@ -1210,15 +1411,25 @@ classdef ROSAnalyzer < handle
                 obj.DataRecords(index).Data(participant_num).Participant_name = original_participant_name;
                 obj.DataRecords(index).Data(participant_num).Anthropometric_data = metadata;
                 obj.DataRecords(index).Data(participant_num).Processed_data = processed_data;
+                if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.left.step)
+                    [obj.DataRecords(index).Data(participant_num).Processed_data.left.step(:).Is_included] = deal(true);
+                end
+                if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.right.step)
+                    [obj.DataRecords(index).Data(participant_num).Processed_data.right.step(:).Is_included] = deal(true);
+                end
             end
             obj.filter_data_by_bad_steps(dataset_id)
         end
         function delete_from_data_records(obj, dataset_id, index)
             obj.DataRecords(index) = [];
+            dataset_index =  obj.DataRecordsIDLookup(dataset_id);
             obj.DataRecordsIDLookup(dataset_id) = [];
-            
+
             if numEntries(obj.DataRecordsIDLookup) > 0
-                obj.DataRecordsIDLookup(obj.DataRecordsIDLookup.keys) = obj.DataRecordsIDLookup.values - 1; % Update remaining indices in lookup table
+                keys = obj.DataRecordsIDLookup.keys';
+                values = obj.DataRecordsIDLookup.values';
+                idx = values > dataset_index;
+                obj.DataRecordsIDLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
                 obj.FirstUniqueDatasetId = max(obj.DataRecordsIDLookup.keys) + 1; % Update first unique ID NOTE: might not be needed
             else
                 obj.FirstUniqueDatasetId = 1;
@@ -1230,11 +1441,11 @@ classdef ROSAnalyzer < handle
             %   dataset_id - the ID of the dataset in data records to add. 
             %                A positive integer number.
             
-            dataset = obj.get_dataset(dataset_id);
-            if isempty(dataset)
-                error("ROSAnalyzer:DataRecords:MissingDataset", ...
-                      "dataset %d not in data records.", dataset_id)
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
             end
+            dataset = obj.get_dataset(dataset_id);
             
             % If summary table has no empty rows, allocate new row
             if obj.SummaryTableSize == height(obj.SummaryTable)
@@ -1275,91 +1486,7 @@ classdef ROSAnalyzer < handle
             obj.SummaryTable(index, :) = [];
             obj.SummaryTableSize = obj.SummaryTableSize - 1;
         end
-        function add_to_samples_table(obj, dataset_id)
-            %ADD_TO_SAMPLES_TABLE processes the dataset and adds to samples 
-            % table.
-            % Input :
-            %   dataset_id - the ID of the dataset to add to the samples
-            %                table. A positive integer number.
-
-            % Get the dataset
-            dataset = obj.get_dataset(dataset_id);
-
-            % Calculate number of rows needed to add to table
-            n_participants = length(dataset.Data);
-            start_row = obj.SamplesTableSize + 1;
-            if isempty(start_row)
-                start_row = 1;
-            end
-            numRows = obj.NUM_SIDES*n_participants - (height(obj.SamplesTable) - obj.SamplesTableSize);
-
-            % Allocate new rows to samples table
-            if numRows > 0
-                new_table = table('Size', [numRows, width(obj.SamplesTable)], ...
-                    'VariableTypes', replace(obj.SamplesTable.Properties.VariableTypes, 'double', 'doublenan'), ...
-                    'VariableNames', obj.SamplesTable.Properties.VariableNames);
-                obj.SamplesTable = [obj.SamplesTable; new_table];
-            end
-
-            % Add new data
-            obj.populate_table(dataset_id, start_row);
-        end
-        function delete_from_samples_table(obj, varargin)
-        %DELETE_FROM_SAMPLES_TABLE deletes the given entries from the samples 
-        %DELETE_FROM_SAMPLES_TABLE deletes the sample entries from the 
-        % samples table given the dataset IDs, participant IDs, sides and 
-        % anatomical sides.
-        % Input :
-        %   dataset_id - the dataset ID for the requested entry. A positive 
-        %                integer number. Could be a vector of IDs.
-        %   participant_id - the participant ID for the requested entry. A 
-        %                    positive integer number. Could be a vector of IDs.
-        %                    Default: all participants of the dataset with 
-        %                    ID dataset_id (except those ignored).
-        %   side - the side for the requested entry. Could be a vector of both
-        %          "left" and "right".
-        %          Default: ["left", "right"].
-        %   anatomical_side - the anatomical side for the requested entry. Could
-        %                     be a vector of multiple anatomical sides.
-        %                     Default: "lateral".
-        % OR :
-        %   entry_flag - 'e', indicates the samples are identified by entry.
-        %   entry_numbers - entry numbers in table to delete.
-        % Example usage :
-        %   obj.delete_from_samples_table(1, [1 2 3], "left")
-        %   obj.delete_from_samples_table(1)
-        %   obj.delete_from_samples_table('e', [1 10 25])
-            
-            % Extract Inputs
-            if length(varargin) == 2 && strcmp(varargin{1}, 'e')
-                entry_numbers = varargin{2};
-            else
-                [~, entry_numbers] = obj.get_sample_entry(varargin{:});
-            end
-
-            if isempty(entry_numbers)
-                return
-            end
-            obj.SamplesTable(entry_numbers, :) = [];
-            obj.SamplesTableSize = obj.SamplesTableSize - length(entry_numbers);
-            obj.PointClouds(entry_numbers) = [];
-        end
-        function add_to_ignore_list(obj, ignore)
-        %ADD_TO_IGNORE_LIST adds ignore entry to ignoreList.
-        % Input :
-        %   ignore
-
-            % Check input format
-            if all(size(ignore) == [1 3]) && ...
-               (isnumeric(ignore{1}) && isscalar(ignore{1})) && ...
-               (isnumeric(ignore{2}) && isnumeric(ignore{3}))
-                % Append to ignore list
-                obj.IgnoreList(end+1, :) = ignore;
-            else
-                error("ROSAnalyzer:IgnoreList:WrongFormat", ...
-                      "Ignore should be in the format: {""DB ID"", [participants_to_ignore_left], [participants_to_ignore_right]}")
-            end
-        end
+        
         function tf = is_in_summary(obj, dataset_id)
         %IS_IN_SUMMARY returns whether the dataseit with ID dataset_id is in the
         % summary table.
@@ -1372,29 +1499,35 @@ classdef ROSAnalyzer < handle
         
             tf =  ~isempty(find(obj.SummaryTable.Dataset_id == dataset_id, 1, 'first'));
         end
-        function filter_data_by_id(obj, ignore_list)
-        %FILTER_DATA_BY_ID Ignore all data in ignore list.
-        % Input :
-        %   ignore_list - list of trials to ignore. A cell array in the format:
-        %   {dataset_id, [participants_to_ignore_left], [participants_to_ignore_right]}
-        
-            % Delete sample table trials from ignore list
-            obj.IgnoreList = ignore_list;
-            for idx=1:height(ignore_list)
-                dataset_id = ignore_list{idx, 1};
-                participants_left = ignore_list{idx, 2};
-                participants_right = ignore_list{idx, 3};
-                obj.delete_from_samples_table(dataset_id, participants_left, "left");
-                obj.delete_from_samples_table(dataset_id, participants_right, "right");
-                
+        function filter_data_by_ignore(obj)
+        %FILTER_DATA_BY_IGNORE Ignore all data in ignore list.
+            
+            n_datasets = length(obj.IgnoreList.IgnoreList);
+            for i=1:n_datasets
+                dataset_id = obj.IgnoreList.IgnoreList(i).Dataset_id;
+                dataset_index = obj.DataRecordsIDLookup(dataset_id);
+                n_participants = length(obj.IgnoreList.IgnoreList(i).Participants);
+                for j=1:n_participants
+                    participant_id = obj.IgnoreList.IgnoreList(i).Participants(j).Participant_id;
+                    left_trials = obj.IgnoreList.IgnoreList(i).Participants(j).Left;
+                    right_trials = obj.IgnoreList.IgnoreList(i).Participants(j).Right;
+                    if isinf(left_trials)
+                        left_trials = ':';
+                    end
+                    [obj.DataRecords(dataset_index).Data(participant_id).Processed_data.left.step(left_trials).Is_included] = deal(false);
+                     if isinf(right_trials)
+                        right_trials = ':';
+                    end
+                    [obj.DataRecords(dataset_index).Data(participant_id).Processed_data.right.step(right_trials).Is_included] = deal(false);
+                end
             end
         end
-        function filter_data_by_outliers(obj, list, method)
+        function filter_data_by_outliers(obj, var_list, method)
         %FILTER_DATA_BY_OUTLIERS Filter all data entries in the samples table by
         % outliers in the given variables. Filters entries if at least one of 
         % the variables' value is an outlier.
         % Input :
-        %   list - list of variables to filter the outliers.
+        %   var_list - list of variables to filter the outliers by.
         %   method - the method for calculating the outliers. Default: 'median'.
 
             if nargin < 3
@@ -1402,13 +1535,13 @@ classdef ROSAnalyzer < handle
             end
 
             % Filter outlier parameters
-            idx = ismember(list, string(obj.SamplesTable.Properties.VariableNames));
+            idx = ismember(var_list, string(obj.SamplesTable.Properties.VariableNames));
             if ~any(idx)
                 return
             end
-            outliers = any(isoutlier(obj.get_sample_var(list(idx)), method), 2);
+            outliers = any(isoutlier(obj.get_sample_var(var_list(idx)), method), 2);
             entry_numbers = find(outliers);
-            obj.delete_from_samples_table('e', entry_numbers)
+            obj.delete_samples('e', entry_numbers)
          end
         function filter_data_by_bad_steps(obj, dataset_id)
         %FILTER_DATA_BY_BAD_STEPS Filter data in records by bad steps. Bad steps
@@ -1417,27 +1550,22 @@ classdef ROSAnalyzer < handle
         % Input :
         %   dataset_id - the ID of the dataset to filter.
 
-            dataset = obj.get_dataset(dataset_id);
-            if isempty(dataset)
-                error("ROSAnalyzer:DataRecords:MissingDataset", ...
-                      "Dataset %d not in data records.", dataset_id)
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
             end
-            dataset_name = dataset.Dataset_name;
-            n_participants = length(dataset.Data);
+            dataset_index = obj.DataRecordsIDLookup(dataset_id);
+            dataset_name = obj.DataRecords(dataset_index).Dataset_name;
+            n_participants = length(obj.DataRecords(dataset_index).Data);
             for participant_num=1:n_participants
-                participant_name = dataset.Data(participant_num).Participant_name;
+                participant_name = obj.DataRecords(dataset_index).Data(participant_num).Participant_name;
                 for side=["left" "right"]
-                     trials = dataset.Data(participant_num).Processed_data.(side).step;
+                    trials = obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step;
                     n_trials = length(trials);
-                    bad_trials = [];
                     for trial_num=1:n_trials
                         step = trials(trial_num);
                         trial_name = step.source.original_trial;
-                        try
                         step_number = step.source.step_number;
-                        catch
-                            disp("!!!")
-                        end
                         plate_number = step.source.plate_number;
                         s = sprintf("DB%d (%s) P%d (%s) %s, T%d (%s), Step %d FP%d\n", dataset_id, dataset_name, participant_num, participant_name, side, trial_num, replace(trial_name, "_", " "),step_number, plate_number);
                         
@@ -1449,24 +1577,93 @@ classdef ROSAnalyzer < handle
                         idx_switch = find(diff(sign_d) ~= 0);
                         if isempty(idx_switch)
                             if sign_d(1) < 0
-                                bad_trials = [bad_trials trial_num];
-                                % fprintf("-1 **** " + s)
+                                obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
+                                disp("-1 " + s);
                             end
                             continue
                         else
                             idx_switch = [0 idx_switch];
                             idx_switch = [idx_switch length(sign_d)];
                             k=1:length(idx_switch)-1;
-                            if  any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
-                                bad_trials = [bad_trials trial_num];
-                                % fprintf(s)
+                            if any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
+                                obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
+                                disp(s);
                             end
                         end
                     end
-                    dataset.Data(participant_num).Processed_data.(side).step(bad_trials) = [];
                 end
             end
-            obj.set_dataset(dataset_id, dataset);
+        end
+    
+        function [samples, row_numbers] = get_sample_entry(obj, dataset_id, participant_id, side)
+        %GET_SAMPLE_ENTRY returns the sample entries and row numbers from the
+        % samples table given the dataset IDs, participant IDs and sides. 
+        % Returns empty table and empty array if does not exist.
+        % Input :
+        %   dataset_id - the dataset ID for the requested entries. A positive
+        %                integer number. Leave empty for all datasets.
+        %   participant_id - the participant ID for the requested entry. A
+        %                    positive integer number. Could be a vector of IDs.
+        %                    Default: all participants of the dataset with
+        %                    ID dataset_id.
+        %   side - the side for the requested entry. Either "left", "right" or
+        %          both ["left", "right"]. Default: ["left", "right"]
+        % Output :
+        %   samples - the entries in the samples table.
+        %   row_numbers - the row numbers of the entries in the samples table.
+            
+            if nargin < 2 || isempty(dataset_id)
+                row_numbers = 1:obj.SamplesTableSize;
+                samples = obj.SamplesTable(row_numbers, :);
+            else
+                row_numbers = 1:obj.SamplesTableSize;
+                samples = obj.SamplesTable(obj.SamplesTable.Dataset_id == dataset_id, :);
+            end
+            if nargin < 4
+                side = ["left" "right"];
+            end
+            if nargin < 3 || isempty(participant_id)
+                dataset = obj.get_dataset(dataset_id);
+                if isempty(dataset)
+                    row_numbers = [];
+                    samples = table;
+                    return
+                end
+                participant_id = [dataset.Data(:).Participant_id];
+            end
+
+            side_rows = ismember(obj.SamplesTable.Side, side);
+            participant_rows = ismember(obj.SamplesTable.Participant_id, participant_id);
+            dataset_rows = ismember(obj.SamplesTable.Dataset_id, dataset_id);
+            row_numbers = find(dataset_rows & participant_rows & side_rows);
+            if isempty(row_numbers)
+                samples = table;
+            else
+                samples = obj.SamplesTable(row_numbers, :);
+            end
+        end
+        function [samples, var_names] = get_sample_var(obj, var_list)
+        %GET_SAMPLE_VAR returns the samples of all variables in var_list from 
+        % the samples table. Also returns a list of the existing variable names. 
+        % If a name in the list is not a variable in samples table, ignores it.
+        % Returns empty table and empty array if no variable names exist.
+        % Input :
+        %   var_list - the variable name or list of variable names. Must be a 
+        %              string array or character cell array.
+        % Output :
+        %   samples - the sample table entries for the variables in list.
+        %   var_names - the names of the variables that are returned.
+
+            idx = ismember(var_list, string(obj.SamplesTable.Properties.VariableNames));
+            if ~any(idx)
+                var_names = [];
+                samples = table;
+                % error(ROSError("SamplesTable", "VariableDoesNotExist", ...
+                    % "The variables %s do not exist.", string(mat2str(var_list))));
+            else
+                var_names = var_list(idx);
+                samples = obj.SamplesTable(1:obj.SamplesTableSize, var_list(idx));
+            end
         end
     end
     
@@ -1475,12 +1672,11 @@ classdef ROSAnalyzer < handle
         function [good_steps] = get_good_steps(steps, min_speed)
         %GET_GOOD_STEPS receives all the steps of the participant from a 
         % single side, and saves and returns only the steps with a speed 
-        % higher than min_speed in [km/h]. By default min_speed = 2.5 [km/h]
-        % -----------------------------------------------------------------
+        % higher than min_speed in [km/h]. By default min_speed = 0 [km/h]
 
             % Set default value for min_speed
             if nargin == 1
-                min_speed = 2.5; % [km/hr]
+                min_speed = 0; % [km/hr]
             end
 
             % good_steps = steps(steps(:).speed.km_per_hour.value >= min_speed);
@@ -1491,7 +1687,8 @@ classdef ROSAnalyzer < handle
             for step_num=1:length(steps)
                 step = steps(step_num);
                 step_speed = step.speed.km_per_hour.value;
-                if step_speed >= min_speed 
+                is_included = step.Is_included;
+                if is_included && step_speed >= min_speed 
                     % add this step:
                     good_steps(counter) = step;
                     counter = counter + 1;
@@ -1562,6 +1759,48 @@ classdef ROSAnalyzer < handle
             shank_cop.z = dot(cop, new_z);
 
         end 
+        function save_figure(f, file_path, sub_folder, file_type)
+        % SAVE_FIGURE saves the figure in the specified format.
+
+        % Example:
+        %   save_figure(f, "C:/path/to/folder", "sub_folder", "png")
+        %   save_figure(f, "C:/path/to/folder", [], "png")
+        %   save_figure(f, [], [], "png")
+        %   save_figure(f)
+        %   save_figure(f, "C:/path/to/folder", "sub_folder", "fig")
+
+            if nargin < 4 || isempty(file_type)
+                file_type = "pdf";  % Default file type
+            end
+            if nargin < 3 || isempty(sub_folder)
+                sub_folder = extractBefore(f.Name, ":");
+            end
+            if nargin < 2 || isempty(file_path)
+                file_path = "C:/Users/chenr/Documents/PROST/figures/ROS Analysis";
+            end
+
+            % Ensure output folder exists
+            if ~isfolder(file_path)
+                mkdir(file_path);
+            end
+
+            % Create a valid filename (replace spaces etc.)
+            clean_name = matlab.lang.makeValidName(f.Name);
+            if isempty(clean_name)
+                clean_name = sprintf('Figure%d', f.Number);
+            end
+
+            % Full file path
+            file_name = fullfile(file_path, sub_folder, clean_name + "." + file_type);
+
+            % Save based on file type
+            switch lower(file_type)
+                case "fig"
+                    savefig(f, file_name);
+                otherwise
+                    exportgraphics(f, file_name, 'Resolution', 300);
+            end
+        end
     end
 end
 
