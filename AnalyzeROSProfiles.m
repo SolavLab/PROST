@@ -68,7 +68,7 @@ end
 
 %% Plot data
 % close all
-obj.plot_ros({}, 12, 'on', 'fig');
+obj.plot_ros({DB_2_ID, 24}, 12, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")

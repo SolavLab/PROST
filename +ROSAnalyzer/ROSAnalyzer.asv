@@ -474,6 +474,18 @@ classdef ROSAnalyzer < handle
             % Get Sides
             sides = table2array(obj.get_sample_var("Side"));
 
+            % Get Dataset IDs
+            dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
+            unique_dataset_ids = unique(dataset_ids)';
+            n_dataset_ids = length(unique_dataset_ids);
+            
+            dataset_ids_left = dataset_ids(sides == "left");
+            dataset_ids_right = dataset_ids(sides == "right");
+            unique_dataset_ids_left = unique(dataset_ids_left)';
+            unique_dataset_ids_right = unique(dataset_ids_right)';
+            n_dataset_ids_left = length(unique_dataset_ids_left);
+            n_dataset_ids_right = length(unique_dataset_ids_right);
+
             % Get Residuals
             residuals = table2array(obj.get_sample_var("Residual"));
             r_left  = residuals(sides=="left");
@@ -494,7 +506,8 @@ classdef ROSAnalyzer < handle
             color_left = [0.85 0 0];  % reddish
 
             % Define Marker Parameters
-            marker = "o";
+            markers = 'o+*.xsdv><phn';
+            marker_size = 5;
             marker_face_alpha = 0.6;
             line_width = 2;
             line_style = "--";
@@ -523,7 +536,6 @@ classdef ROSAnalyzer < handle
                     y_name = replace(label_names{label_index}, "_", " ");
                     y_type = label_types{label_index};
                     y_numeric = (strcmp(y_type, "double") || strcmp(y_type, "doublenan"));
-                    
 
                     % Create new figure for new set of axes
                     if axes_counter == 0
@@ -568,8 +580,10 @@ classdef ROSAnalyzer < handle
                     end
                     
                     % Plot both sides
-                    h_left = scatter(ax, x_left, y_left, sz_left, color_left, marker, 'filled', MarkerFaceAlpha=marker_face_alpha);
-                    h_right = scatter(ax, x_right, y_right, sz_right, color_right, marker, 'filled', MarkerFaceAlpha=marker_face_alpha);
+                    gscatter(x_left, y_left, dataset_ids_left, color_left, markers(1:n_dataset_ids_left), marker_size, 'off', "filled");
+                    gscatter(x_right, y_right, dataset_ids_right, color_right, markers(1:n_dataset_ids_right), marker_size, 'off', "filled");
+                    % h_left = scatter(ax, x_left, y_left, sz_left, color_left, markers(marker_idx_left), 'filled', MarkerFaceAlpha=marker_face_alpha);
+                    % h_right = scatter(ax, x_right, y_right, sz_right, color_right, markers(marker_idx_right), 'filled', MarkerFaceAlpha=marker_face_alpha);
                     
                     % Set axis limits
                     xlim(ax, 'padded');
@@ -597,8 +611,18 @@ classdef ROSAnalyzer < handle
 
                     % % Create legend/colorbar
                     if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
-                        legend([h_left h_right], ["Left" "Right"], Location="east", FontSize=12)
-
+                        % Dummy plots for legend in last axes
+                        h_left = gobjects(n_dataset_ids_left, 1);
+                        h_right = gobjects(n_dataset_ids_right, 1);
+                        for i=unique_dataset_ids_left
+                            h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), "filled", DisplayName="Left " + i);
+                        end
+                        for i=unique_dataset_ids_right
+                            h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), "filled", DisplayName="Right " + i);
+                        end
+                        lgd = legend([h_left h_right], FontSize=9);
+                        lgd.Layout.Tile = 'east';
+                        
                         if strcmp(show, 'off')
                             obj.save_figure(fig, [], "Features vs Labels", file_type);
                         end
@@ -654,7 +678,7 @@ classdef ROSAnalyzer < handle
             x_limits = [-100 200];
             y_limits = [-100 50];
             color_arc = dictionary(["right" "left"], {[0 0.5 0.4] [0.5, 0.0, 0.4]});
-            color_scatter = dictionary(["right" "left"], {summer autumn});
+            color_scatter = dictionary(["right" "left"], {[0.0 1.0 0.0] [1.0 0.0 0.0]});
             % color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
             marker_size = 3;
             markers = 'o+*.xsdv><phn';
@@ -733,7 +757,7 @@ classdef ROSAnalyzer < handle
 
                         % Plot point cloud and arc                       
                         % scatter(ax, x, z, marker_size, color_scatter{side}, '.'); % point cloud
-                        gscatter(x, z, trial_num, color_scatter{side}, markers, marker_size, 'off', "filled");
+                        gscatter(x, z, trial_num, color_scatter{side}, markers(1), marker_size, 'off', "filled");
                         plot(ax, arc_points(1, :), arc_points(2, :), '-', Color=color_arc{side}, LineWidth=line_width); % fitted arc
                         plot(ax, circle_points(1, :), circle_points(2, :), '--', Color=color_arc{side}, LineWidth=line_width); % fitted circle
                         plot(ax, center_x, min(circle_points(2, :)), 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size); % nadir
@@ -757,13 +781,13 @@ classdef ROSAnalyzer < handle
                         for i=1:n_sides
                             side = sides(i);
                             % h(i) = gscatter(NaN, NaN(size, 1, color_scatter{side}, markers, marker_size, "filled");
-                            h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}(1, :), markers(1), DisplayName=side);
+                            h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}(1, :), markers(1), "filled", DisplayName=side);
                             h(i + 2) = plot(ax, NaN, NaN, '-', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted arc");
                             h(i + 4) = plot(ax, NaN, NaN, '--', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted circle");
                             h(i + 6) = plot(ax,  NaN, NaN, 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size, DisplayName=string(side) + " nadir");
                         end                   
                         
-                        lgd = legend(h, FontSize=9);
+                        lgd = legend(h, FontSize=12, );
                         lgd.Layout.Tile = 'east';
                         
                         if strcmp(show, 'off')
@@ -1578,7 +1602,7 @@ classdef ROSAnalyzer < handle
                         if isempty(idx_switch)
                             if sign_d(1) < 0
                                 obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
-                                disp(s)
+                                disp("-1 " + s);
                             end
                             continue
                         else
@@ -1587,6 +1611,7 @@ classdef ROSAnalyzer < handle
                             k=1:length(idx_switch)-1;
                             if any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
                                 obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
+                                disp(s);
                             end
                         end
                     end
