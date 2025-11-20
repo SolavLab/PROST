@@ -40,32 +40,31 @@ Markers_guide.explanation_txt =  "The field reference_guide containes a dictiona
                                  "-----------------------------------------------------------";
 % Important markers reference guide
 keys = ["Right Lateral Ankle"; ...
-        "Right Lateral Above Knee"; ...
-        "Right Lateral Below Knee"; ...
-        "Right Lateral Knee"; ...
-        "Right Hip"; ...
+        "Right Lateral Femoral Epicondyle"; ...
+        "Right Fibular Head"; ...
+        "Right ASIS"; ...
         "Right Heel"; ...
         "Left Lateral Ankle"; ...
-        "Left Lateral Above Knee"; ...
-        "Left Lateral Below Knee"; ...
-        "Left Lateral Knee"; ...
-        "Left Hip"; ...
+        "Left Lateral Femoral Epicondyle"; ...
+        "Left Fibular Head"; ...
+        "Left ASIS"; ...
         "Left Heel"; ...
         "Walking Direction Marker"];
 values = {{'RxLatMal', 64, 65, 66}; ...
           {'RxLatCon', 46, 47, 48}; ...
           {'RxFH', 52, 53, 54}; ...
-          {'RxLatVirtualKnee', NaN, NaN, NaN}; ...
           {'RxAsis', 34, 35, 36}; ...
           {'RxHeel', 70, 71, 72}; ...
           {'LxLatMal', 67, 68, 69}; ...
           {'LxLatCon', 49, 50, 51}; ...
           {'LxFH', 55, 56, 57}; ...
-          {'LxLatVirtualKnee', NaN, NaN, NaN}; ...
           {'LxAsis', 37, 38, 39}; ...
           {'LxHeel', 73, 74, 75}; ...
           {'Psis', 31, 32, 33}};
 Markers_guide.reference_guide = dictionary(keys, values);
+Markers_guide.virtual_markers = dictionary(["Right Lateral Knee" "Right Medial Knee" "Left Lateral Knee" "Left Medial Knee"], ...
+                                ["R_LatVirtualKnee"   "R_MedVirtualKnee"  "L_LatVirtualKnee"  "L_MedVirtualKnee"]);
+
 DB_3.Markers_guide = Markers_guide;
 
 %       ---------------
@@ -120,7 +119,7 @@ DB_3.Experiment_protocol = Experiment_protocol;
 n_participants = size(dir(fullfile(data_path, "*.mat")), 1);
 
 % Get relevant marker names in original database
-markers_guide = DB_3.Markers_guide.reference_guide;
+markers_guide = DB_3.Markers_guide;
 for participant_number = 1:n_participants
     right_steps_counter = 0; left_steps_counter = 0;
     participant_name = "participant_" + participant_number;
@@ -174,23 +173,24 @@ for participant_number = 1:n_participants
     
     % Marker names:
     % ankle - Lateral Malleolus (LatMal)
-    % knee - Virtual marker calculated from Fibula Head (FH) and Lateral
-    % Femoral Condyle (LatCon)
+    % knee - Virtual marker calculated from Fibular Head (FH) and Lateral
+    % Femoral Epicondyle (LatCon)
     % hip - Anterior Superior Iliac Spine (Asis)
-    right_ankle = ST_data([markers_guide{"Right Lateral Ankle"}{2:end}]); % RxLatMal
-    left_ankle = ST_data([markers_guide{"Left Lateral Ankle"}{2:end}]); % LxLatMal
+    right_ankle = ST_data([markers_guide.reference_guide{"Right Lateral Ankle"}{2:end}]); % RxLatMal
+    left_ankle = ST_data([markers_guide.reference_guide{"Left Lateral Ankle"}{2:end}]); % LxLatMal
     
-    right_above_knee = ST_data([markers_guide{"Right Lateral Above Knee"}{2:end}]); % RxLatCon
-    left_above_knee = ST_data([markers_guide{"Left Lateral Above Knee"}{2:end}]); % LxLatCon
-    right_below_knee = ST_data([markers_guide{"Right Lateral Below Knee"}{2:end}]); % RxFH
-    left_below_knee = ST_data([markers_guide{"Left Lateral Below Knee"}{2:end}]); % LxFH
+    right_above_knee = ST_data([markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2:end}]); % RxLatCon
+    left_above_knee = ST_data([markers_guide.reference_guide{"Left Lateral Femoral Epicondyle"}{2:end}]); % LxLatCon
+    right_below_knee = ST_data([markers_guide.reference_guide{"Right Fibular Head"}{2:end}]); % RxFH
+    left_below_knee = ST_data([markers_guide.reference_guide{"Left Fibular Head"}{2:end}]); % LxFH
+    
     right_virtual_knee = get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
     right_knee = [right_virtual_knee.x;right_virtual_knee.y;right_virtual_knee.z];
     left_virtual_knee = get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x;left_virtual_knee.y;left_virtual_knee.z];
 
-    right_hip = ST_data([markers_guide{"Right Hip"}{2:end}]); % RxAsis
-    left_hip = ST_data([markers_guide{"Left Hip"}{2:end}]);  % LxAsis
+    right_hip = ST_data([markers_guide.reference_guide{"Right ASIS"}{2:end}]); % RxAsis
+    left_hip = ST_data([markers_guide.reference_guide{"Left ASIS"}{2:end}]);  % LxAsis
 
     % thigh length
     metadata.Thigh_length.right.value = norm(right_hip - right_knee);
@@ -344,7 +344,7 @@ for participant_number = 1:n_participants
         % 4. Use that height as the threshold of the heel height denoting 
         %    OIC for this trial.
           % Find trajectory of other foot heel 
-          heel_idx = markers_guide{other_foot + " Heel"}{3};
+          heel_idx = markers_guide.reference_guide{other_foot + " Heel"}{3};
           heel = markers_3d_location_data(heel_idx, :); % [m]
 
           % Find where the heel starts descending
@@ -385,9 +385,9 @@ for participant_number = 1:n_participants
         % DB_3 / Data / participant_# / unprocessed_data / trial(#) / Time
         %                                                            -----
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Trajectory_Time.value = trajectory_time_vector;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Trajectory_Time.unit = "seconds";
+        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Trajectory_Time.unit = "second";
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Forceplate_Time.value = forceplate_time_vector;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Forceplate_Time.unit = "seconds";
+        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Forceplate_Time.unit = "second";
         
         %                                                            ----
         % DB_3 / Data / participant_# / unprocessed_data / trial(#) / GRF
@@ -471,16 +471,18 @@ for participant_number = 1:n_participants
             marker_name = strtrim(s.MarkerVarName(idx, :));
             trajectories.(marker_name(2:end)).(lower(marker_name(1))) = markers_3d_location_data(idx, :)*1000; % [mm]
         end
-        right_ST_above_knee = ST_data([markers_guide{"Right Lateral Above Knee"}{2:end}]); % RxLatCon
-        left_ST_above_knee = ST_data([markers_guide{"Left Lateral Above Knee"}{2:end}]); % LxLatCon
-        right_ST_below_knee = ST_data([markers_guide{"Right Lateral Below Knee"}{2:end}]); % RxFH
-        left_ST_below_knee = ST_data([markers_guide{"Left Lateral Below Knee"}{2:end}]); % LxFH
-        trajectories.RxLatVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Right Lateral Below Knee"}{1}), ...
-                                                     trajectories.(markers_guide{"Right Lateral Ankle"}{1}), ...
-                                                     right_ST_below_knee, right_ST_above_knee);
-        trajectories.LxLatVirtualKnee = get_knee_marker(trajectories.(markers_guide{"Left Lateral Below Knee"}{1}), ...
-                                                        trajectories.(markers_guide{"Left Lateral Ankle"}{1}), ...
-                                                        left_ST_below_knee, left_ST_above_knee);
+        right_ST_above_knee = ST_data([markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2:end}]); % RxLatCon
+        left_ST_above_knee = ST_data([markers_guide.reference_guide{"Left Lateral Femoral Epicondyle"}{2:end}]); % LxLatCon
+        right_ST_below_knee = ST_data([markers_guide.reference_guide{"Right Fibular Head"}{2:end}]); % RxFH
+        left_ST_below_knee = ST_data([markers_guide.reference_guide{"Left Fibular Head"}{2:end}]); % LxFH
+        trajectories.(markers_guide.virtual_markers("Right Lateral Knee")) = ...
+            get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ...
+                            trajectories.(markers_guide.reference_guide{"Right Lateral Ankle"}{1}), ...
+                            right_ST_below_knee, right_ST_above_knee);
+        trajectories.(markers_guide.virtual_markers("Left Lateral Knee")) = ...
+            get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ...
+                            trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...
+                            left_ST_below_knee, left_ST_above_knee);
 
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).trajectories = trajectories;
 
@@ -489,7 +491,7 @@ for participant_number = 1:n_participants
         %                                                            ------------------
         % we will check the walking direction by checking if the direction
         % that the Psis marker is moving is +x (+1) or -x (-1)
-        psis_x = trajectories.(markers_guide{"Walking Direction Marker"}{1}).x;
+        psis_x = trajectories.(markers_guide.reference_guide{"Walking Direction Marker"}{1}).x;
         walking_direction = sign(psis_x(end) - psis_x(1));
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.value = walking_direction;
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.explenation = "\n1 - the walking was in the direction from plate 1 to plate 2." + ... 
@@ -503,9 +505,9 @@ for participant_number = 1:n_participants
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.method = "given";
 
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = speed*3600/1000;
+        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = convert_units(convert_units(speed, "m", "km"), "hour", "second");
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = "multiplying by 3.6 to convert from [m/sec] to [km/hour]";
+        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = "Converted from [m/sec] to [km/hour].";
 
         % ---------------------------------------------------------------------------------------------------------------------------------------------------
         %       TODO: add to unprocessed data a calculation for the walking speed.
@@ -589,11 +591,7 @@ for participant_number = 1:n_participants
             %                                                                               -------------
             DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.plate_number = step_info.plate;
             
-            %-----------------------------------------
-            % add:
-            % ---
             % original IC,OIC,and TO: index and time
-            % new OIC index
             DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_IC.forceplate_index = step_info.events.IC.forceplate_index;
             DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_OIC.forceplate_index = step_info.events.OIC.forceplate_index;
             DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_TO.forceplate_index = step_info.events.TO.forceplate_index;
@@ -616,9 +614,9 @@ for participant_number = 1:n_participants
             % percentage of stance phase \ single support phase.
             n_temporal_alignment = 101;
 
-            %                                                                      ----                           --------------
-            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / COP   -  temporally aligned to single support  
-            %                                                                      ----                           --------------
+            %                                                                      ----------------------------
+            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / COP   -  temporally aligned  
+            %                                                                      ----------------------------
             % get data (get the COP):
             COP = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).COP;
             tmp_COP.x = walking_direction*COP.plate_1.x;
@@ -672,14 +670,14 @@ for participant_number = 1:n_participants
             % --------------------------------------------------
             % get the markers data :
               % For the ankle:
-            one_step_Markers.Ankle.lateral.x = walking_direction*trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).x;
-            one_step_Markers.Ankle.lateral.y = -walking_direction*trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).z;
-            one_step_Markers.Ankle.lateral.z = trajectories.(markers_guide{foot + " Lateral Ankle"}{1}).y;
+            one_step_Markers.Ankle.lateral.x = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).x;
+            one_step_Markers.Ankle.lateral.y = -walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).z;
+            one_step_Markers.Ankle.lateral.z = trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).y;
             one_step_Markers.Ankle.medial = [];
               % For the knee:
-            one_step_Markers.Knee.lateral.x = walking_direction*trajectories.(markers_guide{foot + " Lateral Knee"}{1}).x;
-            one_step_Markers.Knee.lateral.y = -walking_direction*trajectories.(markers_guide{foot + " Lateral Knee"}{1}).z;
-            one_step_Markers.Knee.lateral.z = trajectories.(markers_guide{foot + " Lateral Knee"}{1}).y;
+            one_step_Markers.Knee.lateral.x = walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).x;
+            one_step_Markers.Knee.lateral.y = -walking_direction*trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).z;
+            one_step_Markers.Knee.lateral.z = trajectories.(markers_guide.virtual_markers(foot + " Lateral Knee")).y;
             one_step_Markers.Knee.medial = [];
 
             % Cut the markers data from IC to OIC and temporally align it to n_temporal_alignment points :

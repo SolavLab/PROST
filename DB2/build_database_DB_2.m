@@ -48,18 +48,18 @@ markers_guide.explanation_txt = "The field reference_guide containes a dictionar
 % Important markers reference guide
 keys = ["Right Lateral Ankle"; ...
         "Right Medial Ankle"; ...
-        "Right Lateral Above Knee"; ...
-        "Right Medial Above Knee"; ...
-        "Right Lateral Below Knee"; ...
-        "Right Medial Below Knee"; ...
-        "Right Hip"; ...
+        "Right Lateral Femoral Epicondyle"; ...
+        "Right Medial Femoral Epicondyle"; ...
+        "Right Fibular Head"; ...
+        "Right Tibial Tuberosity"; ...
+        "Right ASIS"; ...
         "Left Lateral Ankle"; ...
         "Left Medial Ankle"; ...
-        "Left Lateral Above Knee"; ...
-        "Left Medial Above Knee"; ...
-        "Left Lateral Below Knee"; ...
-        "Left Medial Below Knee"; ...
-        "Left Hip"; ...
+        "Left Lateral Femoral Epicondyle"; ...
+        "Left Medial Femoral Epicondyle"; ...
+        "Left Fibular Head"; ...
+        "Left Tibial Tuberosity"; ...
+        "Left ASIS"; ...
         "Walking Direction Marker"];
 values = {{"R_FAL",  21};...
           {"R_TAM",  22};...
@@ -67,14 +67,14 @@ values = {{"R_FAL",  21};...
           {"R_FME",  18};...
           {"R_FAX",  19};...
           {"R_TTC",  20};...
-          {"R_FTC",  16};...
+          {"R_IAS",  16};...
           {"L_FAL",  10};...
           {"L_TAM",  11};...
           {"L_FLE",  6};...
           {"L_FME",  7};...
           {"L_FAX",  8};...
           {"L_TTC",  9};...
-          {"L_FTC",  5};...
+          {"L_IAS",  5};...
           {"SXS",  29}};
 markers_guide.reference_guide = dictionary(keys, values);
 markers_guide.virtual_markers = dictionary(["Right Lateral Knee" "Right Medial Knee" "Left Lateral Knee" "Left Medial Knee"], ...
@@ -301,14 +301,14 @@ for participant_number=1:n_participants
         speed = calculate_speed(trajectories, event_data, markers_guide.reference_guide{"Walking Direction Marker"}{1});  
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.value = speed;
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
-        DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.calculation_meathod = ...
+        DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.method = ...
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.";
         
         speed_km_per_hr = convert_units(convert_units(speed, "m", "km"), "hour", "second");
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = speed_km_per_hr;
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.calculation_meathod = ...
+        DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = ...
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.\n" + ...
         "Converted from [m/sec] to [km/hr]";
@@ -464,8 +464,8 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % age
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "age");
     metadata.Age.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
-    metadata.Age.unit = string(trial_data_for_metadata.parameters.SUBJECT.UNITS.DATA(idx));
-    metadata.Age.calculation_meathod = "given";
+    metadata.Age.unit = "years";
+    metadata.Age.method = "given";
     
     % gender
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "gender");
@@ -475,70 +475,68 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
         metadata.Gender.value = "Female";
     end
     metadata.Gender.unit = "Male/Female";
-    metadata.Gender.calculation_meathod = "given";
+    metadata.Gender.method = "given";
     
     % height
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "height");
     metadata.Height.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
-    metadata.Height.unit = string(trial_data_for_metadata.parameters.SUBJECT.UNITS.DATA(idx));
-    metadata.Height.calculation_meathod = "given";
+    metadata.Height.unit = "m";
+    metadata.Height.method = "given";
     
     % mass
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "weight");
     metadata.Mass.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
-    metadata.Mass.unit = string(trial_data_for_metadata.parameters.SUBJECT.UNITS.DATA(idx));
-    metadata.Mass.calculation_meathod = "given";
+    metadata.Mass.unit = "kg";
+    metadata.Mass.method = "given";
     
     % Is_shod
     metadata.Is_shod.value = "No";
     metadata.Is_shod.unit = "Yes/No";
     metadata.Is_shod.method = "given";
     
-    % leg length - from ASIS to medial ankle 
-    % TODO: Check if I should stick with this or change it
-    idx_right = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "R_legLength");
-    idx_left = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "L_legLength");
-    metadata.Leg_length.right.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx_right);
-    metadata.Leg_length.left.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx_left);
-    metadata.Leg_length.unit = string(trial_data_for_metadata.parameters.SUBJECT.UNITS.DATA(idx_right));
-    metadata.Leg_length.calculation_meathod = "given";
-    
     % Calculate missing metadata from standing trial
     % Marker names:
     % ankle - Lateral Ankle (FAL)
     % knee - Virtual marker calculated from Lateral Femoral Epicondyle (FLE) and
-    % Fibula Head (FAX)
-    % hip - Greater Trochanter (FTC)
+    % Fibular Head (FAX)
+    % hip - ASIS (FTC)
     
         % ankle
     right_ankle = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Ankle"}{2}); % R_FAL
     left_ankle = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Ankle"}{2}); % L_FAL
     
         % calculating virtual knee markers
-    right_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Above Knee"}{2}); % R_FLE
-    left_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Above Knee"}{2}); % L_FLE
-    right_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Below Knee"}{2}); % R_FAX
-    left_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Below Knee"}{2}); % L_FAX
+    right_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2}); % R_FLE
+    left_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Femoral Epicondyle"}{2}); % L_FLE
+    right_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Fibular Head"}{2}); % R_FAX
+    left_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Fibular Head"}{2}); % L_FAX
+    
     right_virtual_knee = get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
     right_knee = [right_virtual_knee.x; right_virtual_knee.y; right_virtual_knee.z];
     left_virtual_knee = get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x; left_virtual_knee.y; left_virtual_knee.z];
     
         % hip
-    right_hip = standing_trial.data(:, markers_guide.reference_guide{"Right Hip"}{2}); % R_FTC
-    left_hip = standing_trial.data(:,  markers_guide.reference_guide{"Left Hip"}{2}); % L_FTC
+    right_hip = standing_trial.data(:, markers_guide.reference_guide{"Right ASIS"}{2}); % R_FTC
+    left_hip = standing_trial.data(:,  markers_guide.reference_guide{"Left ASIS"}{2}); % L_FTC
     
-    % thigh length
+    % leg length - from ASIS to lateral ankle
+    metadata.Leg_length.right.value = convert_units(norm(right_hip - right_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.left.value = convert_units(norm(left_hip - left_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.unit = "m";
+    metadata.Leg_length.method = "calculated by distance between markers in the standing trial";
+
+    % thigh length - from ASIS to lateral knee
     metadata.Thigh_length.right.value = convert_units(norm(right_hip - right_knee), standing_trial.unit, "m");
     metadata.Thigh_length.left.value = convert_units(norm(left_hip - left_knee), standing_trial.unit, "m");
     metadata.Thigh_length.unit = "m";
-    metadata.Thigh_length.calculation_meathod = "calculated by distance between markers in the standing trial";
+    metadata.Thigh_length.method = "calculated by distance between markers in the standing trial";
     
-    % shank length
+    % shank length - from lateral knee to lateral ankle
     metadata.Shank_length.right.value = convert_units(norm(right_knee - right_ankle), standing_trial.unit, "m");
     metadata.Shank_length.left.value = convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
     metadata.Shank_length.unit = "m";
-    metadata.Shank_length.calculation_meathod = "calculated by distance between markers in the standing trial";
+    metadata.Shank_length.method = "calculated by distance between markers in the standing trial";
 
     % TODO: Recalculate estimated foot length. This estimation isn't good enough
     % when compared to measured foot length. So we need to find another way to estimate. 
@@ -548,7 +546,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % DB_2.Data.(participant_name).metadata.effective_foot_length.right.value = estimate_foot_length(right_steps);
     % DB_2.Data.(participant_name).metadata.effective_foot_length.left.value = estimate_foot_length(left_steps);
     % DB_2.Data.(participant_name).metadata.effective_foot_length.unit = "m";
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.calculation_meathod="calculated from average COP in walking direction which is 0.83 of foot length.";
+    % DB_2.Data.(participant_name).metadata.effective_foot_length.method="calculated from average COP in walking direction which is 0.83 of foot length.";
 end
 
 function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, reference_guide)
@@ -896,31 +894,31 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
 
     % Lateral Virtual Knee calculated from Fibula Head (FAX) and
     % Lateral Femoral Epicondyle (FLE)
-    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Above Knee"}{2}); % R_FLE
-    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Above Knee"}{2}); % L_FLE
-    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Below Knee"}{2}); % R_FAX
-    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Below Knee"}{2}); % L_FAX
+    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2}); % R_FLE
+    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Femoral Epicondyle"}{2}); % L_FLE
+    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Fibular Head"}{2}); % R_FAX
+    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Fibular Head"}{2}); % L_FAX
     trajectories.(markers_guide.virtual_markers("Right Lateral Knee")) = ...
-        get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Lateral Below Knee"}{1}), ... % R_FAX
+        get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ... % R_FAX
                         trajectories.(markers_guide.reference_guide{"Right Lateral Ankle"}{1}), ...      % R_FAL
                         right_ST_below_knee, right_ST_above_knee);
     trajectories.(markers_guide.virtual_markers("Left Lateral Knee")) = ...
-        get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Lateral Below Knee"}{1}), ... % L_FAX
+        get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ... % L_FAX
                         trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...      % L_FAL
                         left_ST_below_knee, left_ST_above_knee);
 
     % Medial Virtual Knee calculated from Tibial Tuberosity (TTC) and
     % Medial Femoral Epicondyle (FME)
-    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Medial Above Knee"}{2}); % R_FME
-    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Medial Above Knee"}{2}); % L_FME
-    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Medial Below Knee"}{2}); % R_TTC
-    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Medial Below Knee"}{2}); % L_TTC
+    right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Medial Femoral Epicondyle"}{2}); % R_FME
+    left_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Medial Femoral Epicondyle"}{2}); % L_FME
+    right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Tibial Tuberosity"}{2}); % R_TTC
+    left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Tibial Tuberosity"}{2}); % L_TTC
     trajectories.(markers_guide.virtual_markers("Right Medial Knee")) = ...
-    get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Medial Below Knee"}{1}), ... % R_TTC
+    get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Tibial Tuberosity"}{1}), ... % R_TTC
                     trajectories.(markers_guide.reference_guide{"Right Medial Ankle"}{1}), ...      % R_TAM
                     right_ST_below_knee, right_ST_above_knee);
     trajectories.(markers_guide.virtual_markers("Left Medial Knee")) = ...
-    get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Medial Below Knee"}{1}), ...  % L_TTC
+    get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Tibial Tuberosity"}{1}), ...  % L_TTC
                     trajectories.(markers_guide.reference_guide{"Left Medial Ankle"}{1}), ...       % L_TAM
                     left_ST_below_knee, left_ST_above_knee);
 end
@@ -1241,8 +1239,8 @@ function good_trials = get_good_trials(dataset_path, reference_guide)
         
         for condition_num = ["C1" "C2" "C3" "C4" "C5"]
             for trial_num = ["01" "02" "03" "04" "05"]
-                file_name = participant_ID + "_" + condition_num + "_" + trial_num;
-                file_path = fullfile(dataset_path, participant_ID, file_name + ".c3d");
+                file_name = participant_ID + "_" + condition_num + "_" + trial_num + ".c3d";
+                file_path = fullfile(dataset_path, participant_ID, file_name);
                 if (isfile(file_path))
                     c3d = ezc3dRead(convertStringsToChars(file_path));
 
