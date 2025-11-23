@@ -1,5 +1,11 @@
-steps = obj.DataRecords(2).Data(14).Processed_data.right.step;
-steps = steps(8);
+dataset_id = 2;
+participant_id = 14;
+side = "right";
+
+dataset_idx = obj.DataRecordsIDLookup(dataset_id);
+steps = obj.DataRecords(dataset_idx).Data(participant_id).Processed_data.(side).step;
+% steps = steps(8);
+
 % Time vector
 time = linspace(0, 100, 101); % Time vector for temporally aligned data to 101 points
 markers = {'.' 'o' 'x' '^' '+' '*' '_' '|' 'square' 'diamond' 'v' '>' '<' 'pentagram' 'hexagram'};
@@ -9,7 +15,7 @@ hold on
 grid on
 cop_transformed = [];
 for idx = 1:length(steps)
-    shank_cop = obj.cop_to_shank_frame(steps(idx), "lateral");
+    shank_cop = obj.cop_to_shank_frame(dataset_id, participant_id, side, idx, "lateral");
     shank_cop_vec = [shank_cop.x; shank_cop.y; shank_cop.z; idx + 0*shank_cop.x];
     cop_transformed = [cop_transformed shank_cop_vec];
     plot(time, shank_cop_vec(2, :), Color=cmap(idx, :), MarkerSize=5, LineStyle="none", Marker="o", DisplayName="Trial " + steps(idx).source.original_trial) 
@@ -33,7 +39,7 @@ axis equal
 grid on
 for idx = 1:length(steps)
     COP = steps(idx).COP;
-    shank_cop = obj.cop_to_shank_frame(steps(idx), "lateral");
+    shank_cop = obj.cop_to_shank_frame(dataset_id, participant_id, side, idx, "lateral");
     ankle = steps(idx).Markers.Ankle.lateral;
     knee = steps(idx).Markers.Knee.lateral;
     X = [ankle.x; knee.x];
@@ -54,7 +60,7 @@ figure
 hold on
 grid on
 for idx = 1:length(steps)
-    shank_cop = obj.cop_to_shank_frame(steps(idx), "lateral");
+    shank_cop = obj.cop_to_shank_frame(dataset_id, participant_id, side, idx, "lateral");
     ankle = steps(idx).Markers.Ankle.lateral;
     knee = steps(idx).Markers.Knee.lateral;
     hold on;

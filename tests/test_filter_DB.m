@@ -1,16 +1,27 @@
 close all
 clc
+
+%   load_list - a cell array where each row contains pairs of dataset name and 
+%               path to the dataset. Example:
+%               {"DB 1 Name", "path/to/DB1.mat"; "DB 2 Name", "path/to/DB2.mat"}
+load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)"; DB_3, "Lencioni et. al. (2019)"};
+n_datasets = size(load_list, 1);
+
+[obj, dataset_ids] = ROSAnalyzer.ROSAnalyzer(load_list);
+DB_1_ID = dataset_ids(1);
+DB_2_ID = dataset_ids(2);
+DB_3_ID = dataset_ids(3);
+
+%% Check One Trials of One Participant
 dataset_id = DB_2_ID; % Schreiber & Moissenet (2019)
 dataset = obj.get_dataset(dataset_id);
-
-%%
-participant_id = 1; % 2014001
-trial_num = 1; % C1_01
+participant_id = 1;
+trial_num = 1;
 side = "left";
 participant_name = dataset.Data(participant_id).Participant_name;
 
 step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
-shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+shank_cop = step.Shank_cop;
 x = shank_cop.x(~isnan(shank_cop.x));
 y = shank_cop.y(~isnan(shank_cop.y));
 z = shank_cop.z(~isnan(shank_cop.z));
@@ -53,8 +64,10 @@ grid on
 xlabel("index")
 ylabel("dx [mm]")
 
-%%
-participant_id = 24; % 2014001
+%% Check All Trials of One Participant
+dataset_id = DB_1_ID;
+dataset = obj.get_dataset(dataset_id);
+participant_id = 24;
 participant_name = dataset.Data(participant_id).Participant_name;
 for side = ["right"]
     trials = dataset.Data(participant_id).Processed_data.(side).step;
@@ -62,7 +75,7 @@ for side = ["right"]
     for trial_num=1:n_trials
         step = trials(trial_num);
         trial_name = step.source.original_trial;
-        shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+        shank_cop = step.Shank_cop;
         
         figure
         tiledlayout(2,2)
@@ -108,7 +121,7 @@ for side = ["right"]
     end
 end
 
-%%
+%% Filter Bad Trials
 clearvars bad_trials
 bad_trials = [];
 bad_sides = [];
@@ -122,7 +135,7 @@ for participant_id=1:n_participants
         for trial_num=1:n_trials
             step = trials(trial_num);
             trial_name = step.source.original_trial;
-            shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+            shank_cop = step.Shank_cop;
 
             x = shank_cop.x(~isnan(shank_cop.x));
             y = shank_cop.y(~isnan(shank_cop.y));
@@ -140,7 +153,7 @@ for participant_id=1:n_participants
                 idx_switch = [0 idx_switch];
                 idx_switch = [idx_switch length(sign_d)];
                 k=1:length(idx_switch)-1;
-                if  any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
+                if  any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 10)
                     fprintf("P%d (%s) %s, T%d (%s)\n", participant_id, participant_name, side, trial_num, replace(trial_name, "_", " "))
                     bad_trials = [bad_trials trial_num];
                     bad_sides = [bad_sides side];
@@ -151,7 +164,7 @@ for participant_id=1:n_participants
     end
 end
 
-%%
+%% Check Filtered Trials
 for i=1:length(bad_trials)
     participant_id = bad_participants(i);
     side = bad_sides(i);
@@ -160,7 +173,7 @@ for i=1:length(bad_trials)
     participant_name = dataset.Data(participant_id).Participant_name;
     step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
     trial_name = step.source.original_trial;
-    shank_cop = ROSAnalyzer.ROSAnalyzer.cop_to_shank_frame(step, "lateral");
+    shank_cop = step.Shank_cop;
 
     figure
     tiledlayout(2,2)

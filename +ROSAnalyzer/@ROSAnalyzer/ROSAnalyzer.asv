@@ -12,6 +12,20 @@ classdef ROSAnalyzer < handle
     % ___________________________
     properties(Constant)
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
+
+        % Some constants for graphics so everything looks uniform
+        COLOR_RIGHT_BRIGHT  = [0 0.85 0]; % greenish bright
+        COLOR_LEFT_BRIGHT = [0.85 0 0]; % reddish bright
+        COLOR_RIGHT_DARK  = [0 0.5 0.4]; % greenish dark
+        COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
+        MARKERS = 'o+*.xsdv><phn';
+        MARKER_SIZE = 10;
+        MARKER_SIZE_SCATTER = 100;
+        MARKER_FACE_ALPHA = 0.6;
+        LINE_WIDTH = 2;
+        LINE_STYLE = "--";
+        LINE_COLOR = "black";
+        FONT_SIZE = 12;
     end
     properties(Access=public)
         DataRecords = struct([]); % Data records
@@ -112,20 +126,19 @@ classdef ROSAnalyzer < handle
         %% Getters and Setters
         function dataset = get_dataset(obj, dataset_id)
         %GET_DATASET returns the dataset object from the data records with 
-        % the given ID. If there is no dataset with the ID, returns an 
-        % empty struct.
+        % the given ID. If there is no dataset with the ID, raises an error.
         % Input :
         %   dataset_id - the ID of the dataset. A positive integer number.
         % Output :
         %   dataset - the dataset in the data records. Empty struct if 
         %             doesn't exist.
             
-            if obj.dataset_exists(dataset_id)
-                index = obj.DataRecordsIDLookup(dataset_id);
-                dataset = obj.DataRecords(index);
-            else
-                dataset = struct([]);
+            if ~obj.dataset_exists(dataset_id)
+                error(ROSError("DataRecords", "MissingDataset", ...
+                               "Dataset %d not in data records.", dataset_id));
             end
+            index = obj.DataRecordsIDLookup(dataset_id);
+            dataset = obj.DataRecords(index);
         end
         function set_dataset(obj, dataset_id, dataset)
         %SET_DATASET sets the dataset object with the given ID in the data 
@@ -473,46 +486,34 @@ classdef ROSAnalyzer < handle
 
             % Get Sides
             sides = table2array(obj.get_sample_var("Side"));
+            unique_sides = unique(sides);
+            n_sides =  length(unique_sides);
 
             % Get Dataset IDs
             dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
             unique_dataset_ids = unique(dataset_ids)';
             n_dataset_ids = length(unique_dataset_ids);
             
-            dataset_ids_left = dataset_ids(sides == "left");
-            dataset_ids_right = dataset_ids(sides == "right");
-            unique_dataset_ids_left = unique(dataset_ids_left)';
-            unique_dataset_ids_right = unique(dataset_ids_right)';
-            n_dataset_ids_left = length(unique_dataset_ids_left);
-            n_dataset_ids_right = length(unique_dataset_ids_right);
+            % dataset_ids_left = dataset_ids(sides == "left");
+            % dataset_ids_right = dataset_ids(sides == "right");
+            % unique_dataset_ids_left = unique(dataset_ids_left)';
+            % unique_dataset_ids_right = unique(dataset_ids_right)';
+            % n_dataset_ids_left = length(unique_dataset_ids_left);
+            % n_dataset_ids_right = length(unique_dataset_ids_right);
 
-            % Get Residuals
-            residuals = table2array(obj.get_sample_var("Residual"));
-            r_left  = residuals(sides=="left");
-            r_right = residuals(sides=="right");
-
-            % Normalize inverse residuals for reasonable marker sizes
-            inv_left  = 1 ./ r_left;
-            inv_right = 1 ./ r_right;
-            norm_left = (inv_left  / max(inv_left));
-            norm_right = (inv_right / max(inv_right));
-          
-            % Scale marker sizes (adjust 200 as needed)
-            sz_left  = 200 * norm_left;
-            sz_right = 200 * norm_right;
+            % % Get Residuals
+            % residuals = table2array(obj.get_sample_var("Residual"));
+            % 
+            % % Normalize inverse residuals for reasonable marker sizes
+            % inv_residuals  = 1 ./ residuals;
+            % norm_inv_residuals = (inv_residuals  / max(inv_residuals));
+            % 
+            % % Scale marker sizes (adjust 200 as needed)
+            % sz_residuals  = obj.MARKER_SIZE_SCATTER * norm_inv_residuals;
             
             % Define colors for sides
-            color_right  = [0 0.7 0];   % greenish
-            color_left = [0.85 0 0];  % reddish
-
-            % Define Marker Parameters
-            markers = 'o+*.xsdv><phn';
-            marker_size = 5;
-            marker_face_alpha = 0.6;
-            line_width = 2;
-            line_style = "--";
-            line_color = "black";
-
+            color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
+            
             % Start plotting
             axes_counter = 0;
             fig_counter = 0;
@@ -523,13 +524,11 @@ classdef ROSAnalyzer < handle
                 for label_index=1:n_labels
                     % Get feature data
                     x = features{:, feature_index};
-                    x_left  = x(sides == "left");
-                    x_right = x(sides == "right");
                     x_unit = replace(feature_units{feature_index}, "_", " ");
                     x_name = replace(feature_names{feature_index}, "_", " ");
                     x_type = feature_types{feature_index};
                     x_numeric = (strcmp(x_type, "double") || strcmp(x_type, "doublenan"));
-                    
+
                     % Get label data
                     y = labels{:, label_index};
                     y_unit = replace(label_units{label_index}, "_", " ");
@@ -544,58 +543,66 @@ classdef ROSAnalyzer < handle
                         tiledlayout(fig)
                         sgtitle(fig, fig.Name)
                     end
-                    
+
                     % Initialize axis
                     ax = nexttile;
                     hold(ax, "on");
-                    
+
                     % Set axis labels
                     x_label = x_name;
                     if ~isempty(x_unit)
-                       x_label = x_label + " [" + x_unit + "]";
+                        x_label = x_label + " [" + x_unit + "]";
                     end
                     y_label = y_name;
                     if ~isempty(y_unit)
-                       y_label = y_label +  " [" + y_unit + "]";
+                        y_label = y_label +  " [" + y_unit + "]";
                     end
 
-                    % Normalize and calculate linear regression if numeric
+                    % Calculate linear regression if numeric
                     if x_numeric && y_numeric
                         % Normalize label values
                         height = convert_units(table2array(obj.get_samples("Height")), "m", "mm");
-                        y_norm = y ./ height; % normalized label
-                        y_left  = y_norm(sides == "left");
-                        y_right = y_norm(sides == "right");
+                        y = y ./ height; % normalized label
                         y_label = y_name + " / height";
 
                         % Create linear model
                         X = [ones(size(x)), x];   % intercept + predictor
-                        b = X \ y_norm;           % regression coefficients
-    
+                        b = X \ y;           % regression coefficients
+
                         y_pred = X * b;
-    
-                        SSres = sum((y_norm - y_pred).^2);
-                        SStot = sum((y_norm - mean(y_norm)).^2);
+
+                        SSres = sum((y - y_pred).^2);
+                        SStot = sum((y - mean(y)).^2);
                         Rsquared = 1 - SSres/SStot;
                     end
-                    
-                    % Plot both sides
-                    gscatter(x_left, y_left, dataset_ids_left, color_left, markers(1:n_dataset_ids_left), marker_size, 'off', "filled");
-                    gscatter(x_right, y_right, dataset_ids_right, color_right, markers(1:n_dataset_ids_right), marker_size, 'off', "filled");
-                    % h_left = scatter(ax, x_left, y_left, sz_left, color_left, markers(marker_idx_left), 'filled', MarkerFaceAlpha=marker_face_alpha);
-                    % h_right = scatter(ax, x_right, y_right, sz_right, color_right, markers(marker_idx_right), 'filled', MarkerFaceAlpha=marker_face_alpha);
-                    
+
+                    % Plot features vs labels for both sides
+                    h = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+                    h(:).Color = color{unique_sides};
+
+                    for i_side=1:n_sides
+                        for i_dataset=1:n_dataset_ids
+                            i = (i_side - 1).*n_dataset_ids + i_dataset;
+                            % Add display name
+                            h(i).DisplayName = sprintf('DB %d %s', unique_dataset_ids(i_dataset), unique_sides(i_side));
+                            h(i).set('Color', color{unique_sides(i_side)});
+                            h(i).MarkerFaceColor = color{unique_sides(i_side)};
+                            h(i).MarkerFaceColor = color{unique_sides(i_side)};
+                        end
+                    end
+                    % end
+                    lgd = legend(FontSize=12, FontWeight="bold");
+
                     % Set axis limits
                     xlim(ax, 'padded');
                     ylim(ax, 'padded');
 
                     % Plot regression model if numeric
                     if x_numeric && y_numeric
-                        plot(ax, x, y_pred, LineWidth=line_width, LineStyle=line_style, Color=line_color);
+                        plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
                         x_limits = xlim(ax);
                         y_limits = ylim(ax);
-                        text(ax, x_limits(1), y_limits(2) - 0.25, "Rsquared = " + Rsquared, FontSize=12, FontWeight="bold", Color=line_color)   
-                        % title(ax, "Rsquared: " + Rsquared)
+                        text(ax, x_limits(1), y_limits(2) - 0.25, "Rsquared = " + Rsquared, FontSize=obj.FONT_SIZE, FontWeight="bold", Color=obj.LINE_COLOR)   
                     end
 
                     % Set axis params
@@ -609,20 +616,20 @@ classdef ROSAnalyzer < handle
                     % Increment counter
                     axes_counter = axes_counter + 1;
 
-                    % % Create legend/colorbar
+                    % % Create legend
                     if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
                         % Dummy plots for legend in last axes
-                        h_left = gobjects(n_dataset_ids_left, 1);
-                        h_right = gobjects(n_dataset_ids_right, 1);
-                        for i=unique_dataset_ids_left
-                            h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), "filled", DisplayName="Left " + i);
-                        end
-                        for i=unique_dataset_ids_right
-                            h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), "filled", DisplayName="Right " + i);
-                        end
-                        lgd = legend([h_left h_right], FontSize=9);
-                        lgd.Layout.Tile = 'east';
-                        
+                        % h_left = gobjects(n_dataset_ids_left, 1);
+                        % h_right = gobjects(n_dataset_ids_right, 1);
+                        % for i=unique_dataset_ids_left
+                        %     h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Left DB" + i);
+                        % end
+                        % for i=unique_dataset_ids_right
+                        %     h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Right DB" + i);
+                        % end
+                        % lgd = legend([h_left h_right], FontSize=12, FontWeight="bold");
+                        % lgd.Layout.Tile = 'east';
+
                         if strcmp(show, 'off')
                             obj.save_figure(fig, [], "Features vs Labels", file_type);
                         end
@@ -677,10 +684,10 @@ classdef ROSAnalyzer < handle
             % Set plot parameters
             x_limits = [-100 200];
             y_limits = [-100 50];
-            color_arc = dictionary(["right" "left"], {[0 0.5 0.4] [0.5, 0.0, 0.4]});
-            color_scatter = dictionary(["right" "left"], {[0.0 1.0 0.0] [1.0 0.0 0.0]});
+            color_arc = dictionary(["right" "left"], {obj.COLOR_RIGHT_DARK obj.COLOR_LEFT_DARK});
+            color_scatter = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});;
             % color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
-            marker_size = 3;
+            marker_size = 5;
             markers = 'o+*.xsdv><phn';
             line_width = 2;
             x_label = "x [mm]";
@@ -750,8 +757,8 @@ classdef ROSAnalyzer < handle
                         
                         % Calculate arc values
                         ang_vec = linspace(ang_start, ang_end, length(x));
-                        ang_sign = sign(z - center_z);
-                        arc_points = [center_x + radius*sind(ang_vec); center_z + radius.*ang_sign.*cosd(ang_vec)];
+                        z_sign = sign(z - center_z);
+                        arc_points = [center_x + radius*sind(ang_vec); center_z + radius.*z_sign.*cosd(ang_vec)];
                         circle_vec = linspace(0, 360, length(x));
                         circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
 
@@ -780,14 +787,13 @@ classdef ROSAnalyzer < handle
                         h = gobjects(n_sides*4, 1);
                         for i=1:n_sides
                             side = sides(i);
-                            % h(i) = gscatter(NaN, NaN(size, 1, color_scatter{side}, markers, marker_size, "filled");
                             h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}(1, :), markers(1), "filled", DisplayName=side);
                             h(i + 2) = plot(ax, NaN, NaN, '-', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted arc");
                             h(i + 4) = plot(ax, NaN, NaN, '--', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted circle");
                             h(i + 6) = plot(ax,  NaN, NaN, 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size, DisplayName=string(side) + " nadir");
                         end                   
                         
-                        lgd = legend(h, FontSize=12, );
+                        lgd = legend(h, FontSize=12, FontWeight="bold");
                         lgd.Layout.Tile = 'east';
                         
                         if strcmp(show, 'off')
@@ -1255,7 +1261,7 @@ classdef ROSAnalyzer < handle
             obj.SamplesTable.Arc_length(entry_number) = arc_length;
             obj.SamplesTable.Residual(entry_number) = residual_norm;
         end
-        function make_point_cloud(obj, good_steps, entry_number, anatomical_side)
+        function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums, row_number, anatomical_side)
         %MAKE_POINT_CLOUD receives an array of good "steps" (structures)
         % and extracts all the ROS points in the sagital (XZ) plane into a
         % "point_cloud" - a 2 x length(good_steps)*101 matrix. The data is
@@ -1268,9 +1274,10 @@ classdef ROSAnalyzer < handle
         %       anatomical_side - the anatomical side to use for fitting. Either
         %                         lateral, medial or mean. Default: lateral.
 
+            % Cut leading and trailing data points of each step since they
+            % contain artifacts from beginning and end of the step
             n_temporal = 101;
-            cut_length = 15;
-            
+            cut_length = 15;           
             trial_size = (n_temporal - 2*cut_length);
 
             if nargin < 4
@@ -1278,15 +1285,17 @@ classdef ROSAnalyzer < handle
             end
 
             % for each of the good steps we want to save the x and z values
-            point_cloud = zeros(length(good_steps)*trial_size, 3);
-            for step_num=1:length(good_steps)
-                step = good_steps(step_num);
-                % ROS = step.ROS.(anatomical_side);
-                ROS = obj.cop_to_shank_frame(step, anatomical_side);
+            point_cloud = zeros(length(good_step_nums)*trial_size, 3);
+            for step_idx=1:length(good_step_nums)
+                step_num = good_step_nums(step_idx);
+
+                % Get step
+                dataset = obj.get_dataset(dataset_id);
+                step = dataset.Data(participant_id).Processed_data.(side).step(step_num);
 
                 % add this step to the point cloud.
-                idx = (1+cut_length:numel(ROS.x)-cut_length);
-                point_cloud((1 + (step_num - 1)*trial_size):(step_num*trial_size), :) = [ROS.x(idx)', ROS.z(idx)', step.source.original_trial_number_in_database + 0.*idx'];
+                idx = (1+cut_length:numel(step.Shank_cop.x)-cut_length);
+                point_cloud((1 + (step_idx - 1)*trial_size):(step_idx*trial_size), :) = [step.Shank_cop.x(idx)', step.Shank_cop.z(idx)', step.source.original_trial_number_in_database + 0.*idx'];
             end
             
             % Check for NaN or Inf values in the lateral point cloud
@@ -1311,7 +1320,7 @@ classdef ROSAnalyzer < handle
                 error(ROSError("PointCloud", "EmptyPointCloud", ...
                                "Something went wrong with the point cloud calculation. It is empty."));
             end
-            obj.PointClouds(entry_number) = {point_cloud};
+            obj.PointClouds(row_number) = {point_cloud};
         end
         function populate_table(obj, dataset_id, start_row, anatomical_side)
         %POPULATE_TABLE processes the dataset and adds new rows to 
@@ -1324,11 +1333,7 @@ classdef ROSAnalyzer < handle
         %                     samples table. Either "lateral", "medial" or 
         %                     "mean". Default: lateral
 
-            % Check that dataset is in data records.
-            if ~obj.dataset_exists(dataset_id)
-                error(ROSError("DataRecords", "MissingDataset", ...
-                               "Dataset %d not in data records.", dataset_id));
-            end
+            % Get dataset
             dataset = obj.get_dataset(dataset_id);
             
             % Default anthropometric side is just lateral
@@ -1352,7 +1357,7 @@ classdef ROSAnalyzer < handle
 
             % Loop over participants of dataset and process data of each
             % one
-            entry_num = start_row;
+            row_num = start_row;
             for participant_number=1:n_participants % get to each participant
                 data = dataset.Data(participant_number);
                 participant_id = data.Participant_id;
@@ -1381,36 +1386,42 @@ classdef ROSAnalyzer < handle
                     [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = obj.get_metadata(anthropometric_data, side); % get anthropometric data
 
                     % Add trial parameters to data entry
-                    obj.SamplesTable(entry_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
+                    obj.SamplesTable(row_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
 
                     % Add features to data entry
                     new_row_features = {age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod};
-                    obj.SamplesTable(entry_num, {'Age', 'Gender', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
+                    obj.SamplesTable(row_num, {'Age', 'Gender', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
 
                     % Make all the "good steps" into a 2D point cloud in the XZ plane (the sagital plane)
-                    obj.make_point_cloud(good_steps, entry_num, anatomical_side);
+                    obj.make_point_cloud(dataset_id, participant_id, side, good_steps, row_num, anatomical_side);
 
                     % Fit the point cloud to a circular arc
                     % (notice that the angles ang_start and ang_end are relative to a vector pointing straight down from the center of the arc)
-                    obj.fit_to_circular_arc(entry_num);
+                    obj.fit_to_circular_arc(row_num);
 
                     % Advance row number
-                    entry_num = entry_num + 1;
+                    row_num = row_num + 1;
                 end
             end
 
             % Update size of populated portion of samples table
             % there are extra rows in table which are empty
-            obj.SamplesTableSize = entry_num - 1;
+            obj.SamplesTableSize = row_num - 1;
         end
-        function dataset_id = add_to_data_records(obj, dataset_name, dataset)
+        function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side)
         %ADD_TO_DATA_RECORDS adds new dataset to data records.
         % Input : 
         %   dataset_name - the name of the dataset.
         %   dataset - the dataset to load.
+        %   anatomical_side - the anatomical side of the marker data. Either
+        %   "lateral" (default), "medial" or "mean".
         % Output :
         %   dataset_id - the unique dataset ID generated.
-
+            
+            if nargin < 4
+                anatomical_side = "lateral";
+            end
+            
             index = length(obj.DataRecords) + 1;
             dataset_id = obj.FirstUniqueDatasetId;
             obj.FirstUniqueDatasetId = obj.FirstUniqueDatasetId + 1;
@@ -1441,6 +1452,15 @@ classdef ROSAnalyzer < handle
                 if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.right.step)
                     [obj.DataRecords(index).Data(participant_num).Processed_data.right.step(:).Is_included] = deal(true);
                 end
+
+                for side=["left" "right"]
+                    if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
+                        [obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(:).Is_included] = deal(true);
+                        for step_num=1:length(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
+                            obj.cop_to_shank_frame(dataset_id, participant_num, side, step_num, anatomical_side);
+                        end
+                    end
+                end
             end
             obj.filter_data_by_bad_steps(dataset_id)
         end
@@ -1465,10 +1485,7 @@ classdef ROSAnalyzer < handle
             %   dataset_id - the ID of the dataset in data records to add. 
             %                A positive integer number.
             
-            if ~obj.dataset_exists(dataset_id)
-                error(ROSError("DataRecords", "MissingDataset", ...
-                               "Dataset %d not in data records.", dataset_id));
-            end
+            % Get dataset
             dataset = obj.get_dataset(dataset_id);
             
             % If summary table has no empty rows, allocate new row
@@ -1567,7 +1584,7 @@ classdef ROSAnalyzer < handle
             entry_numbers = find(outliers);
             obj.delete_samples('e', entry_numbers)
          end
-        function filter_data_by_bad_steps(obj, dataset_id)
+        function filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration)
         %FILTER_DATA_BY_BAD_STEPS Filter data in records by bad steps. Bad steps
         % are steps where the CoP in shank frame does not have the circular arc
         % shape.
@@ -1578,6 +1595,11 @@ classdef ROSAnalyzer < handle
                 error(ROSError("DataRecords", "MissingDataset", ...
                                "Dataset %d not in data records.", dataset_id));
             end
+            
+            if nargin == 2
+                bad_step_min_duration = 10;
+            end
+
             dataset_index = obj.DataRecordsIDLookup(dataset_id);
             dataset_name = obj.DataRecords(dataset_index).Dataset_name;
             n_participants = length(obj.DataRecords(dataset_index).Data);
@@ -1593,7 +1615,7 @@ classdef ROSAnalyzer < handle
                         plate_number = step.source.plate_number;
                         s = sprintf("DB%d (%s) P%d (%s) %s, T%d (%s), Step %d FP%d\n", dataset_id, dataset_name, participant_num, participant_name, side, trial_num, replace(trial_name, "_", " "),step_number, plate_number);
                         
-                        shank_cop = obj.cop_to_shank_frame(step, "lateral");
+                        shank_cop = step.Shank_cop;
                         
                         x = shank_cop.x(~isnan(shank_cop.x));
                         dx = diff(x);
@@ -1602,16 +1624,15 @@ classdef ROSAnalyzer < handle
                         if isempty(idx_switch)
                             if sign_d(1) < 0
                                 obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
-                                disp("-1 " + s);
+                                % disp("-1 " + s);
                             end
                             continue
                         else
                             idx_switch = [0 idx_switch];
                             idx_switch = [idx_switch length(sign_d)];
-                            k=1:length(idx_switch)-1;
-                            if any(sign_d(idx_switch(k) + 1) < 0 & idx_switch(k + 1) - idx_switch(k) > 20)
+                            if any(sign_d(idx_switch(1:end-1) + 1) < 0 & diff(idx_switch) > bad_step_min_duration)
                                 obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
-                                disp(s);
+                                % disp(s);
                             end
                         end
                     end
@@ -1647,12 +1668,12 @@ classdef ROSAnalyzer < handle
                 side = ["left" "right"];
             end
             if nargin < 3 || isempty(participant_id)
-                dataset = obj.get_dataset(dataset_id);
-                if isempty(dataset)
+                if ~obj.dataset_exists(dataset_id)
                     row_numbers = [];
                     samples = table;
                     return
                 end
+                dataset = obj.get_dataset(dataset_id);
                 participant_id = [dataset.Data(:).Participant_id];
             end
 
@@ -1689,6 +1710,56 @@ classdef ROSAnalyzer < handle
                 samples = obj.SamplesTable(1:obj.SamplesTableSize, var_list(idx));
             end
         end
+    
+        function shank_cop = cop_to_shank_frame(obj, dataset_id, participant_id, side, step_num, anatomical_side)
+        %COP_TO_SHANK_FRAME transforms the COP of the step to the shank
+        % coordinate frame. The frame has the ankle as its origin with the
+        % x direction pointing to the direction of walking, the z direction
+        % is from the ankle to the knee (up) and the y direction completes
+        % a right-handed system.
+        % Input :
+        %   step - the step data to transform. Includes COP and marker
+        %          trajectories.
+        %   anatomical_side - the anatomical side of the markers to use for 
+        %                     the transformation.
+        % Output :
+        %   shank_cop - the COP in the Shank coordinate frame.
+
+            % First get the step
+            dataset = obj.get_dataset(dataset_id);
+            step = dataset.Data(participant_id).Processed_data.(side).step(step_num);
+
+            % The new z direction is the direction from the ankle to the knee
+            new_z = [(step.Markers.Knee.(anatomical_side).x - step.Markers.Ankle.(anatomical_side).x);...
+                     (step.Markers.Knee.(anatomical_side).y - step.Markers.Ankle.(anatomical_side).y);...
+                     (step.Markers.Knee.(anatomical_side).z - step.Markers.Ankle.(anatomical_side).z)];
+            new_z = new_z./vecnorm(new_z);
+
+            % The new y direction is to the left (in the mediolateral direction)
+            new_y = 0.*new_z + [0; 1; 0];
+
+            % The new x is the cross product between them
+            new_x = cross(new_y, new_z);
+
+            % The origin of the new coordinate system is the location of the ankle
+            new_origin = [step.Markers.Ankle.(anatomical_side).x; ...
+                          step.Markers.Ankle.(anatomical_side).y; ...
+                          step.Markers.Ankle.(anatomical_side).z];
+
+            % Get the original COP data
+            cop = [step.COP.x; step.COP.y; zeros(size(step.COP.z))];
+
+            % Transform the COP into the new frame of reference in order to get the ROS
+            cop = cop - new_origin;
+            shank_cop = step.COP;
+            shank_cop.x = dot(cop, new_x);
+            shank_cop.y = dot(cop, new_y);
+            shank_cop.z = dot(cop, new_z);
+                        
+            % Save the shank frame COP into the step
+            dataset_idx = obj.DataRecordsIDLookup(dataset_id);
+            obj.DataRecords(dataset_idx).Data(participant_id).Processed_data.(side).step(step_num).Shank_cop = shank_cop;
+        end 
     end
     
     %% STATIC METHODS
@@ -1706,7 +1777,7 @@ classdef ROSAnalyzer < handle
             % good_steps = steps(steps(:).speed.km_per_hour.value >= min_speed);
 
             % start "good_steps" as having the same length as "steps":
-            good_steps(length(steps)) = steps(1);
+            good_steps = zeros(1, length(steps));
             counter = 1;
             for step_num=1:length(steps)
                 step = steps(step_num);
@@ -1714,7 +1785,7 @@ classdef ROSAnalyzer < handle
                 is_included = step.Is_included;
                 if is_included && step_speed >= min_speed 
                     % add this step:
-                    good_steps(counter) = step;
+                    good_steps(counter) = counter;
                     counter = counter + 1;
                 end
             end
@@ -1747,42 +1818,7 @@ classdef ROSAnalyzer < handle
             shank_length = metadata.Shank_length.(side).value; assert(metadata.Shank_length.unit == "m"); % [m]
             is_shod = metadata.Is_shod.value; % "Yes" (shod) or "No" (barefoot)
         end
-        function shank_cop = cop_to_shank_frame(step, anatomical_side)
-        %COP_TO_SHANK_FRAME transforms the COP of the step to the shank
-        % coordinate frame. The frame has the ankle as its origin with the
-        % x direction pointing to the direction of walking, the z direction
-        % is from the ankle to the knee (up) and the y direction completes
-        % a right-handed system.
-        % Input :
-        %   step - the step data to transform. Includes COP and marker
-        %          trajectories.
-        %   anatomical_side - the anatomical side of the markers to use for 
-        %                     the transformation.
-        % Output :
-        %   shank_cop - the COP in the Shank coordinate frame.
 
-            % the new z direction is the direction from the ankle to the knee
-            new_z = [(step.Markers.Knee.(anatomical_side).x - step.Markers.Ankle.(anatomical_side).x);...
-                     (step.Markers.Knee.(anatomical_side).y - step.Markers.Ankle.(anatomical_side).y);...
-                     (step.Markers.Knee.(anatomical_side).z - step.Markers.Ankle.(anatomical_side).z)];
-            new_z = new_z./vecnorm(new_z);
-            % the new y direction to the Left (in the mediolateral direction)
-            new_y = 0.*new_z + [0; 1; 0];
-            % and the new x is the cross product between them:
-            new_x = cross(new_y, new_z);
-            % the origin of the new coordinate system is the location of the ankle:
-            new_origin = [step.Markers.Ankle.(anatomical_side).x; ...
-                          step.Markers.Ankle.(anatomical_side).y; ...
-                          step.Markers.Ankle.(anatomical_side).z];
-            % get the original COP data:
-            cop = [step.COP.x; step.COP.y; zeros(size(step.COP.z))];
-            % now we will transform the COP into the new frame of reference in order to get the ROS.
-            cop = cop - new_origin;
-            shank_cop.x = dot(cop, new_x);
-            shank_cop.y = dot(cop, new_y);
-            shank_cop.z = dot(cop, new_z);
-
-        end 
         function save_figure(f, file_path, sub_folder, file_type)
         % SAVE_FIGURE saves the figure in the specified format.
 

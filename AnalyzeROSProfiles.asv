@@ -68,13 +68,13 @@ end
 
 %% Plot data
 % close all
-obj.plot_ros({}, 1, 'off');
+obj.plot_ros({DB_1_ID, 1; DB_2_ID, 24}, 12, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
 figure(Name="Histogram:Residuals Histogram vs Normal Distribution Comparison");
-residuals = table2array(obj.get_samples("Residual");
-is_shod = obj.get_samples("Is_shod");
+residuals = table2array(obj.get_samples("Residual"));
+is_shod = table2array(obj.get_samples("Is_shod"));
 shod_residuals = residuals(is_shod == "Yes");
 not_shod_residuals = residuals(is_shod == "No");
 
@@ -111,9 +111,9 @@ legend(FontSize=12)
 
 %% Analyze Radius and Center x
 disp("Plotting histogram of normalized radius and center x (by hight)")
-radius = obj.get_sample_var("Radius");
-center_x = obj.get_sample_var("Center_x");
-height = convert_units(obj.get_sample_var("Height"), "m", "mm");
+radius = table2array(obj.get_samples("Radius"));
+center_x = table2array(obj.get_samples("Center_x"));
+height = convert_units(table2array(obj.get_samples("Height")), "m", "mm");
 normalized_radius = radius./height;
 normalized_center_x = center_x./height;
 
@@ -147,8 +147,10 @@ xlabel("Normalized Center x [m/m]")
 %% Plot Features vs Labels
 obj.plot_features_vs_labels([], ["Radius" "Center_x"])
 
+
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
 save_all_open_figures("./figures/ROS Analysis", [], "fig")
+close all
