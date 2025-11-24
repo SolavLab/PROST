@@ -132,7 +132,7 @@ classdef ROSAnalyzer < handle
         % Output :
         %   dataset - the dataset in the data records. Empty struct if 
         %             doesn't exist.
-            
+
             if ~obj.dataset_exists(dataset_id)
                 error(ROSError("DataRecords", "MissingDataset", ...
                                "Dataset %d not in data records.", dataset_id));
@@ -146,7 +146,7 @@ classdef ROSAnalyzer < handle
         % Input :
         %   dataset_id - the ID of the dataset. A positive integer number.
         %   dataset - the dataset object.
-            
+
             if ~obj.dataset_exists(dataset_id)
                 error(ROSError("DataRecords", "MissingDataset", ...
                                "Dataset %d not in data records.", dataset_id));
@@ -162,7 +162,7 @@ classdef ROSAnalyzer < handle
         % Output :
         %   dataset_name - the name of the dataset. Equals empty string if 
         %                  the dataset does not exist.
-        
+
             if obj.dataset_exists(dataset_id)
                 index = obj.DataRecordsIDLookup(dataset_id);
                 dataset_name = obj.DataRecords(index).Dataset_name;
@@ -566,8 +566,8 @@ classdef ROSAnalyzer < handle
                         y_label = y_name + " / height";
 
                         % Create linear model
-                        X = [ones(size(x)), x];   % intercept + predictor
-                        b = X \ y;           % regression coefficients
+                        X = [ones(size(x)), x]; % intercept + predictor
+                        b = X \ y; % regression coefficients
 
                         y_pred = X * b;
 
