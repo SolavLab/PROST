@@ -5,15 +5,15 @@
 clc; close all; clearvars -except DB_1 DB_2
 
 % Turn off a few of the specific warnings:
-warning('off', 'MATLAB:colon:nonIntegerIndex');
-warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
+% warning('off', 'MATLAB:colon:nonIntegerIndex');
+% warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
 
-% Add path to data files
+% Add data files to path
 data_path = "C:\Users\chenr\Documents\PROST\DB3\Data files";
-addpath(genpath(data_path));
+addpath(data_path);
 
-% Add path to helper functions
-addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
+% Add PROST package to path
+addpath("C:\Users\chenr\Documents\PROST\");
 
 %% -----------------------------
 %  General Database info:
@@ -184,9 +184,9 @@ for participant_number = 1:n_participants
     right_below_knee = ST_data([markers_guide.reference_guide{"Right Fibular Head"}{2:end}]); % RxFH
     left_below_knee = ST_data([markers_guide.reference_guide{"Left Fibular Head"}{2:end}]); % LxFH
     
-    right_virtual_knee = get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
+    right_virtual_knee = PROST.utils.get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
     right_knee = [right_virtual_knee.x;right_virtual_knee.y;right_virtual_knee.z];
-    left_virtual_knee = get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
+    left_virtual_knee = PROST.utils.get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x;left_virtual_knee.y;left_virtual_knee.z];
 
     right_hip = ST_data([markers_guide.reference_guide{"Right ASIS"}{2:end}]); % RxAsis
@@ -327,7 +327,7 @@ for participant_number = 1:n_participants
         step_info.events.TO.time = forceplate_time_vector(end);
         step_info.events.TO.time = round(round_by*(step_info.events.TO.time))/round_by;
         step_info.events.TO.forceplate_index = n_grf_samples;
-        [~, step_info.events.TO.trajectory_index] = find_index(trajectory_time_vector, step_info.events.TO.time);
+        [~, step_info.events.TO.trajectory_index] = PROST.utils.find_index_from_value(trajectory_time_vector, step_info.events.TO.time);
         
         if ~(mod(step_info.events.TO.forceplate_index, 1) == 0) || ~(mod(step_info.events.TO.trajectory_index, 1) == 0)
             error("TO index not an integer.\n" + ...
@@ -372,7 +372,7 @@ for participant_number = 1:n_participants
         % Add OIC to step info event
         step_info.events.OIC.time = trajectory_time_vector(OIC_index_traj);
         step_info.events.OIC.time = round(round_by*(step_info.events.OIC.time))/round_by;
-        [~, step_info.events.OIC.forceplate_index] = find_index(forceplate_time_vector, step_info.events.OIC.time);
+        [~, step_info.events.OIC.forceplate_index] = PROST.utils.find_index_from_value(forceplate_time_vector, step_info.events.OIC.time);
         step_info.events.OIC.trajectory_index = OIC_index_traj;
         if ~(mod(step_info.events.OIC.forceplate_index, 1) == 0) || ~(mod(step_info.events.OIC.trajectory_index, 1) == 0)
             error("OIC index not an integer.\n" + ...
@@ -450,7 +450,7 @@ for participant_number = 1:n_participants
                 IC_new_time = forceplate_time_vector(new_forceplate_IC);
                 IC_new_time = round(round_by*(IC_new_time))/round_by;
                 DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.events.IC.time = IC_new_time;
-                [~, new_trajectory_IC] = find_index(trajectory_time_vector, IC_new_time);
+                [~, new_trajectory_IC] = PROST.utils.find_index_from_value(trajectory_time_vector, IC_new_time);
                 DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.events.IC.trajectory_index = new_trajectory_IC;
             end
             if ~(mod(step_info.events.IC.forceplate_index, 1) == 0) || ~(mod(step_info.events.IC.trajectory_index, 1) == 0)
@@ -476,11 +476,11 @@ for participant_number = 1:n_participants
         right_ST_below_knee = ST_data([markers_guide.reference_guide{"Right Fibular Head"}{2:end}]); % RxFH
         left_ST_below_knee = ST_data([markers_guide.reference_guide{"Left Fibular Head"}{2:end}]); % LxFH
         trajectories.(markers_guide.virtual_markers("Right Lateral Knee")) = ...
-            get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ...
+            PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ...
                             trajectories.(markers_guide.reference_guide{"Right Lateral Ankle"}{1}), ...
                             right_ST_below_knee, right_ST_above_knee);
         trajectories.(markers_guide.virtual_markers("Left Lateral Knee")) = ...
-            get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ...
+            PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ...
                             trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...
                             left_ST_below_knee, left_ST_above_knee);
 
@@ -505,7 +505,7 @@ for participant_number = 1:n_participants
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.method = "given";
 
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = convert_units(convert_units(speed, "m", "km"), "hour", "second");
+        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
         DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = "Converted from [m/sec] to [km/hour].";
 

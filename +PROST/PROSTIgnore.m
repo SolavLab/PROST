@@ -1,10 +1,10 @@
-classdef ROSIgnore < handle
+classdef PROSTIgnore < handle
     properties(Access=public)
         IgnoreList = struct([]);
         DatasetIDLookup = configureDictionary("double", "double"); % Lookup dataset_id -> index
     end
     methods
-        function ig = ROSIgnore() 
+        function ig = PROSTIgnore() 
         end
 
         function add_ignored(ig, dataset_id, participants, trials, side)
@@ -21,8 +21,10 @@ classdef ROSIgnore < handle
         % Usage :
         %   add_ignored(dataset_id, participants, trials, side)
         %   add_ignored(dataset_id, participants, trials)
-        %   add_ignored(dataset_id, participants, trials, [])
         %   add_ignored(dataset_id, participants, [], side)
+        %   add_ignored(dataset_id, participants)
+        %   add_ignored(dataset_id)
+
 
             if ~ig.is_ignored_dataset(dataset_id)
                 dataset_index = length(ig.IgnoreList) + 1;
@@ -34,11 +36,13 @@ classdef ROSIgnore < handle
                 dataset_index = ig.DatasetIDLookup(dataset_id);
             end
             
-            % if ~ismember('ParticipantIDLookup', fieldnames(obj.IgnoreList(index)))
-            %     obj.IgnoreList(index).ParticipantIDLookup = configureDictionary("double", "double"); % Lookup dataset_id -> index
-            % end
+            if isempty(participants) || nargin == 2
+                ig.IgnoreList(dataset_index).ParticipantIDLookup(NaN) = 1;
+                ig.IgnoreList(dataset_index).Participants = struct("Participant_id", NaN, "Left", NaN, "Right", NaN);
+                return
+            end
             
-            if nargin == 4 || isempty(side) || ismissing(side)
+            if nargin < 5 || isempty(side) || ismissing(side)
                 side = ["Right" "Left"];
             end
             side = convertCharsToStrings(side);
@@ -47,7 +51,7 @@ classdef ROSIgnore < handle
                ~all(strcmp(side, "Left") | strcmp(side, "Right"))
                 error("ROSIgnore:WrongFormat", "'side' should be either 'Left' or 'Right' or both.")
             end
-
+            
             n_participants = length(participants);
             for pdx=1:n_participants
                 participant_id = participants(pdx);
@@ -63,8 +67,8 @@ classdef ROSIgnore < handle
                 end
 
                 for s=side
-                    if isempty(trials)
-                         ig.IgnoreList(dataset_index).Participants(participant_index).(s) = Inf;
+                    if isempty(trials) || nargin == 3
+                         ig.IgnoreList(dataset_index).Participants(participant_index).(s) = NaN;
                     else
                         ig.IgnoreList(dataset_index).Participants(participant_index).(s) = unique([ig.IgnoreList(dataset_index).Participants(participant_index).(s) trials]);
                     end
@@ -87,10 +91,9 @@ classdef ROSIgnore < handle
         % Usage :
         %   delete_ignored(dataset_id, participants, trials, side)
         %   delete_ignored(dataset_id, participants, trials)
-        %   delete_ignored(dataset_id, participants, trials, [])
         %   delete_ignored(dataset_id, participants, [], side)
+        %   delete_ignored(dataset_id, participants)
         %   delete_ignored(dataset_id)
-        %   delete_ignored(dataset_id, participants, [], side)
         
             if ~ig.is_ignored_dataset(dataset_id)
                 return
@@ -132,7 +135,7 @@ classdef ROSIgnore < handle
                 return
             end
             
-            if nargin == 4 || isempty(side) || ismissing(side)
+            if nargin < 5 || isempty(side) || ismissing(side)
                 side = ["Right" "Left"];
             end
             
@@ -171,7 +174,7 @@ classdef ROSIgnore < handle
             end
         end
 
-        function tf = is_ignored_participants(obj, dataset_id, participants)
+        function tf = is_ignored_participants(ig, dataset_id, participants)
         %IS_IGNORED_PARTICIPANTS returns an array containing logical 1 (true) 
         % where the participant in 'participants' of the dataset with ID 
         % 'dataset_id' is in the ignore list. Elsewhere, the array contains 
@@ -190,12 +193,17 @@ classdef ROSIgnore < handle
             if ~isnumeric(participants) || ~isvector(participants) || any(participants <= 0) || any(participants ~= floor(participants))
                 error("ROSIgnore:WrongFormat", "'participants' should be a positive integer or vector of positive integers.")
             end
-            if ~obj.is_ignored_dataset(dataset_id)
+            if ~ig.is_ignored_dataset(dataset_id)
                 error("ROSIgnore:MissingDataset", "Dataset %d doesn't exist.", dataset_id)
             end
-            dataset_index = obj.DatasetIDLookup(dataset_id);
+            dataset_index = ig.DatasetIDLookup(dataset_id);
             
-            tf = isKey(obj.IgnoreList(dataset_index).ParticipantIDLookup, participants);
+            
+            if isKey(ig.IgnoreList(dataset_index).ParticipantIDLookup, NaN)
+                tf = true(size(participants));
+            else
+                tf = isKey(ig.IgnoreList(dataset_index).ParticipantIDLookup, participants);
+            end
         end
 
         function tf = is_ignored_trials(ig, dataset_id, participant_id, trials, side)
@@ -229,7 +237,7 @@ classdef ROSIgnore < handle
             end
 
             participant_index = ig.IgnoreList(dataset_index).ParticipantIDLookup(participant_id);
-            if isinf(ig.IgnoreList(dataset_index).Participants(participant_index).(side))
+            if isnan(ig.IgnoreList(dataset_index).Participants(participant_index).(side))
                 tf = true;
             else
                 tf = ismember(trials, ig.IgnoreList(dataset_index).Participants(participant_index).(side));

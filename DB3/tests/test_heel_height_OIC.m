@@ -13,8 +13,9 @@ clear variables
 clc
 
 addpath("..\Data files")
-addpath("..\auxiliary functions")
-addpath(genpath("..\..\Helper Functions"))
+
+% Add path to PROST package
+addpath("C:\Users\chenr\Documents\PROST\");
 
 %%
 for threshold_shift=[0 0.02 0.025 0.03 0.035 0.04]
@@ -117,7 +118,7 @@ for threshold_shift=[0 0.02 0.025 0.03 0.035 0.04]
             end
     
             step_info.events.OIC.time = markers_times_vector(OIC_index_traj);
-            [~, step_info.events.OIC.forceplate_index] = find_index(grf_times_vector, step_info.events.OIC.time);
+            [~, step_info.events.OIC.forceplate_index] = PROST.utils.find_index_from_value(grf_times_vector, step_info.events.OIC.time);
             step_info.events.OIC.trajectory_index = OIC_index_traj;
     
             IC_time = step_info.events.IC.time;

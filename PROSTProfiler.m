@@ -2,15 +2,17 @@ clearvars -except DB_1 DB_2 DB_3
 close all
 clc
 
-% setup
+%% Setup
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
-script_folder = fileparts(script_full_path); % Get the folder of the script
-cd(script_folder); % Change to folder of current script
-addpath(genpath(".\Helper Functions")); % Add path to helper functions
+toolbox_root = fileparts(script_full_path); % Get the folder of the script
+addpath(toolbox_root); % Add PROST package to path
+dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_datasets
+cd(toolbox_root); % Change to folder of current script
+
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %% Build data
-db_list = ["DB_1", "./DB1/DB_1.mat"; "DB_2", "./DB2/DB_2.mat"; "DB_3", "./DB3/DB_3.mat"];
+db_list = ["DB_1", fullfile(dataset_dir, "DB_1.mat"); "DB_2", fullfile(dataset_dir, "DB_2.mat"); "DB_3", fullfile(dataset_dir, "DB_3.mat")];
 
 var_names = db_list(:, 1);
 for index = 1:length(var_names)
@@ -18,23 +20,10 @@ for index = 1:length(var_names)
         load(db_list(index, 2))
     end
 end
-
-% dataset_paths = split(db_list(:, 2), "/");
-% if iscolumn(dataset_paths)
-%     dataset_paths = dataset_paths';
-% end
-% build_names = replace("build_database_" + dataset_paths(:, end), "mat", "m");
-% dataset_paths(:, end) = build_names(:);
-% for index = 1:length(var_names)
-%     if ~exist(var_names(index), "var")
-%         disp("Building " + var_names(index) + "...")
-%         dataset_file = join(dataset_paths(index, :), "/");
-%         run(dataset_file)
-%     end
-% end
  
 clearvars -except DB_1 DB_2 DB_3
 close all 
+clc
 
 %% Load and ignore lists
 %   load_list - a cell array where each row contains pairs of dataset name and 
@@ -44,7 +33,7 @@ load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)
 n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
-[obj, dataset_ids] = ROSAnalyzer.ROSAnalyzer(load_list);
+[PROSTObj, dataset_ids] = PROST.PROSTAnalyzer(load_list);
 DB_1_ID = dataset_ids(1);
 DB_2_ID = dataset_ids(2);
 DB_3_ID = dataset_ids(3);
@@ -52,29 +41,29 @@ DB_3_ID = dataset_ids(3);
 %% Clean data
 % Some participants have bad data and should be ignored so we add them to an
 % ignored list
-ignore_list = ROSAnalyzer.ROSIgnore();
+ignore_list = PROST.PROSTIgnore();
 ignore_list.add_ignored(DB_1_ID, [3 5 14 15 16], [], "Left");
 ignore_list.add_ignored(DB_1_ID, [5 14 15 16], [], "Right");
 ignore_list.add_ignored(DB_2_ID, [31], [], "Left");
 ignore_list.add_ignored(DB_3_ID, [43, 47], [], "Left");
 
-obj.IgnoreList = ignore_list;
-obj.clean_data();
+PROSTObj.clean_data(ignore_list);
+
 %% Add to samples table data from datasets
 for index=1:n_datasets
-    dataset_name = obj.get_dataset_name(dataset_ids(index));
-    obj.add_samples(dataset_ids(index));
+    dataset_name = PROSTObj.get_dataset_name(dataset_ids(index));
+    PROSTObj.add_samples(dataset_ids(index));
 end
 
 %% Plot data
 % close all
-obj.plot_ros({DB_1_ID, 1; DB_2_ID, 24}, 12, 'on', 'fig');
+PROSTObj.plot_ros({DB_1_ID, 1; DB_2_ID, 24}, 12, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
 figure(Name="Histogram:Residuals Histogram vs Normal Distribution Comparison");
-residuals = table2array(obj.get_samples("Residual"));
-is_shod = table2array(obj.get_samples("Is_shod"));
+residuals = table2array(PROSTObj.get_samples("Residual"));
+is_shod = table2array(PROSTObj.get_samples("Is_shod"));
 shod_residuals = residuals(is_shod == "Yes");
 not_shod_residuals = residuals(is_shod == "No");
 
@@ -111,9 +100,9 @@ legend(FontSize=12)
 
 %% Analyze Radius and Center x
 disp("Plotting histogram of normalized radius and center x (by hight)")
-radius = table2array(obj.get_samples("Radius"));
-center_x = table2array(obj.get_samples("Center_x"));
-height = convert_units(table2array(obj.get_samples("Height")), "m", "mm");
+radius = table2array(PROSTObj.get_samples("Radius"));
+center_x = table2array(PROSTObj.get_samples("Center_x"));
+height = convert_units(table2array(PROSTObj.get_samples("Height")), "m", "mm");
 normalized_radius = radius./height;
 normalized_center_x = center_x./height;
 
@@ -145,11 +134,11 @@ title(replace(f.Name, "_", " "))
 xlabel("Normalized Center x [m/m]")
 
 %% Plot Features vs Labels
-obj.plot_features_vs_labels([], ["Radius" "Center_x"])
+PROSTObj.plot_features_vs_labels([], ["Radius" "Center_x"])
 
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-save_all_open_figures("./figures/ROS Analysis", [], "fig")
+PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "fig")
 close all

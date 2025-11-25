@@ -7,17 +7,20 @@
 clearvars -except good_trials DB_1 DB_3;
 % close all
 clc
+% 
+% % Turn off a few of the specific warnings:
+% warning('off', 'MATLAB:colon:nonIntegerIndex');
+% warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
 
-% Turn off a few of the specific warnings:
-warning('off', 'MATLAB:colon:nonIntegerIndex');
-warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
+% Add ezc3d package
+addpath("C:\Users\chenr\Documents\PROST\DB2\ezc3d_matlab");
 
-% Add path to helper functions
-addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
+% Add PROST package to path
+addpath("C:\Users\chenr\Documents\PROST\");
 
-% Add path to data files
+% Add data files to path
 dataset_path = "C:\Users\chenr\Documents\PROST\DB2\c3d files";
-addpath(genpath(dataset_path));
+addpath(dataset_path);
 
 %% -----------------------------
 %  General Database info:
@@ -305,7 +308,7 @@ for participant_number=1:n_participants
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.";
         
-        speed_km_per_hr = convert_units(convert_units(speed, "m", "km"), "hour", "second");
+        speed_km_per_hr = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = speed_km_per_hr;
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
         DB_2.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = ...
@@ -511,9 +514,9 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     right_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Fibular Head"}{2}); % R_FAX
     left_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Fibular Head"}{2}); % L_FAX
     
-    right_virtual_knee = get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
+    right_virtual_knee = PROST.utils.get_knee_marker(right_below_knee, right_ankle, right_below_knee, right_above_knee);
     right_knee = [right_virtual_knee.x; right_virtual_knee.y; right_virtual_knee.z];
-    left_virtual_knee = get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
+    left_virtual_knee = PROST.utils.get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x; left_virtual_knee.y; left_virtual_knee.z];
     
         % hip
@@ -521,20 +524,20 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     left_hip = standing_trial.data(:,  markers_guide.reference_guide{"Left ASIS"}{2}); % L_FTC
     
     % leg length - from ASIS to lateral ankle
-    metadata.Leg_length.right.value = convert_units(norm(right_hip - right_ankle), standing_trial.unit, "m");
-    metadata.Leg_length.left.value = convert_units(norm(left_hip - left_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.right.value = PROST.utils.convert_units(norm(right_hip - right_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.left.value = PROST.utils.convert_units(norm(left_hip - left_ankle), standing_trial.unit, "m");
     metadata.Leg_length.unit = "m";
     metadata.Leg_length.method = "calculated by distance between markers in the standing trial";
 
     % thigh length - from ASIS to lateral knee
-    metadata.Thigh_length.right.value = convert_units(norm(right_hip - right_knee), standing_trial.unit, "m");
-    metadata.Thigh_length.left.value = convert_units(norm(left_hip - left_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.right.value = PROST.utils.convert_units(norm(right_hip - right_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.left.value = PROST.utils.convert_units(norm(left_hip - left_knee), standing_trial.unit, "m");
     metadata.Thigh_length.unit = "m";
     metadata.Thigh_length.method = "calculated by distance between markers in the standing trial";
     
     % shank length - from lateral knee to lateral ankle
-    metadata.Shank_length.right.value = convert_units(norm(right_knee - right_ankle), standing_trial.unit, "m");
-    metadata.Shank_length.left.value = convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
+    metadata.Shank_length.right.value = PROST.utils.convert_units(norm(right_knee - right_ankle), standing_trial.unit, "m");
+    metadata.Shank_length.left.value = PROST.utils.convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
     metadata.Shank_length.unit = "m";
     metadata.Shank_length.method = "calculated by distance between markers in the standing trial";
 
@@ -543,8 +546,8 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % Add foot length estimation to metadata.
     % right_steps = DB_2.Data.(participant_name).processed_data.right.step;
     % left_steps = DB_2.Data.(participant_name).processed_data.left.step;
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.right.value = estimate_foot_length(right_steps);
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.left.value = estimate_foot_length(left_steps);
+    % DB_2.Data.(participant_name).metadata.effective_foot_length.right.value = PROST.utils.estimate_foot_length(right_steps);
+    % DB_2.Data.(participant_name).metadata.effective_foot_length.left.value = PROST.utils.estimate_foot_length(left_steps);
     % DB_2.Data.(participant_name).metadata.effective_foot_length.unit = "m";
     % DB_2.Data.(participant_name).metadata.effective_foot_length.method="calculated from average COP in walking direction which is 0.83 of foot length.";
 end
@@ -899,11 +902,11 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
     right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Fibular Head"}{2}); % R_FAX
     left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Fibular Head"}{2}); % L_FAX
     trajectories.(markers_guide.virtual_markers("Right Lateral Knee")) = ...
-        get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ... % R_FAX
+        PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Fibular Head"}{1}), ... % R_FAX
                         trajectories.(markers_guide.reference_guide{"Right Lateral Ankle"}{1}), ...      % R_FAL
                         right_ST_below_knee, right_ST_above_knee);
     trajectories.(markers_guide.virtual_markers("Left Lateral Knee")) = ...
-        get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ... % L_FAX
+        PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Fibular Head"}{1}), ... % L_FAX
                         trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...      % L_FAL
                         left_ST_below_knee, left_ST_above_knee);
 
@@ -914,11 +917,11 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
     right_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Tibial Tuberosity"}{2}); % R_TTC
     left_ST_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Tibial Tuberosity"}{2}); % L_TTC
     trajectories.(markers_guide.virtual_markers("Right Medial Knee")) = ...
-    get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Tibial Tuberosity"}{1}), ... % R_TTC
+    PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Right Tibial Tuberosity"}{1}), ... % R_TTC
                     trajectories.(markers_guide.reference_guide{"Right Medial Ankle"}{1}), ...      % R_TAM
                     right_ST_below_knee, right_ST_above_knee);
     trajectories.(markers_guide.virtual_markers("Left Medial Knee")) = ...
-    get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Tibial Tuberosity"}{1}), ...  % L_TTC
+    PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Tibial Tuberosity"}{1}), ...  % L_TTC
                     trajectories.(markers_guide.reference_guide{"Left Medial Ankle"}{1}), ...       % L_TAM
                     left_ST_below_knee, left_ST_above_knee);
 end
@@ -1011,12 +1014,12 @@ function speed = calculate_speed(trajectories, events, walking_marker_name)
                            trajectories.(walking_marker_name).y];
         distance = norm([distance_marker(1, index_end) - distance_marker(1, index_start);...
                          distance_marker(2, index_end) - distance_marker(2, index_start)]); % [mm]
-        distance = convert_units(distance, trajectories.unit, "m"); % [m]
+        distance = PROST.utils.convert_units(distance, trajectories.unit, "m"); % [m]
         
         % Calculate speed of the side
         duration = time_end - time_start;
         if trajectories.time_vector.unit ~= "second"
-            duration = convert_units(duration, trajectories.time_vector.unit, "second");
+            duration = PROST.utils.convert_units(duration, trajectories.time_vector.unit, "second");
         end
         speed(side_num) = distance/duration; % [m/sec]
     end
@@ -1137,7 +1140,7 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
         n_temporal_alignment = 101;
     end
     % Foot of the step
-    foot = capitalize(step_info.foot);
+    foot = PROST.utils.capitalize(step_info.foot);
 
     % Get event indices of the trajectory measurements
     IC_index = step_info.events.IC.trajectory_index;

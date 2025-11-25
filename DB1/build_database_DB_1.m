@@ -6,12 +6,12 @@
 %
 clc; close all; clearvars -except DB_2 DB_3;
 
-% Add path to data files
+% Add data files to path
 data_path = "C:\Users\chenr\Documents\PROST\DB1\Subjects_Data";
 addpath(data_path);
 
-% Add path to helper functions
-addpath(genpath("C:\Users\chenr\Documents\PROST\Helper Functions"));
+% Add PROST package to path
+addpath("C:\Users\chenr\Documents\PROST\");
 
 %% -----------------------------
 %  General Database info:
@@ -263,9 +263,9 @@ for participant_number=participant_numbers
 
                 % Get COP data
                 % cop is given in meters. notice we multiplied by 1000 to convert to mm.
-                x_cop = convert_units(single_trial_COP_data.("FP" + force_plate + "_X"), "m", "mm"); % [mm]
-                y_cop = convert_units(single_trial_COP_data.("FP" + force_plate + "_Y"), "m", "mm"); % [mm]
-                z_cop = convert_units(single_trial_COP_data.("FP" + force_plate + "_Z"), "m", "mm"); % [mm]
+                x_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_X"), "m", "mm"); % [mm]
+                y_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_Y"), "m", "mm"); % [mm]
+                z_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_Z"), "m", "mm"); % [mm]
 
                 % Process the COP data to get rid of wrong points
                 if rem(forceplate_counter, 2) == 0 % left foot
@@ -330,7 +330,7 @@ for participant_number=participant_numbers
 
             distance = [vecnorm([psis.x(IC3_index); psis.y(IC3_index)] - [psis.x(IC1_index); psis.y(IC1_index)]); ... % [mm]
                 vecnorm([psis.x(IC4_index); psis.y(IC4_index)] - [psis.x(IC2_index); psis.y(IC2_index)])];    % [mm]
-            distance = convert_units(distance, "mm", "m");
+            distance = PROST.utils.convert_units(distance, "mm", "m");
             speed = distance ./ [(IC3_time - IC1_time); (IC4_time - IC2_time)];
             mean_speed = mean(speed); % [m/s]
 
@@ -340,7 +340,7 @@ for participant_number=participant_numbers
                 "For each foot, calculated the distance traveled of the mean PSIS marker divided by the time between two consecutive foot strikes of that foot.\n" + ...
                 "Then calculated the mean speed of both feet.";
 
-            speed_structure.km_per_hour.value = convert_units(convert_units(speed_structure.m_per_sec.value, "m", "km"), "hour", "second");
+            speed_structure.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed_structure.m_per_sec.value, "m", "km"), "hour", "second");
             speed_structure.km_per_hour.unit="km/hour";
             speed_structure.km_per_hour.method="calculated by" + ...
                 "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
@@ -569,9 +569,9 @@ for participant_number=participant_numbers
 
     % Add foot length estimation to metadata.
     % right_steps = DB_1.Data.(participant_name).processed_data.right.step;
-    % estimated_foot_length_right = estimate_foot_length(right_steps);
+    % estimated_foot_length_right = PROST.utils.estimate_foot_length(right_steps);
     % left_steps = DB_1.Data.(participant_name).processed_data.left.step;
-    % estimated_foot_length_left = estimate_foot_length(left_steps);
+    % estimated_foot_length_left = PROST.utils.estimate_foot_length(left_steps);
     % DB_1.Data.(participant_name).metadata.Estimated_foot_length.right.value = estimated_foot_length_right;
     % DB_1.Data.(participant_name).metadata.Estimated_foot_length.left.value = estimated_foot_length_left;
     % DB_1.Data.(participant_name).metadata.Estimated_foot_length.unit = "m";
@@ -649,12 +649,12 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
                 single_trial_trajectories_data.(relevant_markers{"Left Lateral Knee"}{2})'; ...
                 single_trial_trajectories_data.(relevant_markers{"Left Lateral Knee"}{3})'];
 
-            right_leg_length = convert_units(vecnorm(right_asis - right_ankle), "mm", "m");
-            left_leg_length = convert_units(vecnorm(left_asis - left_ankle), "mm", "m");
-            right_thigh_length = convert_units(vecnorm(right_asis - right_knee), "mm", "m");
-            left_thigh_length = convert_units(vecnorm(left_asis - left_knee), "mm", "m");
-            right_shank_length = convert_units(vecnorm(right_knee - right_ankle), "mm", "m");
-            left_shank_length = convert_units(vecnorm(left_knee - left_ankle), "mm", "m");
+            right_leg_length = PROST.utils.convert_units(vecnorm(right_asis - right_ankle), "mm", "m");
+            left_leg_length = PROST.utils.convert_units(vecnorm(left_asis - left_ankle), "mm", "m");
+            right_thigh_length = PROST.utils.convert_units(vecnorm(right_asis - right_knee), "mm", "m");
+            left_thigh_length = PROST.utils.convert_units(vecnorm(left_asis - left_knee), "mm", "m");
+            right_shank_length = PROST.utils.convert_units(vecnorm(right_knee - right_ankle), "mm", "m");
+            left_shank_length = PROST.utils.convert_units(vecnorm(left_knee - left_ankle), "mm", "m");
 
             % save medians
             right_leg_lengths_vector(trials_counter) = median(right_leg_length);

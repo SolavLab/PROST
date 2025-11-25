@@ -4,3 +4,8 @@ DB3/DB_3.mat
 DB2/tests/DB_2_old.mat
 DB2/tests/DB_2_alt.mat
 *.asv
+DB_1.mat
+DB3/DB_3.mat
+example_datasets/DB_1.mat
+example_datasets/DB_2.mat
+example_datasets/DB_3.mat

@@ -41,7 +41,7 @@ ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16];...
 % ignore_list = {};
 
 %% Create ROS analysis object
-[obj, ~] = ROSAnalyzer();
+[obj, ~] = PROST.PROSTAnalyzer();
 
 %% Test Add Dataset Elements
 assert(isempty(obj.DataRecords))
@@ -89,10 +89,10 @@ assert(obj.SummaryTable.Authors(1) == DB_1.Article_data.authors)
 assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories(1), DB_1.Experiment_explained.speed_categories))
+assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
 assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_participants)
 assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod)
+assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_1.Data.participant_1.processed_data.(side).step;
     if ~isempty(steps)
@@ -110,10 +110,10 @@ assert(obj.SummaryTable.Authors(2) == DB_3.Article_data.authors)
 assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories(2), DB_3.Experiment_explained.speed_categories))
+assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
 assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_participants)
 assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod)
+assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_3.Data.participant_1.processed_data.(side).step;
     if ~isempty(steps)
@@ -121,7 +121,7 @@ for side=["left" "right"]
     end
 end
 
-assert(assert((ismissing(obj.SamplesTable) | isnan(obj.SamplesTable) | (obj.SamplesTable == false)) || isempty(obj.SamplesTable)))
+assert(isempty(obj.SamplesTable))
 assert(obj.SamplesTableSize == 0)
 
 obj.add_to_samples_table(DB_1_ID);
@@ -130,7 +130,7 @@ sides_counter = 0;
 for p=1:16
     for side=["left" "right"]
         steps = DB_1.Data.("participant_" + p).processed_data.(side).step;
-        sides_counter = sides_counter + length(steps);
+        sides_counter = sides_counter + ~isempty(steps);
     end
 end
 assert(obj.SamplesTableSize == sides_counter)
@@ -140,7 +140,7 @@ assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
 for p=1:50
     for side=["left" "right"]
         steps = DB_3.Data.("participant_" + p).processed_data.(side).step;
-        sides_counter = sides_counter + length(steps);
+        sides_counter = sides_counter + ~isempty(steps);
     end
 end
 assert(obj.SamplesTableSize == sides_counter)
@@ -151,17 +151,17 @@ obj.delete_dataset(DB_1_ID);
 obj.delete_dataset(DB_3_ID);
 
 assert(isempty(obj.DataRecords))
-assert(isempty(obj.DataRecordsIDLookup))
+assert(numEntries(obj.DataRecordsIDLookup) == 0)
 assert(isempty(obj.SummaryTable))
 assert(obj.SummaryTableSize == 0)
-assert((ismissing(obj.SamplesTable) | isnan(obj.SamplesTable) | ~(obj.SamplesTable)) || isempty(obj.SamplesTable))
+assert(all(ismissing(obj.SamplesTable, {false, missing}), 'all'))
 assert(obj.SamplesTableSize == 0)
 %% Test Add Dataset
 assert(isempty(obj.DataRecords))
-assert(isempty(obj.DataRecordsIDLookup))
+assert(numEntries(obj.DataRecordsIDLookup) == 0)
 assert(isempty(obj.SummaryTable))
 assert(obj.SummaryTableSize == 0)
-assert((ismissing(obj.SamplesTable) | isnan(obj.SamplesTable) | ~(obj.SamplesTable)) || isempty(obj.SamplesTable))
+assert(all(ismissing(obj.SamplesTable, {false, missing}), 'all') || isempty(obj.SamplesTable))
 assert(obj.SamplesTableSize == 0)
 
 DB_1_ID = obj.add_dataset("DB_1", DB_1);
@@ -187,10 +187,10 @@ assert(obj.SummaryTable.Authors(1) == DB_1.Article_data.authors)
 assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories(1), DB_1.Experiment_explained.speed_categories))
+assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
 assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_participants)
 assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod)
+assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_1.Data.participant_1.processed_data.(side).step;
     if ~isempty(steps)
@@ -202,7 +202,7 @@ sides_counter = 0;
 for p=1:16
     for side=["left" "right"]
         steps = DB_1.Data.("participant_" + p).processed_data.(side).step;
-        sides_counter = sides_counter + length(steps);
+        sides_counter = sides_counter + ~isempty(steps);
     end
 end
 assert(obj.SamplesTableSize == sides_counter)
@@ -230,10 +230,10 @@ assert(obj.SummaryTable.Authors(2) == DB_3.Article_data.authors)
 assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories(2), DB_3.Experiment_explained.speed_categories))
+assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
 assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_participants)
 assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod)
+assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_3.Data.participant_1.processed_data.(side).step;
     if ~isempty(steps)
@@ -244,7 +244,7 @@ assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
 for p=1:50
     for side=["left" "right"]
         steps = DB_3.Data.("participant_" + p).processed_data.(side).step;
-        sides_counter = sides_counter + length(steps);
+        sides_counter = sides_counter + ~isempty(steps);
     end
 end
 assert(obj.SamplesTableSize == sides_counter)
