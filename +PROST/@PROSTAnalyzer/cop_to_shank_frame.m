@@ -1,4 +1,4 @@
-function shank_cop = cop_to_shank_frame(obj, dataset_id, participant_id, side, step_num, anatomical_side)
+function shank_cop = cop_to_shank_frame(step, anatomical_side)
 %COP_TO_SHANK_FRAME transforms the COP of the step to the shank
 % coordinate frame. The frame has the ankle as its origin with the
 % x direction pointing to the direction of walking, the z direction
@@ -13,9 +13,6 @@ function shank_cop = cop_to_shank_frame(obj, dataset_id, participant_id, side, s
 % Output :
 %   shank_cop - the COP in the Shank coordinate frame.
 
-    % First get the step
-    dataset = obj.get_dataset(dataset_id);
-    step = dataset.Data(participant_id).Processed_data.(side).step(step_num);
 
     % The new z direction is the direction from the ankle to the knee
     new_z = [(step.Markers.Knee.(anatomical_side).x - step.Markers.Ankle.(anatomical_side).x);...
@@ -42,10 +39,4 @@ function shank_cop = cop_to_shank_frame(obj, dataset_id, participant_id, side, s
     shank_cop.x = dot(cop, new_x);
     shank_cop.y = dot(cop, new_y);
     shank_cop.z = dot(cop, new_z);
-
-    % Save the shank frame COP into the step
-    dataset_idx = obj.DataRecordsIDLookup(dataset_id);
-    obj.DataRecords(dataset_idx).Data(participant_id).Processed_data.(side).step(step_num).Shank_cop.unit = step.COP.unit;
-    % obj.DataRecords(dataset_idx).Data(participant_id).Processed_data.(side).step(step_num).Shank_cop. = step.COP.;
-    obj.DataRecords(dataset_idx).Data(participant_id).Processed_data.(side).step(step_num).Shank_cop.(anatomical_side) = shank_cop;
 end

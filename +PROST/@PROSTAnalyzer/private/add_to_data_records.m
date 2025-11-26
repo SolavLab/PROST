@@ -47,7 +47,16 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
             if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
                 [obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(:).Is_included] = deal(true);
                 for step_num=1:length(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
-                    obj.cop_to_shank_frame(dataset_id, participant_num, side, step_num, anatomical_side);
+                    step = obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(step_num);
+                    shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(step, anatomical_side);
+                    shank_cop.temporal_alignment = step.COP.temporal_alignment;
+                    shank_cop.IC_index = step.COP.IC_index;
+                    shank_cop.OIC_index = step.COP.OIC_index;
+                    shank_cop.unit = step.COP.unit;
+                    shank_cop.lateral = struct([]);
+                    shank_cop.medial = struct([]);
+                    shank_cop.mean = struct([]);
+                    obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(step_num).Shank_cop.(anatomical_side) = shank_cop;
                 end
             end
         end

@@ -7,7 +7,7 @@ clc
 load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)"; DB_3, "Lencioni et. al. (2019)"};
 n_datasets = size(load_list, 1);
 
-[obj, dataset_ids] = ROSAnalyzer.ROSAnalyzer(load_list);
+[obj, dataset_ids] = PROST.PROSTAnalyzer(load_list);
 DB_1_ID = dataset_ids(1);
 DB_2_ID = dataset_ids(2);
 DB_3_ID = dataset_ids(3);

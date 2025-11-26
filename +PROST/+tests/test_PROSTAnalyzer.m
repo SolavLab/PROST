@@ -4,15 +4,15 @@ clc
 
 % setup
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
-script_folder = fileparts(script_full_path); % Get the folder of the script
-cd(script_folder); % Change to folder of current script
-addpath(genpath("..\Helper Functions")); % Add path to helper functions
-addpath(genpath("..\")); % Add path to ROSAnalyzer toolbox
-
+script_path = fileparts(script_full_path); % Get the folder of the script
+toolbox_root = extractBefore(script_path, "+"); % Get the folder of the PROST toolbox root
+addpath(toolbox_root); % Add PROST package to path
+dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_datasets
+cd(toolbox_root); % Change to folder of current script
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %% Load data
-db_list = ["DB_1", "../DB1/DB_1.mat"; "DB_3", "../DB3/DB_3.mat"];
+db_list = ["DB_1", "example_datasets/DB_1.mat"; "DB_3", "example_datasets/DB_3.mat"];
 % db_list = ["DB_3", "./DB3/DB_3.mat"];
 
 var_names = db_list(:, 1);

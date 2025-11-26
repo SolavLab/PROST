@@ -55,9 +55,12 @@ for index=1:n_datasets
     PROSTObj.add_samples(dataset_ids(index));
 end
 
+%% Save PROST Object
+save("PROSTObj.mat","PROSTObj")
+
 %% Plot data
 % close all
-PROSTObj.plot_ros({DB_1_ID, 1; DB_2_ID, 24}, 12, 'on', 'fig');
+PROSTObj.plot_ros({DB_1_ID, 1}, 1, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
@@ -102,7 +105,7 @@ legend(FontSize=12)
 disp("Plotting histogram of normalized radius and center x (by hight)")
 radius = table2array(PROSTObj.get_samples("Radius"));
 center_x = table2array(PROSTObj.get_samples("Center_x"));
-height = convert_units(table2array(PROSTObj.get_samples("Height")), "m", "mm");
+height = PROST.utils.convert_units(table2array(PROSTObj.get_samples("Height")), "m", "mm");
 normalized_radius = radius./height;
 normalized_center_x = center_x./height;
 
@@ -140,5 +143,5 @@ PROSTObj.plot_features_vs_labels([], ["Radius" "Center_x"])
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "fig")
-close all
+% PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "fig")
+% close all

@@ -108,10 +108,10 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
         hold(ax, "on")
         axis(ax, "equal")
         yyaxis left
-        plot(ax, y_k, 'o', MarkerSize=marker_size, DisplayName=label_names(k));
+        plot(ax, y_k, obj.MARKERS(1), MarkerSize=obj.MARKER_SIZE, DisplayName=label_names(k));
         ylabel("DATA")
         yyaxis right
-        plot(ax, yfit_k, 'o', MarkerSize=marker_size, DisplayName=label_names(k));
+        plot(ax, yfit_k, obj.MARKERS(1)', MarkerSize=obj.MARKER_SIZE, DisplayName=label_names(k));
         ylabel("FIT")
         x_limits = xlim(ax);
         y_limits = ylim(ax);

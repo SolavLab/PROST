@@ -63,7 +63,7 @@ for particpant_num=participants
             time = linspace(0, 100, 101); % Time vector for temporally aligned data to 101 points
 
             % Get COP in shank coordinate frame
-            shank_cop = ROSAnalyzer.cop_to_shank_frame(trial, "lateral");
+            shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(trial, "lateral");
 
             % colormap("autumn");
             scatter(shank_cop.x, shank_cop.z, 30, cmaps(side), 'o', 'filled', DisplayName=side)

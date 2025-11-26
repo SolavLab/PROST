@@ -20,9 +20,9 @@ function fit_to_circular_arc(obj, entry_number)
 %       arc_length [deg]
 
     % Check if participant exists
-    if entry_number > obj.SamplesTableSize
+    if entry_number > size(obj.SamplesTable, 1)
         error(PROST.PROSTError("SamplesTable", "OutOfBounds", ...
-            "Entry number %d is too large.\nSamples table has %d entries.", entry_number, obj.SamplesTableSize));
+            "Entry number %d is too large.\nSamples table has %d entries.", entry_number, size(obj.SamplesTable, 1)));
     end
 
     % Check for NaN or Inf values in the point cloud

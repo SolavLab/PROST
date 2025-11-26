@@ -43,9 +43,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
     color_arc = dictionary(["right" "left"], {obj.COLOR_RIGHT_DARK obj.COLOR_LEFT_DARK});
     color_scatter = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
     % color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
-    marker_size = 5;
-    markers = 'o+*.xsdv><phn';
-    line_width = 2;
     x_label = "x [mm]";
     y_label = "z [mm]";
 
@@ -88,8 +85,8 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
             yticks(ax, y_limits(1):50:y_limits(2));
             ax.XLim = x_limits;
             ax.YLim = y_limits;
-            text(ax, x_limits(1), y_limits(2) - 10, erase(dataset_name, "_") + " P" + participant_id, FontSize=9, FontWeight="bold")
-            plot(0, 0, MarkerSize=marker_size, Marker='o', MarkerEdgeColor="black", MarkerFaceColor="black")
+            text(ax, x_limits(1), y_limits(2) - 10, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+            plot(0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")
 
             % Plot trials of participant
             for i=1:height(samples)
@@ -103,6 +100,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 x = point_cloud(:, 1);
                 z = point_cloud(:, 2);
                 trial_num = point_cloud(:, 3);
+                unique_trial_num = unique(trial_num);
 
                 % Get arc parameters
                 [radius, center_x, center_z, ang_start, ang_end, residual] = ...
@@ -119,15 +117,22 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
 
                 % Plot point cloud and arc
-                % scatter(ax, x, z, marker_size, color_scatter{side}, '.'); % point cloud
-                gscatter(x, z, trial_num, color_scatter{side}, markers(1), marker_size, 'off', "filled");
-                plot(ax, arc_points(1, :), arc_points(2, :), '-', Color=color_arc{side}, LineWidth=line_width); % fitted arc
-                plot(ax, circle_points(1, :), circle_points(2, :), '--', Color=color_arc{side}, LineWidth=line_width); % fitted circle
-                plot(ax, center_x, min(circle_points(2, :)), 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size); % nadir
+                for k = unique_trial_num(:)'
+                    idx = trial_num == k;
+                    h = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE, color_scatter{side}, obj.MARKER_DOT, "filled"); % point cloud
 
+                    % Optional: custom datatip text field
+                    trialVals = repmat(k, sum(idx), 1);
+                    h.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trialVals);
+                end
+
+                plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
+                plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
+                plot(ax, center_x, center_z, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % center
+                
                 % Print parameter values and residual
                 txt = sprintf("radius: %.2f [mm], center: (%.2f, %.2f) [mm], residual: %.2f [mm]", radius, center_x, center_z, residual);
-                text(ax, x_limits(1), y_limits(2) - 10 - i*10, txt, Color=color_arc{side}, FontSize=9, FontName="FixedWidth", FontWeight="bold")
+                text(ax, x_limits(1), y_limits(2) - i*(obj.FONT_SIZE + 5), txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT)
 
                 xlabel(ax, x_label);
                 ylabel(ax, y_label);
@@ -143,13 +148,13 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 h = gobjects(n_sides*4, 1);
                 for i=1:n_sides
                     side = sides(i);
-                    h(i) = scatter(ax, NaN, NaN, marker_size, color_scatter{side}(1, :), markers(1), "filled", DisplayName=side);
-                    h(i + 2) = plot(ax, NaN, NaN, '-', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted arc");
-                    h(i + 4) = plot(ax, NaN, NaN, '--', Color=color_arc{side}, LineWidth=line_width, DisplayName=string(side) + " fitted circle");
-                    h(i + 6) = plot(ax,  NaN, NaN, 'o', MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=marker_size, DisplayName=string(side) + " nadir");
+                    h(i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, "filled", DisplayName=side);
+                    h(i + 2) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
+                    h(i + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
+                    h(i + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");
                 end
 
-                lgd = legend(h, FontSize=12, FontWeight="bold");
+                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
                 lgd.Layout.Tile = 'east';
 
                 if strcmp(show, 'off')

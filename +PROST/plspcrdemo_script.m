@@ -18,11 +18,11 @@ clearvars -except DB_1 DB_2 DB_3
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script
 cd(script_folder); % Change to folder of current script
-addpath(genpath(".\Helper Functions")); % Add path to helper functions
-data_path = "C:\Users\chenr\Documents\ROS-Project"; % Path to ROS toolbox
+data_path = "C:\Users\chenr\Documents\PROST"; % Path to PROST toolbox
+
 %% Loading the Data
 % Load a data set comprising anthropometric data and roll-over shape radii of 
-% participants from a unified database. These data are from the ROSAnalyzer toolbox.
+% participants from a unified database. These data are from the PROST toolbox.
 
 db_list = ["DB_1" "DB_3" "DB_2"];
 for idx=1:length(db_list)
@@ -34,7 +34,7 @@ end
 
 load_list = {DB_1, "DB_1"; DB_2, "DB_2"; DB_3, "DB_3"};
 ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
-obj = ROSAnalyzer(load_list, ignore_list);
+obj = PROST.PROSTAnalyzer(load_list);
 [features, feature_names, feature_units, feature_types] = obj.get_features(["Age" "Height" "Mass" "Leg_length" "Thigh_length" "Shank_length" "Gender"]);
 % features.Is_shod = categorical(features.Is_shod);
 [labels, label_names, label_units, label_types] = obj.get_labels(["Radius"]);
@@ -46,6 +46,7 @@ labels(filter_idx, :) = [];
 features(filter_idx, :) = [];
 sides(filter_idx, :) = [];
 disp([height(features) height(labels) height(sides)])
+
 %% Data Visualization
 
 figure

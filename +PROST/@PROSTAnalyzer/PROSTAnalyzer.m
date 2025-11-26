@@ -18,14 +18,18 @@ classdef PROSTAnalyzer < handle
         COLOR_LEFT_BRIGHT = [0.85 0 0]; % reddish bright
         COLOR_RIGHT_DARK  = [0 0.5 0.4]; % greenish dark
         COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
-        MARKERS = 'o+*.xsdv><phn';
+        MARKER_CIRCLE = 'o';
+        MARKER_DOT = '.';
+        MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 10;
         MARKER_SIZE_SCATTER = 100;
         MARKER_FACE_ALPHA = 0.6;
         LINE_WIDTH = 2;
-        LINE_STYLE = "--";
+        LINE_STYLE_SOLID = "-";
+        LINE_STYLE_DASHED = "--";
         LINE_COLOR = "black";
         FONT_SIZE = 12;
+        FONT_WEIGHT = "bold";
     end
     properties(Access=public)
         DataRecords = struct([]); % Data records
@@ -152,7 +156,7 @@ classdef PROSTAnalyzer < handle
     methods (Access = private)
         % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side)  
         % add_to_summary_table(obj, dataset_id);
-        % shank_cop = cop_to_shank_frame(obj, dataset_id, participant_id, side, step_num, anatomical_side);
+        % 
         % delete_from_data_records(obj, dataset_id, index);
         % delete_from_summary_table(obj, index);
         % filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatomical_side);
@@ -170,7 +174,8 @@ classdef PROSTAnalyzer < handle
     
     %% STATIC METHODS
     methods(Static)
-        [good_steps] = get_good_steps(obj, steps, min_speed);
+        [good_steps] = get_good_steps(steps, min_speed);
+        shank_cop = cop_to_shank_frame(step, anatomical_side);
         [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
         save_figure(f, file_path, sub_folder, file_type);
 

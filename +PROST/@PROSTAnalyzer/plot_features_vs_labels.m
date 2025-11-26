@@ -112,7 +112,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
             % Calculate linear regression if numeric
             if x_numeric && y_numeric
                 % Normalize label values
-                height = convert_units(table2array(obj.get_samples("Height")), "m", "mm");
+                height = PROST.utils.convert_units(table2array(obj.get_samples("Height")), "m", "mm");
                 y = y ./ height; % normalized label
                 y_label = y_name + " / height";
 
@@ -148,7 +148,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 
             % Plot regression model if numeric
             if x_numeric && y_numeric
-                plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
+                plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
                 x_limits = xlim(ax);
                 y_limits = ylim(ax);
                 text(ax, x_limits(1), y_limits(2) - 0.25, "Rsquared = " + Rsquared, FontSize=obj.FONT_SIZE, FontWeight="bold", Color=obj.LINE_COLOR)

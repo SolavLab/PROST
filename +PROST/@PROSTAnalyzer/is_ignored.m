@@ -32,6 +32,6 @@ function tf = is_ignored(obj, dataset_id, participant_id, trials, side)
     end
 
     % Are specific trials ignored
-    side = capitalize(side);
+    side = PROST.utils.capitalize(side);
     tf = obj.IgnoreObject.is_ignored_trials(dataset_id, participant_id, trials, side);
 end

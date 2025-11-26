@@ -3,7 +3,6 @@ close all;
 clc
 
 addpath("C:\Users\chenr\Documents\PROST\")
-addpath("C:\Users\chenr\Documents\PROST\Helper Functions/")
 addpath("C:\Users\chenr\Documents\PROST\DB1\")
 
 set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
@@ -32,16 +31,16 @@ cmaps = dictionary("right", "green", "left", "red");
 % A cell array listing each participant and each trial for that participant to
 % test.
 % The cell array has the format
-% {participant_number, [processed_trial_numbers], [prcessed_trial_sides]}
+% {participant_number, [processed_trial_numbers], [processed_trial_sides]}
 % Example:
 % {1, [1 2 3], ["right"]; 2, [1 2], ["right" left"]}
-tests = {1, [1], ["left" "right"]; 5, [138], ["right"]; 7, [38], ["right"]};
+tests = {1, [104], ["right"]};
 
 
 % If you don't want to choose a specific trial for each participant, leave it
-% empty and choose the number of trials to test instead and the scipt will
-% choose trials spaces equally as that number.
-n_trials = 1;
+% empty and choose the number of trials to test instead and the script will
+% choose trials spaced equally as that number.
+n_trials = 10;
 
 %% PROCESSED DATA
 % Check Shank Frame Transformation
@@ -59,7 +58,7 @@ for p=1:n_participants
         test_sides = ["left" "right"];
     end
     if isempty(trials_test_processsed)
-        total_trials = min(length(DB.Data.(participant_name).processed_data.test_sides(1).step), length(DB.Data.(participant_name).processed_data.test_sides(end).step));
+        total_trials = min(length(DB.Data.(participant_name).processed_data.(test_sides(1)).step), length(DB.Data.(participant_name).processed_data.(test_sides(end)).step));
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else
@@ -73,7 +72,6 @@ for p=1:n_participants
     f = figure(Name=participant_name + " Shank Frame");
     tiledlayout(f, "flow")
     for t=trials
-        nexttile
         for side=test_sides
             try
                 trial = DB.Data.(participant_name).processed_data.(side).step(t);
@@ -87,17 +85,24 @@ for p=1:n_participants
             time = linspace(0, 100, 101); % Time vector for temporally aligned data to 101 points
 
             % Get COP in shank coordinate frame
-            shank_cop = ROSAnalyzer.cop_to_shank_frame(trial, "lateral");
-
-            % colormap("autumn");
-            scatter(shank_cop.x, shank_cop.z, 30, cmaps(side), 'o', 'filled', DisplayName=side)
+            shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(trial, "lateral");
+            nexttile
+            % X = [0; knee.x];
+            % Y = [0; knee.z];
+            % plot(X, Y, '-k')
+            % hold on;
+            % axis square;
+            % scatter(ankle.x, ankle.z, 30, time, 'square', 'filled')
+            % scatter(knee.x, knee.z, 30, time, 'o', 'filled')
+            scatter(shank_cop.x, shank_cop.z, 30, time, '^', 'filled', DisplayName=side)
             hold on
             axis equal
-            title("P" + particpant_num + " T" + num2str(t), replace(trial.source.original_trial, "_", " "))
+            title(PROST.utils.capitalize(side) + ": P" + p + " Trial " + num2str(t), replace(trial.source.original_trial, "_", " "))
 
         end
         legend
     end
+    colorbar('east')
 end
 
 % Loop over processed data
@@ -166,14 +171,15 @@ for p=1:n_participants
             axis square;
             scatter(ankle.x, ankle.z, 30, time, 'square', 'filled')
             scatter(knee.x, knee.z, 30, time, 'o', 'filled')
-            scatter(COP.x, 0*COP.y, 30, time, '^', 'filled')
-            title(upper(side) + ": Trial " + num2str(t), replace(trial.source.original_trial, "_", " "))
+            scatter(COP.x, 0.*COP.x, 30, time, '^', 'filled')
+            title(PROST.utils.capitalize(side) + ": P" + p + " Trial " + num2str(t), replace(trial.source.original_trial, "_", " "))
             xlabel("x [mm]")
             ylabel("z [mm]")
             hold off
         end
         sgtitle(replace(string(f.Name), "_", " "))
     end
+    colorbar('east')
 end
 
 %% UNPROCESSED DATA
@@ -333,7 +339,7 @@ for p=1:n_participants
 
                 % Get COP and ankle, knee trajectories before temporal alignment
                 COP = trial.COP.FP(step_num);
-                GRF = trial.GRF.(capitalize(foot));
+                GRF = trial.GRF.(PROST.utils.capitalize(foot));
 
                 nexttile;
                 hold on
