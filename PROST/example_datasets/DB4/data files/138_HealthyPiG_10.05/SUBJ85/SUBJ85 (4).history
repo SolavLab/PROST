@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<Trial name="SUBJ85 (4)" notes="">
+
+  <Parameters>
+    <Param header="0" name="c3d" value="SUBJ85 (4).c3d"/>
+    <Param header="0" name="Path" value="C:\Users\u0087971\OneDrive - KU Leuven\Documents\Academia\Projecten\Stroke_Trunkdata_UA\Healthy_Stroke_Data\Data 10.05_paper\138_HealthyPiG_10.05\SUBJ85"/>
+  </Parameters>
+
+</Trial>

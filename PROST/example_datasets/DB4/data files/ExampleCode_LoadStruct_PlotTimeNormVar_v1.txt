@@ -1,0 +1,221 @@
+% READ-IN AND PLOT TIME-NORMALIZED DATA STRUCTURES
+% Example code to use the structure.
+%
+%
+% input: time-normalized structure van Criekinge et al, 2022
+% eg. MAT_normalizedData_AbleBodiedAdults_v06-03-23
+% eg. MAT_normalizedData_PostStrokeAdults_v27-02-23
+%
+% output: 
+% Figure of the selected variable of interest (.fig and .png)
+%
+% 
+% 19.09.2023, Lizeth Sloot, Heidelberg University / Newcastle University.
+%
+%
+% MIT License:
+% 
+% Copyright (c) 2022 Lizeth Sloot (LizSloot)
+% 
+% Permission is hereby granted, free of charge, to any person obtaining a copy
+% of this software and associated documentation files (the "Software"), to deal
+% in the Software without restriction, including without limitation the rights
+% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+% copies of the Software, and to permit persons to whom the Software is
+% furnished to do so, subject to the following conditions:
+% 
+% The above copyright notice and this permission notice shall be included in all
+% copies or substantial portions of the Software.
+% 
+% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+% SOFTWARE.
+
+close all
+clear all
+clc
+
+
+%% General Settings
+
+%%% 1. Set path to directory of the Structure you want to load!
+settings.mainDir = pwd;
+
+
+%%% 2. Load Structure
+% Give the name of the structure you want to load:
+settings.StructName = 'MAT_normalizedData_PostStrokeAdults_v27-02-23';
+StructTime = load(fullfile(settings.mainDir,settings.StructName));
+
+
+%%% 3. Set saving settings
+settings.SaveFig = 1;       % set to 1 if you want to save the figure, set to 0 if not.
+settings.SaveDir = fullfile(settings.mainDir,'Figures');
+
+
+%%% 4. Set Figure settings
+% Set the "Sides" as defined in the Structure. 
+% (eg. DataStruct.Sub(1).PsideSegm_PsideData --> PsideSegm and NPsideSegm)
+% For Able bodied (MAT_normalizedData_AbleBodiedAdults_v06-03-23), this is
+% left and right (or SideA = {'LR';'LR'})
+% For Stroke (MAT_normalizedData_PostStrokeAdults_v27-02-23), this is
+% paretic and non-paretic side (or SideA = {'PN';'PN'};)
+% SideA = {'LR';'LR'}; 
+settings.SideA = {'PN';'PN'};
+
+% Both sides are plotted in a different color and line type. 
+% note, first side (defined above) will get the first color.
+settings.ColorZ = 'br';
+settings.MarkerSymbol = {'-';'--'};
+
+% Set the number of subplots in a single figure. 
+% if you set it lower, the subplot per participant will get larger, but
+% less will fit in a single figure. 
+% For Able bodied, 12x12 seems to work well. 
+% For Stroke, 7x8 seems to work well. 
+settings.iCol = 7;        
+settings.iRow = 8;    
+
+
+
+%% Select the data you want to plot
+
+%%% 1. Specify the variable(s) of interest to plot:
+% You can give a series of variables (it will run in a loop) or a single
+% one.
+varsInt = {'AnkleAngles';'CentreOfMass'};
+    
+
+%%% 2. Specify the dimension to plot for each of these variables:
+% This can be x, y, z, or n (non-dimensional). Check the Structure.
+DimsC={'x','x'};    
+
+
+%%% 3. Specify the body side of the data you want to look at
+% The code will plot both the e.g. Left-side-segmented (stride normalized
+% based on left side gait events) and the Right-side-segmented data. 
+% Here you specify if you want to plot the left ankle angle from the
+% left-side segmented data (ipsilateral side), or the right ankle angle
+% (contra-lateral side). Usually, this will be the same as in settings.SideA.
+% (eg. DataStruct.Sub(1).PsideSegm_PsideData --> PsideData and NPsideData)
+% If you are interested in whole-body parameters that aren't related to one
+% side (eg center-of-mass, sternum marker), use 'BB').
+SideS= {'PN';'BB'};
+
+
+  
+%% DO NOT CHANGE ANYTHING AFTER THIS SECTION
+
+iDim=length(DimsC);
+
+% Get Screen size
+scrsz = get(0,'ScreenSize');
+scrplt.x(1) = round( scrsz(3)*0.05 );
+scrplt.x(2) = round( scrsz(3)*0.75 );
+scrplt.y(1) = round( scrsz(4)*0.05 );
+scrplt.y(2) = round( scrsz(4)*0.75 );
+
+% Graph per var:
+for iVar = 1%:length(varsInt)
+    disp(['Working on plotting var: ',varsInt{iVar}])
+    
+    % Average data
+    TelSub.L = 1; TelSub.R = 1; TelSub.B = 1; TelSub.P = 1; TelSub.N = 1; 
+    clear Temp Hfig SidesLeg
+    for iSub = 1:size(StructTime.Sub,2)  
+        for iSide = 1:length(settings.SideA)
+            if ~isempty( StructTime.Sub(iSub). ...
+                    ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']) )
+                if isfield(StructTime.Sub(iSub). ...
+                        ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']),...
+                        ([varsInt{iVar}]))
+                    if isfield(StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']).([varsInt{iVar}]),...
+                            (DimsC{iVar}))
+                        
+                        Temp.(settings.SideA{iSide}(iSide))(TelSub.(SideS{iSide}(iSide)),:) = ...
+                            nanmean(StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar}),2);
+                        
+                        TelSub.(SideS{iSide}(iSide))=TelSub.(SideS{iSide}(iSide))+1;
+                    end
+                end
+            end
+        end % iSide
+    end % iSub
+    
+    % Initiate figure
+    figure, set(gcf,'name',varsInt{iVar},'color',[1 1 1],'position',...
+        [scrplt.x(1) scrplt.y(1) scrplt.x(2) scrplt.y(2)])    
+    
+    % Plot individual data
+    tiledlayout(settings.iCol,settings.iRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
+    for iSub = 1:size(StructTime.Sub,2)
+        nexttile 
+        if length(SideS{iVar})>1
+            Temp0 = [Temp.(settings.SideA{1}(1))(:,1:10:end); Temp.(settings.SideA{1}(1))(:,1:10:end)];
+            
+        else
+            Temp0 = Temp.B(:,1:10:end);
+        end
+        xdata = 0:10:(size(Temp0,2)-1)*10;  
+        if (min(nanmean(Temp0))<0 && max(nanmean(Temp0))>0)
+            plot(xdata,zeros(length(xdata)),'-k'),
+        end
+        hold on, clear Temp0
+        
+        for iSide = 1:length(settings.SideA)
+            if ~isempty( StructTime.Sub(iSub). ...
+                    ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']) )
+                if isfield(StructTime.Sub(iSub). ...
+                        ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']),...
+                        ([varsInt{iVar}]))
+                    if isfield(StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']).([varsInt{iVar}]),...
+                            (DimsC{iVar}))
+                        
+                        if iSub==1 % to create legend
+                        Hfig(iSide) = plot(xdata, StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar})(1:10:end,1),'color',settings.ColorZ(iSide),'linewidth',1.5);
+                        end 
+                        
+                        plot(xdata, StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar})(1:10:end,:),'color',settings.ColorZ(iSide),'linewidth',1.5);
+                        
+                        TelSub.(SideS{iVar}(iSide))=TelSub.(SideS{iVar}(iSide))+1;
+                    end
+                end
+            end
+        end % iSide        
+        
+        ylabel(['Subno:',num2str(iSub)])
+    end
+    
+    
+    % Create legend
+    for iSide = 1:length(settings.SideA)
+        SidesLeg{iSide} = SideS{iVar}(iSide);
+    end
+    legend(Hfig,SidesLeg)
+    
+    
+    %%% Save
+    if settings.SaveFig==1
+        saveas(gcf,[settings.SaveDir,varsInt{iVar},'_',DimsC{iVar}],'fig')
+        saveas(gcf,[settings.SaveDir,varsInt{iVar},'_',DimsC{iVar}],'png')
+        disp(['Figs ',varsInt{iVar},' saved.'])
+    end
+    
+    
+end % iVar
+
+
+
+% EOF
