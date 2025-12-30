@@ -119,11 +119,11 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 % Plot point cloud and arc
                 for k = unique_trial_num(:)'
                     idx = trial_num == k;
-                    h = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE, color_scatter{side}, obj.MARKER_DOT, "filled"); % point cloud
+                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE, color_scatter{side}, obj.MARKER_DOT); % point cloud
 
                     % Optional: custom datatip text field
                     trialVals = repmat(k, sum(idx), 1);
-                    h.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trialVals);
+                    h_scat.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trialVals);
                 end
 
                 plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
@@ -148,7 +148,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 h = gobjects(n_sides*4, 1);
                 for i=1:n_sides
                     side = sides(i);
-                    h(i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, "filled", DisplayName=side);
+                    h(i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=side);
                     h(i + 2) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
                     h(i + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
                     h(i + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");

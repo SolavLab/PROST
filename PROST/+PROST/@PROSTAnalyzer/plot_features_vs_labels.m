@@ -1,4 +1,4 @@
-function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type)
+function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, norm_var_name, show, file_type)
 %PLOT_FEATURES_VS_LABELS plots the features (anthropometric parameters)
 % v.s. the labels (ROS parameters).
 % Input :
@@ -11,11 +11,14 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 
     disp("Plotting Features vs Labels...")
     % Prep Input Arguments
-    if nargin < 6
+    if nargin < 7
         file_type = [];
     end
-    if nargin < 5
+    if nargin < 6
         show = 'on';
+    end
+    if nargin < 5
+        norm_var_name = "Height";
     end
     if nargin < 3
         labels_list = {};
@@ -110,21 +113,25 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
             end
 
             % Calculate linear regression if numeric
-            if x_numeric && y_numeric
-                % Normalize label values
-                height = PROST.utils.convert_units(table2array(obj.get_samples("Height")), "m", "mm");
-                y = y ./ height; % normalized label
-                y_label = y_name + " / height";
+            if y_numeric
+                if ~isempty(norm_var_name)
+                    % Normalize label values
+                    norm_entry = obj.get_samples(norm_var_name);
+                    norm_var = PROST.utils.convert_units(table2array(norm_entry), norm_entry.Properties.VariableUnits{:}, "mm");
+                    y = y ./ norm_var; % normalized label
+                    y_label = y_name + " / " + norm_var_name;
+                end
+                if x_numeric
+                    % Create linear model
+                    X = [ones(size(x)), x]; % intercept + predictor
+                    b = X \ y; % regression coefficients
 
-                % Create linear model
-                X = [ones(size(x)), x]; % intercept + predictor
-                b = X \ y; % regression coefficients
+                    y_pred = X * b;
 
-                y_pred = X * b;
-
-                SSres = sum((y - y_pred).^2);
-                SStot = sum((y - mean(y)).^2);
-                Rsquared = 1 - SSres/SStot;
+                    SSres = sum((y - y_pred).^2);
+                    SStot = sum((y - mean(y)).^2);
+                    Rsquared = 1 - SSres/SStot;
+                end
             end
 
             % Plot features vs labels for both sides

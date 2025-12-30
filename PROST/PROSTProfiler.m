@@ -60,7 +60,7 @@ save("PROSTObj.mat","PROSTObj")
 
 %% Plot data
 % close all
-PROSTObj.plot_ros({DB_1_ID, 1}, 1, 'on', 'fig');
+PROSTObj.plot_ros({DB_2_ID, [1 2 3]}, 1, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
