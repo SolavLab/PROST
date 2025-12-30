@@ -18,8 +18,8 @@ function [age, gender, height, mass, leg_length, thigh_length, shank_length, is_
     gender = categorical(metadata.Gender.value); % "Male" or "Female"
     height = metadata.Height.value; assert(metadata.Height.unit == "m"); % [m]
     mass = metadata.Mass.value; assert(metadata.Mass.unit == "kg"); % [kg]
-    leg_length = metadata.Leg_length.(side).value; assert(metadata.Leg_length.unit == "m"); % [m]
-    thigh_length = metadata.Thigh_length.(side).value; assert(metadata.Thigh_length.unit == "m"); % [m]
-    shank_length = metadata.Shank_length.(side).value; assert(metadata.Shank_length.unit == "m"); % [m]
+    leg_length = metadata.Leg_length.(side); assert(metadata.Leg_length.unit == "m"); % [m]
+    thigh_length = metadata.Thigh_length.(side); assert(metadata.Thigh_length.unit == "m"); % [m]
+    shank_length = metadata.Shank_length.(side); assert(metadata.Shank_length.unit == "m"); % [m]
     is_shod = metadata.Is_shod.value; % "Yes" (shod) or "No" (barefoot)
 end

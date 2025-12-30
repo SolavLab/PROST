@@ -27,7 +27,7 @@ function add_to_summary_table(obj, dataset_id)
     obj.SummaryTable.Article_url(entry_number) = dataset.Article_data.link_to_paper;
     obj.SummaryTable.Dataset_url(entry_number) = dataset.Article_data.link_to_dataset;
     obj.SummaryTable.Published_year(entry_number) = dataset.Article_data.published_year;
-    obj.SummaryTable.Speed_categories(entry_number) = {dataset.Experiment_protocol.speed_categories};
+    obj.SummaryTable.Speed_categories(entry_number) = dataset.Experiment_protocol.speed_categories;
     obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_protocol.num_participants;
     obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
 

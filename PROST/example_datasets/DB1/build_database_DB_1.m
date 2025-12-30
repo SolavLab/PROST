@@ -30,12 +30,12 @@ DB_1.Article_data = Article_data;
 %       -------------
 % DB_1 / marker_names :
 %       -------------
-Markers_guide.explanation_txt="The field reference_guide containes a dictionary.\n"+...
-    "The keys: the names we gave each marker for cohesiveness between the different databases.\n"+...
-    "The values: a cell array with the data of that marker in the original database.\n"+...
-    "Columns 1, 2, 3: the name of the variable in the original trajectories database for the X, Y and Z coordinates.\n"+...
-    "Columns 4, 5, 6: the number of the column in the original trajectories database for the X, Y and Z coordinates.\n"+...
-    "-----------------------------------------------------------";
+Markers_guide.explanation_txt = "The field reference_guide containes a dictionary that maps our naming of important markers to the names and indices in the original dataset.\n" + ...
+                                "The keys: our naming of important markers for cohesiveness between the different datasets.\n" + ...
+                                "The values: a cell array with the names and indices of each marker in the original dataset.\n" + ...
+                                "Columns 1, 2, 3: the name of the variable in the original trajectories dataset for the X, Y and Z coordinates.\n" + ...
+                                "Columns 4, 5, 6: the number of the column in the original trajectories dataset for the X, Y and Z coordinates.\n" + ...
+                                "-----------------------------------------------------------";
 
 % Important markers reference guide
 keys = ["Right Lateral Ankle"; ...
@@ -68,13 +68,14 @@ DB_1.Markers_guide = Markers_guide;
 %       --------------------
 % DB_1 / Lab_system :
 %       --------------------
-Lab_system.lab_frame.x= ...
+Lab_system.lab_frame = ...
+    "X Direction: \n" + ...
     "For COP and marker trajectories: pointing in the direction that completes a right handed coordinate system.\n" + ...
-    "for GRF data: the direction in the lab from the first forceplate to the last forceplate (walking direction).";
-Lab_system.lab_frame.y= ...
+    "for GRF data: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
+    "Y Direction: \n" + ...
     "For COP and marker trajectories: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
-    "For GRF data: pointing in the direction that completes a right handed coordinate system.";
-Lab_system.lab_frame.z= ...
+    "For GRF data: pointing in the direction that completes a right handed coordinate system.\n" + ...
+    "Z Direction: \n" + ...
     "For GRF, COP and marker trajectories the z direction is pointing up.";
 Lab_system.num_forceplates = 6;
 
@@ -96,13 +97,13 @@ Experiment_protocol.explanation_txt = ...
     "During a single trial, the right and left leg performed two and one strides, respectively, since the participants step the first force platform with the right foot.\n" + ...
     "Overall, 1120 trials were collected, containing 1120 and 2240 strides for the left and right leg, respectively.\n\n" + ...
     "Note: this dataset only uses the raw data that was aquired.";
-Experiment_protocol.speed_categories.V1 = "V1 is a speed of 1.0 km/h.";
-Experiment_protocol.speed_categories.V15 = "V15 is a speed of 1.5 km/h.";
-Experiment_protocol.speed_categories.V2 = "V2 is a speed of 2.0 km/h.";
-Experiment_protocol.speed_categories.V25 = "V25 is a speed of 2.5 km/h.";
-Experiment_protocol.speed_categories.V3 = "V3 is a speed of 3.0 km/h.";
-Experiment_protocol.speed_categories.V35 = "V35 is a speed of 3.5 km/h.";
-Experiment_protocol.speed_categories.V4 = "V4 is a speed of 4.0 km/h.";
+Experiment_protocol.speed_categories = "V1 is a speed of 1.0 km/h.\n" + ...
+                                       "V15 is a speed of 1.5 km/h.\n" + ...
+                                       "V2 is a speed of 2.0 km/h.\n" + ...
+                                       "V25 is a speed of 2.5 km/h.\n" + ...
+                                       "V3 is a speed of 3.0 km/h.\n" + ...
+                                       "V35 is a speed of 3.5 km/h.\n" + ...
+                                       "V4 is a speed of 4.0 km/h.\n";
 Experiment_protocol.num_participants = 16;
 
 DB_1.Experiment_protocol = Experiment_protocol;
@@ -162,26 +163,26 @@ for participant_number=participant_numbers
     [right_leg_length, left_leg_length, right_thigh_length, left_thigh_length, right_shank_length, left_shank_length] = get_lengths(participant_number, participant_raw_data, DB_1.Markers_guide); % [m]
 
     % Leg length - distance between anterior superior iliac spine (ASIS) and lateral ankle (LA)
-    DB_1.Data.(participant_name).metadata.Leg_length.right.value = right_leg_length; % [m]
-    DB_1.Data.(participant_name).metadata.Leg_length.left.value = left_leg_length; % [m]
+    DB_1.Data.(participant_name).metadata.Leg_length.right = right_leg_length; % [m]
+    DB_1.Data.(participant_name).metadata.Leg_length.left = left_leg_length; % [m]
     DB_1.Data.(participant_name).metadata.Leg_length.unit = "m";
-    DB_1.Data.(participant_name).metadata.Leg_length.method = "calculated by median distance between markers in all trials";
+    DB_1.Data.(participant_name).metadata.Leg_length.method = "calculated by median distance between ASIS and lateral ankle markers in all trials";
 
     % Thigh length - distance between lateral knee (LK) and anterior superior iliac spine (ASIS)
-    DB_1.Data.(participant_name).metadata.Thigh_length.right.value = right_thigh_length; % [m]
-    DB_1.Data.(participant_name).metadata.Thigh_length.left.value = left_thigh_length; % [m]
+    DB_1.Data.(participant_name).metadata.Thigh_length.right = right_thigh_length; % [m]
+    DB_1.Data.(participant_name).metadata.Thigh_length.left = left_thigh_length; % [m]
     DB_1.Data.(participant_name).metadata.Thigh_length.unit = "m";
-    DB_1.Data.(participant_name).metadata.Thigh_length.method = "calculated by median distance between markers in all trials";
+    DB_1.Data.(participant_name).metadata.Thigh_length.method = "calculated by median distance between ASIS and lateral knee markers in all trials";
 
     % Shank length - distance between lateral knee (LK) and lateral ankle (LA)
-    DB_1.Data.(participant_name).metadata.Shank_length.right.value = right_shank_length; % [m]
-    DB_1.Data.(participant_name).metadata.Shank_length.left.value = left_shank_length; % [m]
+    DB_1.Data.(participant_name).metadata.Shank_length.right = right_shank_length; % [m]
+    DB_1.Data.(participant_name).metadata.Shank_length.left = left_shank_length; % [m]
     DB_1.Data.(participant_name).metadata.Shank_length.unit = "m";
-    DB_1.Data.(participant_name).metadata.Shank_length.method = "calculated by median distance between markers in all trials";
+    DB_1.Data.(participant_name).metadata.Shank_length.method = "calculated by median distance between lateral knee and lateral ankle markers in all trials";
 
     % Foot length
-    % DB_1.Data.(participant_name).metadata.Foot_length.right.value = double(metadata_array(21));
-    % DB_1.Data.(participant_name).metadata.Foot_length.left.value = double(metadata_array(21));
+    % DB_1.Data.(participant_name).metadata.Foot_length.right = double(metadata_array(21));
+    % DB_1.Data.(participant_name).metadata.Foot_length.left = double(metadata_array(21));
     % DB_1.Data.(participant_name).metadata.Foot_length.unit = "m";
     % DB_1.Data.(participant_name).metadata.Foot_length.method = "given";
 
@@ -572,8 +573,8 @@ for participant_number=participant_numbers
     % estimated_foot_length_right = PROST.utils.estimate_foot_length(right_steps);
     % left_steps = DB_1.Data.(participant_name).processed_data.left.step;
     % estimated_foot_length_left = PROST.utils.estimate_foot_length(left_steps);
-    % DB_1.Data.(participant_name).metadata.Estimated_foot_length.right.value = estimated_foot_length_right;
-    % DB_1.Data.(participant_name).metadata.Estimated_foot_length.left.value = estimated_foot_length_left;
+    % DB_1.Data.(participant_name).metadata.Estimated_foot_length.right = estimated_foot_length_right;
+    % DB_1.Data.(participant_name).metadata.Estimated_foot_length.left = estimated_foot_length_left;
     % DB_1.Data.(participant_name).metadata.Estimated_foot_length.unit = "m";
     % DB_1.Data.(participant_name).metadata.Estimated_foot_length.method = "calculated from average COP in walking direction which is 0.83 of foot length.";
 end
