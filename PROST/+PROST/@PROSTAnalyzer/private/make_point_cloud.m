@@ -29,7 +29,7 @@ function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums,
     for step_idx=1:length(good_step_nums)
         step_num = good_step_nums(step_idx);
 
-        step = dataset.Data(participant_id).Processed_data.(side).step(step_num);
+        step = dataset.Data(participant_id).Uniform_data.(side).step(step_num);
 
         % add this step to the point cloud.
         idx = (1+cut_length:numel(step.Shank_cop.(anatomical_side).x)-cut_length);

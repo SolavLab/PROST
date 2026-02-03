@@ -6,8 +6,8 @@ addpath("..\..\Helper Functions\DisplayTools\")
 load("..\DB_3.mat");
 n_participants = length(fieldnames(DB_3.Data));
 for p=1:10
-    right_data = DB_3.Data.("participant_" + num2str(p)).processed_data.right.step;
-    left_data = DB_3.Data.("participant_" + num2str(p)).processed_data.left.step;
+    right_data = DB_3.Data.("participant_" + num2str(p)).uniform_data.right.step;
+    left_data = DB_3.Data.("participant_" + num2str(p)).uniform_data.left.step;
     n_right_data = length(right_data);
     n_left_data = length(left_data);
     figure

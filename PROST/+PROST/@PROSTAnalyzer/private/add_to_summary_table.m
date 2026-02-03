@@ -35,10 +35,10 @@ function add_to_summary_table(obj, dataset_id)
     % shod and medial markers exist
     participant = dataset.Data(1);
     obj.SummaryTable.Is_shod(entry_number) = participant.Anthropometric_data.Is_shod.value;
-    if ~isempty(participant.Processed_data.right.step)
-        step = participant.Processed_data.right.step(1);
-    elseif ~isempty(participant.Processed_data.left.step)
-        step = participant.Processed_data.left.step(1);
+    if ~isempty(participant.Uniform_data.right.step)
+        step = participant.Uniform_data.right.step(1);
+    elseif ~isempty(participant.Uniform_data.left.step)
+        step = participant.Uniform_data.left.step(1);
     end
     obj.SummaryTable.Has_medial(entry_number) = ~isempty(step.Markers.Ankle.medial);
 end

@@ -37,12 +37,12 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
     for participant_number=1:n_participants % get to each participant
         data = dataset.Data(participant_number);
         participant_id = data.Participant_id;
-        processed_data = data.Processed_data;
+        uniform_data = data.Uniform_data;
         anthropometric_data = data.Anthropometric_data;
 
         for side=["right", "left"]
             % Get data
-            steps = processed_data.(side).step; % get the steps
+            steps = uniform_data.(side).step; % get the steps
             % Not all participants have measurements from both
             % legs.
             if isempty(steps)

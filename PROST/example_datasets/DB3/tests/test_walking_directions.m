@@ -3,7 +3,7 @@ n_participants = length(participants);
 walking_directions = cell(n_participants, 1);
 for p_idx=1:n_participants
     p_name = participants(p_idx);
-    trials = DB_3.Data.(p_name).unprocessed_data.trial;
+    trials = DB_3.Data.(p_name).processed_original_data.trial;
     n_trials = length(trials);
     walking_directions{p_idx} = zeros(n_trials, 1);
 

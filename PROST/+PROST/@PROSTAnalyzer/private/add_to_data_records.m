@@ -29,26 +29,25 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
     for participant_num = 1:n_participants
         participant_name = participants{participant_num};
         original_participant_name = dataset.Data.(participant_name).participant_ID_in_original_structure;
-        processed_data = dataset.Data.(participant_name).processed_data;
+        uniform_data = dataset.Data.(participant_name).uniform_data;
         metadata = dataset.Data.(participant_name).metadata;
 
         obj.DataRecords(index).Data(participant_num).Participant_id = participant_num;
         obj.DataRecords(index).Data(participant_num).Participant_name = original_participant_name;
         obj.DataRecords(index).Data(participant_num).Anthropometric_data = metadata;
-        obj.DataRecords(index).Data(participant_num).Processed_data = processed_data;
-        if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.left.step)
-            [obj.DataRecords(index).Data(participant_num).Processed_data.left.step(:).Is_included] = deal(true);
+        obj.DataRecords(index).Data(participant_num).Uniform_data = uniform_data;
+        if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.left.step)
+            [obj.DataRecords(index).Data(participant_num).Uniform_data.left.step(:).Is_included] = deal(true);
         end
-        if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.right.step)
-            [obj.DataRecords(index).Data(participant_num).Processed_data.right.step(:).Is_included] = deal(true);
+        if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.right.step)
+            [obj.DataRecords(index).Data(participant_num).Uniform_data.right.step(:).Is_included] = deal(true);
         end
 
         for side=["left" "right"]
-            if ~isempty(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
-                [obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(:).Is_included] = deal(true);
-                for step_num=1:length(obj.DataRecords(index).Data(participant_num).Processed_data.(side).step)
-                    step = obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(step_num);
-                    shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(step, anatomical_side);
+            if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
+                [obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(:).Is_included] = deal(true);
+                for step_num=1:length(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
+                    step = obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(step_num);
                     shank_cop.temporal_alignment = step.COP.temporal_alignment;
                     shank_cop.IC_index = step.COP.IC_index;
                     shank_cop.OIC_index = step.COP.OIC_index;
@@ -56,7 +55,8 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
                     shank_cop.lateral = struct([]);
                     shank_cop.medial = struct([]);
                     shank_cop.mean = struct([]);
-                    obj.DataRecords(index).Data(participant_num).Processed_data.(side).step(step_num).Shank_cop.(anatomical_side) = shank_cop;
+                    shank_cop.(anatomical_side) = PROST.PROSTAnalyzer.cop_to_shank_frame(step, anatomical_side);
+                    obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(step_num).Shank_cop = shank_cop;
                 end
             end
         end

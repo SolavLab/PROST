@@ -6,7 +6,7 @@ function foot_length = estimate_foot_length(steps)
 %   Input :
 %       steps - the steps measurements for all trials of the given foot. 
 %               A N x 1 struct array containing the step info of the N 
-%               trials. This is the processed and interpolated data so x is 
+%               trials. This is the uniform interpolated data so x is 
 %               the walking direction.
 %   Output :
 %       foot_length - the estimated foot length in [m]

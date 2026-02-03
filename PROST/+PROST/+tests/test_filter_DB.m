@@ -20,7 +20,7 @@ trial_num = 1;
 side = "left";
 participant_name = dataset.Data(participant_id).Participant_name;
 
-step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
+step = dataset.Data(participant_id).Uniform_data.(side).step(trial_num);
 shank_cop = step.Shank_cop;
 x = shank_cop.x(~isnan(shank_cop.x));
 y = shank_cop.y(~isnan(shank_cop.y));
@@ -70,7 +70,7 @@ dataset = obj.get_dataset(dataset_id);
 participant_id = 24;
 participant_name = dataset.Data(participant_id).Participant_name;
 for side = ["right"]
-    trials = dataset.Data(participant_id).Processed_data.(side).step;
+    trials = dataset.Data(participant_id).Uniform_data.(side).step;
     n_trials = length(trials);
     for trial_num=1:n_trials
         step = trials(trial_num);
@@ -130,7 +130,7 @@ n_participants = length(participants);
 for participant_id=1:n_participants
     participant_name = dataset.Data(participant_id).Participant_name;
     for side=["left" "right"]
-        trials = dataset.Data(participant_id).Processed_data.(side).step;
+        trials = dataset.Data(participant_id).Uniform_data.(side).step;
         n_trials = length(trials);
         for trial_num=1:n_trials
             step = trials(trial_num);
@@ -171,7 +171,7 @@ for i=1:length(bad_trials)
     trial_num = bad_trials(i);
 
     participant_name = dataset.Data(participant_id).Participant_name;
-    step = dataset.Data(participant_id).Processed_data.(side).step(trial_num);
+    step = dataset.Data(participant_id).Uniform_data.(side).step(trial_num);
     trial_name = step.source.original_trial;
     shank_cop = step.Shank_cop;
 

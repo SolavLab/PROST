@@ -58,7 +58,7 @@ for p=1:16
     assert(obj.DataRecords(1).Data(p).Participant_id == p)
     assert(obj.DataRecords(1).Data(p).Participant_name == "participant_" + p)
     assert(isequaln(obj.DataRecords(1).Data(p).Anthropometric_data, DB_1.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(1).Data(p).Processed_data, DB_1.Data.("participant_" + p).processed_data))
+    assert(isequaln(obj.DataRecords(1).Data(p).Uniform_data, DB_1.Data.("participant_" + p).uniform_data))
 end
 
 DB_3_ID = obj.add_to_data_records("DB_3", DB_3);
@@ -73,7 +73,7 @@ for p=1:50
     assert(obj.DataRecords(2).Data(p).Participant_id == p)
     assert(obj.DataRecords(2).Data(p).Participant_name == "participant_" + p)
     assert(isequaln(obj.DataRecords(2).Data(p).Anthropometric_data, DB_3.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(2).Data(p).Processed_data, DB_3.Data.("participant_" + p).processed_data))
+    assert(isequaln(obj.DataRecords(2).Data(p).Uniform_data, DB_3.Data.("participant_" + p).uniform_data))
 end
 
 assert(isempty(obj.SummaryTable))
@@ -94,7 +94,7 @@ assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_par
 assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
-    steps = DB_1.Data.participant_1.processed_data.(side).step;
+    steps = DB_1.Data.participant_1.uniform_data.(side).step;
     if ~isempty(steps)
         assert(obj.SummaryTable.Has_medial(1) == ~isempty(steps(1).Markers.Ankle.medial))
     end
@@ -115,7 +115,7 @@ assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_par
 assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
-    steps = DB_3.Data.participant_1.processed_data.(side).step;
+    steps = DB_3.Data.participant_1.uniform_data.(side).step;
     if ~isempty(steps)
         assert(obj.SummaryTable.Has_medial(2) == ~isempty(steps(1).Markers.Ankle.medial))
     end
@@ -129,7 +129,7 @@ assert(height(obj.SamplesTable) == obj.NUM_SIDES*16)
 sides_counter = 0;
 for p=1:16
     for side=["left" "right"]
-        steps = DB_1.Data.("participant_" + p).processed_data.(side).step;
+        steps = DB_1.Data.("participant_" + p).uniform_data.(side).step;
         sides_counter = sides_counter + ~isempty(steps);
     end
 end
@@ -139,7 +139,7 @@ obj.add_to_samples_table(DB_3_ID);
 assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
 for p=1:50
     for side=["left" "right"]
-        steps = DB_3.Data.("participant_" + p).processed_data.(side).step;
+        steps = DB_3.Data.("participant_" + p).uniform_data.(side).step;
         sides_counter = sides_counter + ~isempty(steps);
     end
 end
@@ -176,7 +176,7 @@ for p=1:16
     assert(obj.DataRecords(1).Data(p).Participant_id == p)
     assert(obj.DataRecords(1).Data(p).Participant_name == "participant_" + p)
     assert(isequaln(obj.DataRecords(1).Data(p).Anthropometric_data, DB_1.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(1).Data(p).Processed_data, DB_1.Data.("participant_" + p).processed_data))
+    assert(isequaln(obj.DataRecords(1).Data(p).Uniform_data, DB_1.Data.("participant_" + p).uniform_data))
 end
 assert(height(obj.SummaryTable) == 1)
 assert(obj.SummaryTableSize == 1)
@@ -192,7 +192,7 @@ assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_par
 assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
-    steps = DB_1.Data.participant_1.processed_data.(side).step;
+    steps = DB_1.Data.participant_1.uniform_data.(side).step;
     if ~isempty(steps)
         assert(obj.SummaryTable.Has_medial(1) == ~isempty(steps(1).Markers.Ankle.medial))
     end
@@ -201,7 +201,7 @@ assert(height(obj.SamplesTable) == obj.NUM_SIDES*16)
 sides_counter = 0;
 for p=1:16
     for side=["left" "right"]
-        steps = DB_1.Data.("participant_" + p).processed_data.(side).step;
+        steps = DB_1.Data.("participant_" + p).uniform_data.(side).step;
         sides_counter = sides_counter + ~isempty(steps);
     end
 end
@@ -219,7 +219,7 @@ for p=1:50
     assert(obj.DataRecords(2).Data(p).Participant_id == p)
     assert(obj.DataRecords(2).Data(p).Participant_name == "participant_" + p)
     assert(isequaln(obj.DataRecords(2).Data(p).Anthropometric_data, DB_3.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(2).Data(p).Processed_data, DB_3.Data.("participant_" + p).processed_data))
+    assert(isequaln(obj.DataRecords(2).Data(p).Uniform_data, DB_3.Data.("participant_" + p).uniform_data))
 end
 assert(height(obj.SummaryTable) == 2)
 assert(obj.SummaryTableSize == 2)
@@ -235,7 +235,7 @@ assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_par
 assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
-    steps = DB_3.Data.participant_1.processed_data.(side).step;
+    steps = DB_3.Data.participant_1.uniform_data.(side).step;
     if ~isempty(steps)
         assert(obj.SummaryTable.Has_medial(2) == ~isempty(steps(1).Markers.Ankle.medial))
     end
@@ -243,7 +243,7 @@ end
 assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
 for p=1:50
     for side=["left" "right"]
-        steps = DB_3.Data.("participant_" + p).processed_data.(side).step;
+        steps = DB_3.Data.("participant_" + p).uniform_data.(side).step;
         sides_counter = sides_counter + ~isempty(steps);
     end
 end

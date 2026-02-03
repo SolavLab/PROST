@@ -1,4 +1,4 @@
-clear variables -except DB_1 
+clearvars -except DB_1 
 close all; 
 clc
 
@@ -23,15 +23,15 @@ step_nums.right = [1 3]; % number of steps per trial (right)
 step_nums.left = 2; % number of steps per trial (left)
 steps_feet = ["right" "left" "right"]; % the feet per trial
 db_axis = ["y", "x", "z"]; % lab frame axis: [walking direction, other direction, up]
-sides.processed = ["right", "left"];
-sides.unprocessed = ["R", "L"]; % How are the sides delineated in the database
+sides.uniform = ["right", "left"];
+sides.processed_original = ["R", "L"]; % How are the sides delineated in the database
 cmaps = dictionary("right", "green", "left", "red");
 
 %% Which participants and trials to test?
 % A cell array listing each participant and each trial for that participant to
 % test.
 % The cell array has the format
-% {participant_number, [processed_trial_numbers], [processed_trial_sides]}
+% {participant_number, [uniform_trial_numbers], [uniform_trial_sides]}
 % Example:
 % {1, [1 2 3], ["right"]; 2, [1 2], ["right" left"]}
 tests = {1, [104], ["right"]};
@@ -42,8 +42,7 @@ tests = {1, [104], ["right"]};
 % choose trials spaced equally as that number.
 n_trials = 10;
 
-%% PROCESSED DATA
-% Check Shank Frame Transformation
+%% Check Shank Frame Transformation
 % close all
 participants = [tests{:, 1}];
 n_participants = length(participants);
@@ -58,7 +57,7 @@ for p=1:n_participants
         test_sides = ["left" "right"];
     end
     if isempty(trials_test_processsed)
-        total_trials = min(length(DB.Data.(participant_name).processed_data.(test_sides(1)).step), length(DB.Data.(participant_name).processed_data.(test_sides(end)).step));
+        total_trials = min(length(DB.Data.(participant_name).uniform_data.(test_sides(1)).step), length(DB.Data.(participant_name).uniform_data.(test_sides(end)).step));
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else
@@ -74,7 +73,7 @@ for p=1:n_participants
     for t=trials
         for side=test_sides
             try
-                trial = DB.Data.(participant_name).processed_data.(side).step(t);
+                trial = DB.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -105,7 +104,7 @@ for p=1:n_participants
     colorbar('east')
 end
 
-% Loop over processed data
+%% Loop over uniform data
 % close all
 for p=1:n_participants
     % Get test parameters
@@ -118,11 +117,11 @@ for p=1:n_participants
     end
     
     % Plot trials
-    f = figure(Name=participant_name + " Shank Frame");
+    f = figure(Name=participant_name + " Uniform");
     tiledlayout(f, "flow")
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).processed_data.(side).step);
+            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -134,7 +133,7 @@ for p=1:n_participants
 
         for t=trials
             try
-                trial = DB.Data.(participant_name).processed_data.(side).step(t);
+                trial = DB.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -182,8 +181,7 @@ for p=1:n_participants
     colorbar('east')
 end
 
-%% UNPROCESSED DATA
-% Loop over unprocessed data
+%% Loop over processed_original data
 % close all
 participants = [tests{:, 1}];
 n_participants = length(participants);
@@ -199,11 +197,11 @@ for p=1:n_participants
     end
 
     % Plot trials
-    f = figure(Name=participant_name + " Unprocessed");
+    f = figure(Name=participant_name + " Processed Original");
     tiledlayout
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).processed_data.(side).step);
+            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -215,18 +213,18 @@ for p=1:n_participants
 
         for t=trials
             try
-                trial_processed = DB.Data.(participant_name).processed_data.(side).step(t);
+                trial_uniform = DB.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
                 end
             end
-            t_unprocessed = trial_processed.source.original_trial_number_in_database;
-            trial = DB.Data.(participant_name).unprocessed_data.("trial_" + t_unprocessed);
+            t_processed_original = trial_uniform.source.original_trial_number_in_database;
+            trial = DB.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
             
             for step_num=step_nums.(side)
                 foot = steps_feet(step_num);
-                side_prefix = sides.unprocessed(strcmp(foot, sides.processed));
+                side_prefix = sides.processed_original(strcmp(foot, sides.uniform));
                 if isempty(side_prefix)
                     continue
                 end
@@ -275,7 +273,7 @@ for p=1:n_participants
                 scatter(ankle.(db_axis(1))(IC_index_traj:OIC_index_traj), ankle.(db_axis(3))(IC_index_traj:OIC_index_traj), 30, 'square', 'filled')
                 scatter(knee.(db_axis(1))(IC_index_traj:OIC_index_traj), knee.(db_axis(3))(IC_index_traj:OIC_index_traj), 30, 'o', 'filled')
                 scatter(COP.(db_axis(1))(IC_index_grf:OIC_index_grf), 0*COP.(db_axis(1))(IC_index_grf:OIC_index_grf), 30, '^', 'filled')
-                title(upper(foot) + ": Trial " + num2str(t_unprocessed), trial.origin.speed_catagory + " " + trial.origin.number_of_trial_under_speed_catagory)
+                title(upper(foot) + ": Trial " + num2str(t_processed_original), trial.origin.speed_catagory + " " + trial.origin.number_of_trial_under_speed_catagory)
                 xlabel("x [mm]")
                 ylabel("z [mm]")
             end
@@ -284,7 +282,7 @@ for p=1:n_participants
     end
 end
 
-% Loop over Just Force plate Data
+%% Loop over Just Force plate Data
 % close all
 for p=1:n_participants
     % Get test parameters
@@ -297,11 +295,11 @@ for p=1:n_participants
     end
 
     % Plot trials
-    f = figure(Name=participant_name + " Unprocessed");
+    f = figure(Name=participant_name + " Forceplate Data");
     tiledlayout
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).processed_data.(side).step);
+            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -313,19 +311,19 @@ for p=1:n_participants
 
         for t=trials
              try
-                trial_processed = DB.Data.(participant_name).processed_data.(side).step(t);
+                trial_uniform = DB.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
                 end
             end
-            t_unprocessed = trial_processed.source.original_trial_number_in_database;
-            trial = DB.Data.(participant_name).unprocessed_data.("trial_" + t_unprocessed);
+            t_processed_original = trial_uniform.source.original_trial_number_in_database;
+            trial = DB.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
 
             h = [];
             for step_num=step_nums.(side)
                 foot = steps_feet(step_num);
-                side_prefix = sides.unprocessed(strcmp(foot, sides.processed));
+                side_prefix = sides.processed_original(strcmp(foot, sides.uniform));
                 if isempty(side_prefix)
                     continue
                 end
@@ -344,7 +342,7 @@ for p=1:n_participants
                 nexttile;
                 hold on
 
-                title(upper(side) + ": Trial " + num2str(t_unprocessed), trial.origin.speed_catagory + " " + trial.origin.number_of_trial_under_speed_catagory);
+                title(upper(side) + ": Trial " + num2str(t_processed_original), trial.origin.speed_catagory + " " + trial.origin.number_of_trial_under_speed_catagory);
                 xlabel("time [s]");
                 grid on
 

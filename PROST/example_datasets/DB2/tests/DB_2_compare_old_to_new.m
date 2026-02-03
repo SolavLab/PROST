@@ -20,27 +20,27 @@ for p=1:48
     DB_2_alt.Data.("participant_" + p).metadata = rmfield(DB_2_alt.Data.("participant_" + p).metadata, {'mass', 'thigh_length', 'shank_length'});
 
     for side=["left" "right"]
-        n_steps = length(DB_2_alt.Data.("participant_" + p).processed_data.(side).step);
+        n_steps = length(DB_2_alt.Data.("participant_" + p).uniform_data.(side).step);
         for s=1:n_steps
 
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers = struct;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Ankle.lateral = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Lateral_Ankle;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Ankle.medial = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Medial_Ankle;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Ankle.mean = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Ankle;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Knee.lateral = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Lateral_Knee;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Knee.medial = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Medial_Knee;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.Knee.mean = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).markers.Knee;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.unit = "mm";
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.temporal_alignment = "weight acceptance + single support";
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.IC_index = 1;
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).Markers.OIC_index = 101;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers = struct;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Ankle.lateral = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Lateral_Ankle;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Ankle.medial = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Medial_Ankle;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Ankle.mean = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Ankle;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Knee.lateral = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Lateral_Knee;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Knee.medial = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Medial_Knee;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.Knee.mean = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).markers.Knee;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.unit = "mm";
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.temporal_alignment = "weight acceptance + single support";
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.IC_index = 1;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).Markers.OIC_index = 101;
 
-            DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).source = DB_2_alt.Data.("participant_" + p).processed_data.(side).step(s).scorce;
+            DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).source = DB_2_alt.Data.("participant_" + p).uniform_data.(side).step(s).scorce;
        end
     end
 
     for side=["left" "right"]
-        DB_2_alt.Data.("participant_" + p).processed_data.(side).step = rmfield(DB_2_alt.Data.("participant_" + p).processed_data.(side).step, {'scorce', 'markers', 'ROS'});
+        DB_2_alt.Data.("participant_" + p).uniform_data.(side).step = rmfield(DB_2_alt.Data.("participant_" + p).uniform_data.(side).step, {'scorce', 'markers', 'ROS'});
     end
 end
 

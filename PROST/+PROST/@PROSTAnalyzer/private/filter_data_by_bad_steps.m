@@ -28,7 +28,7 @@ function filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatom
     for participant_num=1:n_participants
         participant_name = obj.DataRecords(dataset_index).Data(participant_num).Participant_name;
         for side=["left" "right"]
-            trials = obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step;
+            trials = obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step;
             n_trials = length(trials);
             for trial_num=1:n_trials
                 step = trials(trial_num);
@@ -45,7 +45,7 @@ function filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatom
                 idx_switch = find(diff(sign_d) ~= 0);
                 if isempty(idx_switch)
                     if sign_d(1) < 0
-                        obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
+                        obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step(trial_num).Is_included = false;
                         % disp("-1 " + s);
                     end
                     continue
@@ -53,7 +53,7 @@ function filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatom
                     idx_switch = [0 idx_switch];
                     idx_switch = [idx_switch length(sign_d)];
                     if any(sign_d(idx_switch(1:end-1) + 1) < 0 & diff(idx_switch) > bad_step_min_duration)
-                        obj.DataRecords(dataset_index).Data(participant_num).Processed_data.(side).step(trial_num).Is_included = false;
+                        obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step(trial_num).Is_included = false;
                         % disp(s);
                     end
                 end

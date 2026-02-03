@@ -225,11 +225,11 @@ for participant_number = 1:n_participants
     DB_3.Data.(participant_name).metadata = metadata;
 
     %                                               ---------------------
-    % DB_3 / Data / participant_# / processed_data / Right,Left / step(#)
+    % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#)
     %                                               ---------------------
-    % Prepping processed data database
-    DB_3.Data.(participant_name).processed_data.right.step = [];
-    DB_3.Data.(participant_name).processed_data.left.step = [];
+    % Prepping uniform data database
+    DB_3.Data.(participant_name).uniform_data.right.step = [];
+    DB_3.Data.(participant_name).uniform_data.left.step = [];
 
     % Only use walking data
     walking_data = s.Data(matches({s.Data.Task}, 'Walking'));
@@ -251,11 +251,12 @@ for participant_number = 1:n_participants
       threshold_shift = 0.025; % [m]
       [right_OIC_threshold, left_OIC_threshold] = get_OIC_thresholds(walking_data, s.MarkerVarName, threshold_shift);
 
-    % New trial number only for good quality trials.
     for trial_number = 1:n_trials
-        % --------------------
+        %                               ---------------- -----------
+        % DB_2 / Data / participant_# / processed_original_data / trial(#)
+        %                               ---------------- -----------
+        
         % now get the signals:
-        % -------------------- 
         % number of samples in trial
         n_marker_samples = size(walking_data(trial_number).Marker, 2);
         n_grf_samples = size(walking_data(trial_number).Grf, 2);
@@ -270,12 +271,12 @@ for participant_number = 1:n_participants
         cop_data = walking_data(trial_number).Grf(contains(string(s.GrfVarName), 'Cop'), :);
         
         %                                                            -------
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / origin
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / origin
         %                                                            -------        
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).origin.trial_number = trial_number;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = trial_number;
 
         %                                                            --------------------------------------------
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / step_#_info / events , step_quality , foot
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / step_#_info / events , step_quality , foot
         %                                                            --------------------------------------------
         % Each trial consists of a single foot strike on the force plate.
         % For each trial, foot-strikes were defined from platform data as 
@@ -382,18 +383,18 @@ for participant_number = 1:n_participants
                   "Forceplate index: %d. Trajectory index: %d", step_info.events.OIC.forceplate_index, step_info.events.OIC.trajectory_index)
         end
 
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info = step_info;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info = step_info;
         
         %                                                            -----
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / Time
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / Time
         %                                                            -----
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Trajectory_Time.value = trajectory_time_vector;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Trajectory_Time.unit = "second";
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Forceplate_Time.value = forceplate_time_vector;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).Forceplate_Time.unit = "second";
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).Trajectory_Time.value = trajectory_time_vector;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).Trajectory_Time.unit = "second";
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).Forceplate_Time.value = forceplate_time_vector;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).Forceplate_Time.unit = "second";
         
         %                                                            ----
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / GRF
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / GRF
         %                                                            ----
         % -------------------------------------------
         % the x direction is the direction of walking.
@@ -405,22 +406,22 @@ for participant_number = 1:n_participants
         GRF.plate_1.z = grf_data(3, :);
         GRF.unit = "N";
         GRF.sampling_freq = s.GrfFreq; % [Hz]
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).GRF = GRF;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).GRF = GRF;
         
         %                                                            ----
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / COP
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / COP
         %                                                            ----
         COP.plate_1.x = cop_data(1, :);
         COP.plate_1.y = cop_data(2, :);
         COP.plate_1.z = cop_data(3, :);
         COP.unit = "mm";
         COP.sampling_freq = s.GrfFreq; % [Hz]
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).COP = COP;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).COP = COP;
         
         % now if the step is good,
         % we will change the initial contact that we saved
         % according to the COP (check where the COP starts making sense)
-        trial = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number);
+        trial = DB_3.Data.(participant_name).processed_original_data.trial(trial_number);
         if ((trial.step_1_info.step_quality) == "good")
             step_info = trial.step_1_info;
             
@@ -444,17 +445,17 @@ for participant_number = 1:n_participants
             added_IC = find(is_in, 1, 'first');
             if isempty(added_IC)
                 added_IC = 0;
-                DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.step_quality = "bad";
+                DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.step_quality = "bad";
                 warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no CoP initial contact detected', participant_ID, c, t, 1);
             else
                 % change the IC of this good step:
                 new_forceplate_IC = IC_index + added_IC - 1;
-                DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.events.IC.forceplate_index = new_forceplate_IC;
+                DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.events.IC.forceplate_index = new_forceplate_IC;
                 IC_new_time = forceplate_time_vector(new_forceplate_IC);
                 IC_new_time = round(round_by*(IC_new_time))/round_by;
-                DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.events.IC.time = IC_new_time;
+                DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.events.IC.time = IC_new_time;
                 [~, new_trajectory_IC] = PROST.utils.find_index_from_value(trajectory_time_vector, IC_new_time);
-                DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info.events.IC.trajectory_index = new_trajectory_IC;
+                DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.events.IC.trajectory_index = new_trajectory_IC;
             end
             if ~(mod(step_info.events.IC.forceplate_index, 1) == 0) || ~(mod(step_info.events.IC.trajectory_index, 1) == 0)
                 error("IC index not an integer.\n" + ...
@@ -463,7 +464,7 @@ for participant_number = 1:n_participants
         end
 
         %                                                            -------------
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / trajectories
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / trajectories
         %                                                            -------------
         % ---------------------------------
         % which markers do we want to save:
@@ -487,42 +488,36 @@ for participant_number = 1:n_participants
                             trajectories.(markers_guide.reference_guide{"Left Lateral Ankle"}{1}), ...
                             left_ST_below_knee, left_ST_above_knee);
 
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).trajectories = trajectories;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).trajectories = trajectories;
 
         %                                                            ------------------
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / walking_direction
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / walking_direction
         %                                                            ------------------
         % we will check the walking direction by checking if the direction
         % that the Psis marker is moving is +x (+1) or -x (-1)
         psis_x = trajectories.(markers_guide.reference_guide{"Walking Direction Marker"}{1}).x;
         walking_direction = sign(psis_x(end) - psis_x(1));
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.value = walking_direction;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.explenation = "\n1 - the walking was in the direction from plate 1 to plate 2." + ... 
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value = walking_direction;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.explenation = "\n1 - the walking was in the direction from plate 1 to plate 2." + ... 
                                                                                                           "\n-1 - the walking was in the direction from plate 2 to plate 1.";
         %                                                            ------
-        % DB_3 / Data / participant_# / unprocessed_data / trial(#) / speed
+        % DB_3 / Data / participant_# / processed_original_data / trial(#) / speed
         %                                                            ------
         % get the speed from the data:
         speed = walking_data(trial_number).speed;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.value = speed;
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.m_per_sec.method = "given";
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.value = speed;
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.method = "given";
 
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed.km_per_hour.method = "Converted from [m/sec] to [km/hour].";
-
-        % ---------------------------------------------------------------------------------------------------------------------------------------------------
-        %       TODO: add to unprocessed data a calculation for the walking speed.
-        %       perhaps with a linear fit to a graph of the location of the pelvix marker in the walking direction (x)
-        %       as a function of time (the derivative is the walking speed.)
-        % ---------------------------------------------------------------------------------------------------------------------------------------------------
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
+        DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.method = "Converted from [m/sec] to [km/hour].";
 
         %                              ---------------
-        % DB_3 / Data / participant_# / processed_data
+        % DB_3 / Data / participant_# / uniform_data
         %                              ---------------
         
-        % reminder: the frame of reference of the un-processed data:
+        % reminder: the frame of reference of the processed_original data:
         %           -------------------------------------------------
         % x - the direction (in the lab) from Force_Plate_1 to Force_Plate_2
         % y - up
@@ -541,7 +536,7 @@ for participant_number = 1:n_participants
         %  v 
         % z
 
-        % and the frame of reference of the processed data:
+        % and the frame of reference of the uniform data:
         % ---------------------------------------------
         % x - the walking direction (+x or -x)
         % y - to the left (of the body)
@@ -559,9 +554,9 @@ for participant_number = 1:n_participants
         % while the COP, markers, and ROS should be temporally aligned (to n_temporal_alignment points) in the single support phase (SS) -> from initial contact to opposite initial contact 
 
         %                                               ---------------------
-        % DB_3 / Data / participant_# / processed_data / Right,Left / step(#)
+        % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#)
         %                                               ---------------------
-        step_info = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).step_1_info;
+        step_info = DB_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info;
         if (step_info.step_quality == "good")
             side = step_info.foot; %side: right or left
             if side == "right"
@@ -575,35 +570,35 @@ for participant_number = 1:n_participants
             end
 
             %                                                                      ---------
-            % DB_3 / Data / participant_# / processed_data / right,left / step(#) / source /
+            % DB_3 / Data / participant_# / uniform_data / right,left / step(#) / source /
             %                                                                      ---------
               %                                                                             ---------------
             %                                                                               / original trial
             %                                                                               ---------------
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_trial = string(trial_number);
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_trial = string(trial_number);
             %                                                                               ----------------------------------
             %                                                                               / original trial number in database
             %                                                                               ----------------------------------
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_trial_number_in_database = trial_number;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_trial_number_in_database = trial_number;
             %                                                                               ---------------------
             %                                                                               / step number in trial
             %                                                                               ---------------------
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.step_number = 1;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.step_number = 1;
             %                                                                               -------------
             %                                                                               / plate number
             %                                                                               -------------
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.plate_number = step_info.plate;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.plate_number = step_info.plate;
             
             % original IC,OIC,and TO: index and time
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_IC.forceplate_index = step_info.events.IC.forceplate_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_OIC.forceplate_index = step_info.events.OIC.forceplate_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_TO.forceplate_index = step_info.events.TO.forceplate_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_IC.trajectory_index = step_info.events.IC.trajectory_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_OIC.trajectory_index = step_info.events.OIC.trajectory_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_TO.trajectory_index = step_info.events.TO.trajectory_index;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_IC.time = step_info.events.IC.time;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_OIC.time = step_info.events.OIC.time;
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).source.original_TO.time = step_info.events.TO.time;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.forceplate_index = step_info.events.IC.forceplate_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.forceplate_index = step_info.events.OIC.forceplate_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.forceplate_index = step_info.events.TO.forceplate_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.trajectory_index = step_info.events.IC.trajectory_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.trajectory_index = step_info.events.OIC.trajectory_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.trajectory_index = step_info.events.TO.trajectory_index;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.time = step_info.events.IC.time;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.time = step_info.events.OIC.time;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.time = step_info.events.TO.time;
             %-----------------------------------------
             % Get event indices of the force plate measurements
             IC_index = step_info.events.IC.forceplate_index;
@@ -611,17 +606,17 @@ for participant_number = 1:n_participants
             OIC_index = step_info.events.OIC.forceplate_index;
             
             % Get the walking direction of the trial
-            walking_direction = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).walking_direction.value;
+            walking_direction = DB_3.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value;
             
             % Size of temporal alignment. We want 101 points so data is in
             % percentage of stance phase \ single support phase.
             n_temporal_alignment = 101;
 
             %                                                                      ----------------------------
-            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / COP   -  temporally aligned  
+            % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#) / COP   -  temporally aligned  
             %                                                                      ----------------------------
             % get data (get the COP):
-            COP = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).COP;
+            COP = DB_3.Data.(participant_name).processed_original_data.trial(trial_number).COP;
             tmp_COP.x = walking_direction*COP.plate_1.x;
             tmp_COP.y = -walking_direction*COP.plate_1.z;
             tmp_COP.z = COP.plate_1.y;
@@ -635,13 +630,13 @@ for participant_number = 1:n_participants
             interpolated_COP.IC_index = 1;
 
             % and place into the database:
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).COP = interpolated_COP;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).COP = interpolated_COP;
 
             %                                                                      ----                           ------------
-            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / GRF   -  temporally aligned to stance phase 
+            % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#) / GRF   -  temporally aligned to stance phase 
             %                                                                      ----                           ------------
             % get data:
-            GRF = DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).GRF;
+            GRF = DB_3.Data.(participant_name).processed_original_data.trial(trial_number).GRF;
             tmp_GRF.x = walking_direction*GRF.plate_1.x;
             tmp_GRF.y = -walking_direction*GRF.plate_1.z;
             tmp_GRF.z = GRF.plate_1.y;
@@ -656,10 +651,10 @@ for participant_number = 1:n_participants
             interpolated_GRF.TO_index = n_temporal_alignment;
 
             % and place into the database:
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).GRF = interpolated_GRF;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).GRF = interpolated_GRF;
 
             %                                                                      --------                           --------------
-            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / markers   -  temporally aligned to single support
+            % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#) / markers   -  temporally aligned to single support
             %                                                                      --------                           --------------
             % Get event indices of the trajectory measurements
             IC_index = step_info.events.IC.trajectory_index;
@@ -704,13 +699,13 @@ for participant_number = 1:n_participants
             one_step_Markers.OIC_index = n_temporal_alignment;
 
                 % And place into the database:
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).Markers = one_step_Markers;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).Markers = one_step_Markers;
 
             %                                                                       ------
-            % DB_3 / Data / participant_# / processed_data / Right,Left / step(#) / speed 
+            % DB_3 / Data / participant_# / uniform_data / Right,Left / step(#) / speed 
             %                                                                       ------ 
-            DB_3.Data.(participant_name).processed_data.(side).step(relevant_index).speed = ...
-            DB_3.Data.(participant_name).unprocessed_data.trial(trial_number).speed;
+            DB_3.Data.(participant_name).uniform_data.(side).step(relevant_index).speed = ...
+            DB_3.Data.(participant_name).processed_original_data.trial(trial_number).speed;
         end
     end
 end

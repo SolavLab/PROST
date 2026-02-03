@@ -1,4 +1,4 @@
-clear variables -except DB_2
+clearvars -except DB_2
 close all; 
 clc
 
@@ -24,9 +24,9 @@ db_axis = ["x", "y", "z"]; % lab frame axis: [walking direction, other direction
 % Which participant to test?
 participants = [24];
 n_participants = length(participants);
-sides.processed = ["right", "left"];
+sides.uniform = ["right", "left"];
 cmaps = dictionary("right", "green", "left", "red");
-sides.unprocessed = ["R_", "L_"]; % How are the sides delineated in the database
+sides.processed_original = ["R_", "L_"]; % How are the sides delineated in the database
 
 
 %% Check Shank Frame Transformation
@@ -40,7 +40,7 @@ for particpant_num=participants
     tiledlayout(f, "flow")
 
     if isempty(trials_test)
-        total_trials = min(length(DB.Data.(p).processed_data.left.step), length(DB.Data.(p).processed_data.right.step));
+        total_trials = min(length(DB.Data.(p).uniform_data.left.step), length(DB.Data.(p).uniform_data.right.step));
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else
@@ -51,9 +51,9 @@ for particpant_num=participants
     end
     for t=trials
         nexttile
-        for side=sides.processed
+        for side=sides.uniform
             try
-                trial = DB.Data.(p).processed_data.(side).step(t);
+                trial = DB.Data.(p).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -77,18 +77,18 @@ for particpant_num=participants
     end
 end
 
-%% Loop over processed data
+%% Loop over uniform data
 % close all
 % How many trials to test?
 n_trials = 3;
 trials_test = [15];
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Processed");
+    f = figure(Name=p + " Uniform");
     tiledlayout(f, "flow")
-    for side=sides.processed
+    for side=sides.uniform
        if isempty(trials_test)
-            total_trials = length(DB.Data.(p).processed_data.(side).step);
+            total_trials = length(DB.Data.(p).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else 
@@ -99,7 +99,7 @@ for particpant_num=participants
         end
         for t=trials
             try
-                trial = DB.Data.(p).processed_data.(side).step(t);
+                trial = DB.Data.(p).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     % nexttile
@@ -147,17 +147,17 @@ for particpant_num=participants
     end
 end
 
-%% Loop over unprocessed data
+%% Loop over processed_original data
 % close all
 % How many trials to test?
 n_trials = 3;
 trials_test = [22];
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Unprocessed");
+    f = figure(Name=p + " Processed Original");
     tiledlayout
     if isempty(trials_test)
-        total_trials = length(DB.Data.(p).unprocessed_data.trial);
+        total_trials = length(DB.Data.(p).processed_original_data.trial);
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else 
@@ -167,11 +167,11 @@ for particpant_num=participants
        trials = trials_test;
     end
     for t=trials
-        trial = DB.Data.(p).unprocessed_data.trial(t);
+        trial = DB.Data.(p).processed_original_data.trial(t);
         for step_num=step_nums
             step_info = trial.("step_" + step_num + "_info");
             side = step_info.foot;
-            side_prefix = sides.unprocessed(strcmp(side, sides.processed));
+            side_prefix = sides.processed_original(strcmp(side, sides.uniform));
             if strcmp(step_info.step_quality, "bad")
                 disp(step_num + "," + t)
             end
@@ -227,14 +227,14 @@ for particpant_num=participants
     sgtitle(strrep(f.Name, "_", " "))
 end
 
-%% Loop over Just Forceplate Data
+%% Loop over Just force plate Data
 close all
 for particpant_num=participants
     p = "participant_" + num2str(particpant_num);
     f = figure(Name=p + " Forceplate Data");
     tiledlayout;
     if isempty(trials_test)
-        total_trials = length(DB.Data.(p).unprocessed_data.trial);
+        total_trials = length(DB.Data.(p).processed_original_data.trial);
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else 
@@ -244,12 +244,12 @@ for particpant_num=participants
        trials = trials_test;
     end
     for t=trials
-        trial = DB.Data.(p).unprocessed_data.trial(t);
+        trial = DB.Data.(p).processed_original_data.trial(t);
         h = [];
         for step_num=step_nums
             step_info = trial.("step_" + step_num + "_info");
             side = step_info.foot;
-            side_prefix = sides.unprocessed(strcmp(side, sides.processed));
+            side_prefix = sides.processed_original(strcmp(side, sides.uniform));
             if strcmp(step_info.step_quality, "bad")
                 disp(p + " Trial: " + t + " Step: " + step_num)
             end

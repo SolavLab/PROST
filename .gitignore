@@ -9,3 +9,5 @@ PROST/example_datasets/DB_3.mat
 *.asv
 PROST/example_datasets/DB4/data files/MAT_normalizedData_AbleBodiedAdults_v06-03-23.mat
 PROST/PROSTObj.mat
+PROST/example_datasets/DB_4.mat
+PROST/example_datasets/DB4/Data Files/raw_data.mat
