@@ -2,7 +2,7 @@
 %  build a matlab structure containing the third database data
 %  Created by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
-clc; close all; clearvars -except DB_1 DB_2 DB_4
+clc; close all; clearvars -except -regexp ^DB\w*
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script
@@ -84,7 +84,7 @@ Lab_system.lab_frame = ...
     "The z direction is pointing in the direction that completes a right handed coordinate system\n"+...
     "(this is towards the right (of the body) for trials where the first force-plate was stepped on first,\n"+...
     "and towards the left (of the body) for trials where the second force-plate was stepped on first).";
-Lab_system.num_forceplates = 1;
+Lab_system.num_forceplates = 2;
 
 DB_3.Lab_system = Lab_system;
 
@@ -177,8 +177,8 @@ for participant_number = 1:n_participants
     % Marker names:
     % ankle - Lateral Malleolus (LatMal)
     % knee - Virtual marker calculated from Fibular Head (FH) and Lateral
-    % Femoral Epicondyle (LatCon)
-    % hip - Anterior Superior Iliac Spine (Asis)
+    %        Femoral Epicondyle (LatCon)
+    % asis - Anterior Superior Iliac Spine (Asis)
     right_ankle = ST_data([markers_guide.reference_guide{"Right Lateral Ankle"}{2:end}]); % RxLatMal
     left_ankle = ST_data([markers_guide.reference_guide{"Left Lateral Ankle"}{2:end}]); % LxLatMal
     
@@ -192,12 +192,12 @@ for participant_number = 1:n_participants
     left_virtual_knee = PROST.utils.get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x;left_virtual_knee.y;left_virtual_knee.z];
 
-    right_hip = ST_data([markers_guide.reference_guide{"Right ASIS"}{2:end}]); % RxAsis
-    left_hip = ST_data([markers_guide.reference_guide{"Left ASIS"}{2:end}]);  % LxAsis
+    right_asis = ST_data([markers_guide.reference_guide{"Right ASIS"}{2:end}]); % RxAsis
+    left_asis = ST_data([markers_guide.reference_guide{"Left ASIS"}{2:end}]);  % LxAsis
 
     % thigh length
-    metadata.Thigh_length.right = norm(right_hip - right_knee);
-    metadata.Thigh_length.left = norm(left_hip - left_knee);
+    metadata.Thigh_length.right = norm(right_asis - right_knee);
+    metadata.Thigh_length.left = norm(left_asis - left_knee);
     metadata.Thigh_length.unit = "m";
     metadata.Thigh_length.method = "calculated by distance between ASIS and lateral knee markers in the standing trial";
 
@@ -208,19 +208,10 @@ for participant_number = 1:n_participants
     metadata.Shank_length.method = "calculated by distance between lateral knee and lateral ankle markers in the standing trial";
     
     % leg length
-    metadata.Leg_length.right = norm(right_hip - right_ankle);
-    metadata.Leg_length.left = norm(left_hip - left_ankle);
+    metadata.Leg_length.right = norm(right_asis - right_ankle);
+    metadata.Leg_length.left = norm(left_asis - left_ankle);
     metadata.Leg_length.unit = "m";
     metadata.Leg_length.method = "calculated by distance between ASIS and lateral ankle markers in the standing trial";
-    
-    % foot length
-    % metadata.foot_length.value=0; % TODO: write a function that caculates this
-    % metadata.foot_length.unit="";
-    % metadata.foot_length.method="calculated as a function of the effective foot length;
-
-    % metadata.effective_foot_length.value=0; % TODO write a function that calculates this
-    % metadata.effective_foot_length.unit="";
-    % metadata.effective_foot_length.method="calculated from the COP (in the lab coordinate system) by finding the maximum distance beetween all COP points)";
     
     DB_3.Data.(participant_name).metadata = metadata;
 
@@ -527,10 +518,10 @@ for participant_number = 1:n_participants
         % drawing of the coordinate system:
         %
         %    y          
-        %    ^              ________________    ________________
-        %    |             /               /   /               /
-        %    |            / force_plate_1 /   / force_plate_2 /
-        %    | _ _ _> x  /_______________/   /_______________/
+        %    ^              ________________
+        %    |             /               /
+        %    |            / force_plate_1 /
+        %    | _ _ _> x  /_______________/
         %    /
         %   /
         %  v 

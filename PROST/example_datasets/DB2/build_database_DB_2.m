@@ -4,8 +4,8 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clearvars -except good_trials DB_1 DB_3 DB_4;
-% close all
+clearvars -except good_trials -regexp ^DB\w*
+close all
 clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
@@ -514,14 +514,12 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     % Marker names:
     % ankle - Lateral Ankle (FAL)
     % knee - Virtual marker calculated from Lateral Femoral Epicondyle (FLE) and
-    % Fibular Head (FAX)
-    % hip - ASIS (FTC)
+    %        Fibular Head (FAX)
+    % asis - ASIS (FTC)
     
-        % ankle
     right_ankle = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Ankle"}{2}); % R_FAL
     left_ankle = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Ankle"}{2}); % L_FAL
     
-        % calculating virtual knee markers
     right_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2}); % R_FLE
     left_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Left Lateral Femoral Epicondyle"}{2}); % L_FLE
     right_below_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Fibular Head"}{2}); % R_FAX
@@ -532,19 +530,18 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     left_virtual_knee = PROST.utils.get_knee_marker(left_below_knee, left_ankle, left_below_knee, left_above_knee);
     left_knee = [left_virtual_knee.x; left_virtual_knee.y; left_virtual_knee.z];
     
-        % hip
-    right_hip = standing_trial.data(:, markers_guide.reference_guide{"Right ASIS"}{2}); % R_FTC
-    left_hip = standing_trial.data(:,  markers_guide.reference_guide{"Left ASIS"}{2}); % L_FTC
+    right_asis = standing_trial.data(:, markers_guide.reference_guide{"Right ASIS"}{2}); % R_FTC
+    left_asis = standing_trial.data(:,  markers_guide.reference_guide{"Left ASIS"}{2}); % L_FTC
     
     % leg length - from ASIS to lateral ankle
-    metadata.Leg_length.right = PROST.utils.convert_units(norm(right_hip - right_ankle), standing_trial.unit, "m");
-    metadata.Leg_length.left = PROST.utils.convert_units(norm(left_hip - left_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.right = PROST.utils.convert_units(norm(right_asis - right_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.left = PROST.utils.convert_units(norm(left_asis - left_ankle), standing_trial.unit, "m");
     metadata.Leg_length.unit = "m";
     metadata.Leg_length.method = "calculated by distance between ASIS and lateral ankle markers in the standing trial";
 
     % thigh length - from ASIS to lateral knee
-    metadata.Thigh_length.right = PROST.utils.convert_units(norm(right_hip - right_knee), standing_trial.unit, "m");
-    metadata.Thigh_length.left = PROST.utils.convert_units(norm(left_hip - left_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.right = PROST.utils.convert_units(norm(right_asis - right_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.left = PROST.utils.convert_units(norm(left_asis - left_knee), standing_trial.unit, "m");
     metadata.Thigh_length.unit = "m";
     metadata.Thigh_length.method = "calculated by distance between ASIS and lateral knee markers in the standing trial";
     
@@ -553,16 +550,6 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     metadata.Shank_length.left = PROST.utils.convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
     metadata.Shank_length.unit = "m";
     metadata.Shank_length.method = "calculated by distance between lateral knee and lateral ankle markers in the standing trial";
-
-    % TODO: Recalculate estimated foot length. This estimation isn't good enough
-    % when compared to measured foot length. So we need to find another way to estimate. 
-    % Add foot length estimation to metadata.
-    % right_steps = DB_2.Data.(participant_name).processed_data.right.step;
-    % left_steps = DB_2.Data.(participant_name).processed_data.left.step;
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.right = PROST.utils.estimate_foot_length(right_steps);
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.left = PROST.utils.estimate_foot_length(left_steps);
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.unit = "m";
-    % DB_2.Data.(participant_name).metadata.effective_foot_length.method="calculated from average COP in walking direction which is 0.83 of foot length.";
 end
 
 function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, reference_guide)
@@ -583,17 +570,13 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path,
 
     % Get trajectory data
     marker_data.n_samples = size(c3d.data.points, 3); % Number of samples in trial
-    marker_data.n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
     marker_data.freq = c3d.parameters.POINT.RATE.DATA; % Sampling frequency. Should be 100 Hz
     marker_data.time_vector = (0:marker_data.n_samples - 1) / marker_data.freq; % Time vector of trial
-    marker_data.data = c3d.data.points; % Trial measurements
-    marker_data.unit = string(c3d.parameters.POINT.UNITS.DATA);
-    marker_data.marker_names = string(c3d.parameters.POINT.LABELS.DATA);
+    marker_data.unit = string(c3d.parameters.POINT.UNITS.DATA); % Trajectory measurement units
+    marker_data.n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
+    marker_data.marker_names = string(c3d.parameters.POINT.LABELS.DATA); % Names of the markers
+    marker_data.data = c3d.data.points; % Trial trajectory measurements
     
-    % TODO : erase after debug
-    assert(marker_data.n_samples == size(marker_data.data, 3))
-    assert(marker_data.n_markers == size(marker_data.data, 2))
-    assert(3 == size(marker_data.data, 1))
     if marker_data.n_markers ~= 52
         important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
         important_markers(contains(important_markers, "Virtual")) = [];
@@ -608,21 +591,17 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path,
     % The force-plates were sampled at the same frequency as the EMG
     forceplate_data.freq = c3d.parameters.ANALOG.RATE.DATA; % Sampling frequency. Should be 1500 Hz
     forceplate_data.time_vector = (0:forceplate_data.n_samples - 1) / forceplate_data.freq; % Time vector of trial
-    forceplate_data.grf_unit = string(fp(1).unit_force);
-    forceplate_data.cop_unit = string(fp(1).unit_position);
+    forceplate_data.grf_unit = string(fp(1).unit_force); % GRF measurement units
+    forceplate_data.cop_unit = string(fp(1).unit_position); % CoP measurement units
    
     % Trial measurements
     forceplate_data.plate(forceplate_data.n_forceplates) = struct("grf", [], "cop", []); % Preallocate
     for k = 1:forceplate_data.n_forceplates
         forceplate_data.plate(k).grf = fp(k).force; % Copy each vector
         forceplate_data.plate(k).cop = fp(k).center_of_pressure; % Copy each vector
-        assert(3 == size(forceplate_data.plate(k).grf, 1))
-        assert(3 == size(forceplate_data.plate(k).cop, 1))
     end
 
     % Get event data
-    assert(ismatrix(c3d.parameters.EVENT.TIMES.DATA));
-    assert(all(c3d.parameters.EVENT.TIMES.DATA(1, :) == 0));
     event_data.times = c3d.parameters.EVENT.TIMES.DATA(2, :);
     event_data.names = string(c3d.parameters.EVENT.LABELS.DATA)';
     event_data.feet = string(c3d.parameters.EVENT.CONTEXTS.DATA)';
@@ -673,7 +652,7 @@ function steps_info = save_steps_info(event_data, forceplate_data, marker_data, 
         [~, steps_info(step_number).events.OIC.forceplate_index] = min(abs(steps_info(step_number).events.OIC.time - forceplate_data.time_vector));
         [~, steps_info(step_number).events.OIC.trajectory_index] = min(abs(steps_info(step_number).events.OIC.time - marker_data.time_vector));
 
-        % tow off
+        % toe off
         steps_info(step_number).events.TO.time = event_data.times(base_TO_index + shift_index);
         steps_info(step_number).events.TO.time = round(round_by*(steps_info(step_number).events.TO.time))/round_by;
         [~, steps_info(step_number).events.TO.forceplate_index] = min(abs(steps_info(step_number).events.TO.time - forceplate_data.time_vector));
@@ -693,10 +672,10 @@ function steps_info = check_step(steps_info, forceplate_data, feet)
 % Input :
 %   steps_info - the information of the steps. 
 %   forceplate_data - force plate measurements of all plates.
-%   foot - the foot of the step according to the data files.
+%   feet - the foot of each step according to the data files.
 % Output :
-%   step_info - the information of the step updated with the step quality, the 
-%               relevant plate and foot (if "good").
+%   steps_info - the information of each step updated with the step quality, the 
+%                relevant plate and foot (if "good").
 
     % Tolerance value for time difference.
     tol = 0.1;
@@ -732,8 +711,8 @@ function steps_info = check_step(steps_info, forceplate_data, feet)
             if abs(step_IC_time - fp_times(fp_num, 1)) < tol && ...
                abs(step_TO_time - fp_times(fp_num, 2)) < tol && ...
                (step_quality == "bad" || ...
-                (abs(step_IC_time - fp_times(step_plate, 1) > abs(step_IC_time - fp_times(fp_num, 1)) && ...
-                 abs(step_TO_time - fp_times(step_plate, 2)) > abs(step_TO_time - fp_times(fp_num, 2)))))
+               (abs(step_IC_time - fp_times(step_plate, 1) > abs(step_IC_time - fp_times(fp_num, 1)) && ...
+                abs(step_TO_time - fp_times(step_plate, 2)) > abs(step_TO_time - fp_times(fp_num, 2)))))
                 % cop_x = forceplate_data.plate(fp_num).cop(1, :);
                 % x = cop_x(~isnan(cop_x));
                 % dx = diff(x);
