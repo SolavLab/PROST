@@ -178,6 +178,7 @@ classdef PROSTAnalyzer < handle
     methods(Static)
         [good_steps] = get_good_steps(steps, min_speed);
         shank_cop = cop_to_shank_frame(step, anatomical_side);
+        shank_data = convert_to_shank_frame(data, knee, ankle)
         [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
         save_figure(f, file_path, file_type);
 
