@@ -1,22 +1,21 @@
-function save_figure(f, file_path, sub_folder, file_type)
+function save_figure(f, file_path, file_type)
 % SAVE_FIGURE saves the figure in the specified format.
+% Inpur :
+%   f - handle of the figure to save.
+%   file_path - path to the figures directory.
+%   file_type - the file type to save. Default "fig".
 % Example:
-%   save_figure(f, "C:/path/to/folder", "sub_folder", "png")
-%   save_figure(f, "C:/path/to/folder", [], "png")
-%   save_figure(f, [], [], "png")
+%   save_figure(f, "C:/path/to/folder", "png")
+%   save_figure(f, [], "png")
 %   save_figure(f)
-%   save_figure(f, "C:/path/to/folder", "sub_folder", "fig")
 
-    if nargin < 4 || isempty(file_type)
+    if nargin < 3 || isempty(file_type)
         file_type = "pdf";  % Default file type
     end
-    if nargin < 3 || isempty(sub_folder)
-        sub_folder = extractBefore(f.Name, ":");
-    end
     if nargin < 2 || isempty(file_path)
-        file_path = "C:/Users/chenr/Documents/PROST/figures/ROS Analysis";
+        file_path = uigetdir(pwd);
     end
-
+    
     % Ensure output folder exists
     if ~isfolder(file_path)
         mkdir(file_path);
@@ -29,7 +28,7 @@ function save_figure(f, file_path, sub_folder, file_type)
     end
 
     % Full file path
-    file_name = fullfile(file_path, sub_folder, clean_name + "." + file_type);
+    file_name = fullfile(file_path, clean_name + "." + file_type);
 
     % Save based on file type
     switch lower(file_type)

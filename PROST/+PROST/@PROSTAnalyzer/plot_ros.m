@@ -158,7 +158,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 lgd.Layout.Tile = 'east';
 
                 if strcmp(show, 'off')
-                    PROST.PROSTAnalyzer.save_figure(fig, [], "ROS PLots", file_type);
+                    PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/ROS Plots", file_type);
                 end
 
                 axes_counter = 0;
