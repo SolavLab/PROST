@@ -20,6 +20,8 @@ classdef PROSTAnalyzer < handle
         COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
         MARKER_CIRCLE = 'o';
         MARKER_DOT = '.';
+        MARKER_SQUARE = 'square';
+        MARKER_UP = '^';
         MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 10;
         MARKER_SIZE_SCATTER = 100;
@@ -146,6 +148,7 @@ classdef PROSTAnalyzer < handle
         % tf = participant_exists(obj, dataset_id, participant_id);
         % plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type);
+        % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);
         % set_dataset_name(obj, dataset_id, dataset_name);
