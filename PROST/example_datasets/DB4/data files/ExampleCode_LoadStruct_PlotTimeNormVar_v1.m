@@ -47,14 +47,15 @@ clc
 %%% 1. Set path to directory of the Structure you want to load!
 settings.mainDir = pwd;
 
+
 %%% 2. Load Structure
 % Give the name of the structure you want to load:
-settings.StructName = 'MAT_normalizedData_AbleBodiedAdults_v06-03-23';
+settings.StructName = 'MAT_normalizedData_PostStrokeAdults_v27-02-23';
 StructTime = load(fullfile(settings.mainDir,settings.StructName));
 
 
 %%% 3. Set saving settings
-settings.SaveFig = 0;       % set to 1 if you want to save the figure, set to 0 if not.
+settings.SaveFig = 1;       % set to 1 if you want to save the figure, set to 0 if not.
 settings.SaveDir = fullfile(settings.mainDir,'Figures');
 
 
@@ -64,24 +65,23 @@ settings.SaveDir = fullfile(settings.mainDir,'Figures');
 % For Able bodied (MAT_normalizedData_AbleBodiedAdults_v06-03-23), this is
 % left and right (or SideA = {'LR';'LR'})
 % For Stroke (MAT_normalizedData_PostStrokeAdults_v27-02-23), this is
-% paretic and non-paretic side (or SideA = {'P';'NP'};)
-settings.SideA = {'L';'R'};
-% settings.SideA = {'P';'NP'};
-oppositeSide = dictionary('L', 'R', 'R', 'L', 'P', 'NP', 'NP', 'P');
+% paretic and non-paretic side (or SideA = {'PN';'PN'};)
+% SideA = {'LR';'LR'}; 
+settings.SideA = {'PN';'PN'};
 
 % Both sides are plotted in a different color and line type. 
 % note, first side (defined above) will get the first color.
 settings.ColorZ = 'br';
 settings.MarkerSymbol = {'-';'--'};
-settings.LineWidth = 1.5;
 
 % Set the number of subplots in a single figure. 
 % if you set it lower, the subplot per participant will get larger, but
 % less will fit in a single figure. 
 % For Able bodied, 12x12 seems to work well. 
 % For Stroke, 7x8 seems to work well. 
-settings.iCol = 12;        
-settings.iRow = 12;    
+settings.iCol = 7;        
+settings.iRow = 8;    
+
 
 
 %% Select the data you want to plot
@@ -89,12 +89,12 @@ settings.iRow = 12;
 %%% 1. Specify the variable(s) of interest to plot:
 % You can give a series of variables (it will run in a loop) or a single
 % one.
-varsInt = {'GroundReactionForce'};
+varsInt = {'AnkleAngles';'CentreOfMass'};
     
 
 %%% 2. Specify the dimension to plot for each of these variables:
 % This can be x, y, z, or n (non-dimensional). Check the Structure.
-DimsC={'z'};    
+DimsC={'x','x'};    
 
 
 %%% 3. Specify the body side of the data you want to look at
@@ -106,8 +106,7 @@ DimsC={'z'};
 % (eg. DataStruct.Sub(1).PsideSegm_PsideData --> PsideData and NPsideData)
 % If you are interested in whole-body parameters that aren't related to one
 % side (eg center-of-mass, sternum marker), use 'BB').
-SideS = {'I'};
-% SideS = {'PN';'BB'};
+SideS= {'PN';'BB'};
 
 
   
@@ -123,67 +122,91 @@ scrplt.y(1) = round( scrsz(4)*0.05 );
 scrplt.y(2) = round( scrsz(4)*0.75 );
 
 % Graph per var:
-for iVar = 1:length(varsInt)
-    disp(['Working on plotting var from MAT file: ',varsInt{iVar}])
+for iVar = 1%:length(varsInt)
+    disp(['Working on plotting var: ',varsInt{iVar}])
+    
+    % Average data
+    TelSub.L = 1; TelSub.R = 1; TelSub.B = 1; TelSub.P = 1; TelSub.N = 1; 
+    clear Temp Hfig SidesLeg
+    for iSub = 1:size(StructTime.Sub,2)  
+        for iSide = 1:length(settings.SideA)
+            if ~isempty( StructTime.Sub(iSub). ...
+                    ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']) )
+                if isfield(StructTime.Sub(iSub). ...
+                        ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']),...
+                        ([varsInt{iVar}]))
+                    if isfield(StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']).([varsInt{iVar}]),...
+                            (DimsC{iVar}))
+                        
+                        Temp.(settings.SideA{iSide}(iSide))(TelSub.(SideS{iSide}(iSide)),:) = ...
+                            nanmean(StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar}),2);
+                        
+                        TelSub.(SideS{iSide}(iSide))=TelSub.(SideS{iSide}(iSide))+1;
+                    end
+                end
+            end
+        end % iSide
+    end % iSub
     
     % Initiate figure
     figure, set(gcf,'name',varsInt{iVar},'color',[1 1 1],'position',...
         [scrplt.x(1) scrplt.y(1) scrplt.x(2) scrplt.y(2)])    
     
     % Plot individual data
-    tiledlayout%(settings.iCol,settings.iRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
-    for iSub = 1%:size(StructTime.Sub,2)
+    tiledlayout(settings.iCol,settings.iRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
+    for iSub = 1:size(StructTime.Sub,2)
         nexttile 
-      
-        xdata = 0:10:1000;  
-        plot(xdata, zeros(size(xdata)), '-k')
-        hold on
+        if length(SideS{iVar})>1
+            Temp0 = [Temp.(settings.SideA{1}(1))(:,1:10:end); Temp.(settings.SideA{1}(1))(:,1:10:end)];
+            
+        else
+            Temp0 = Temp.B(:,1:10:end);
+        end
+        xdata = 0:10:(size(Temp0,2)-1)*10;  
+        if (min(nanmean(Temp0))<0 && max(nanmean(Temp0))>0)
+            plot(xdata,zeros(length(xdata)),'-k'),
+        end
+        hold on, clear Temp0
         
-        for iSegment = 1:length(settings.SideA)
-            for iSide = 1:strlength(SideS{iVar})
-                if strcmp(SideS{iVar}(iSide), 'I')
-                    side = settings.SideA{iSegment};
-                elseif strcmp(SideS{iVar}(iSide), 'C')
-                    side = oppositeSide(settings.SideA{iSegment});
-                else
-                    side = SideS{iVar}(iSide);
-                end
-                if ~isempty(StructTime.Sub(iSub). ...
-                        ([settings.SideA{iSegment}, 'sideSegm_', side, 'sideData']) )
+        for iSide = 1:length(settings.SideA)
+            if ~isempty( StructTime.Sub(iSub). ...
+                    ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']) )
+                if isfield(StructTime.Sub(iSub). ...
+                        ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']),...
+                        ([varsInt{iVar}]))
                     if isfield(StructTime.Sub(iSub). ...
-                            ([settings.SideA{iSegment}, 'sideSegm_', side, 'sideData']), ...
-                            ([varsInt{iVar}]))
-                        if isfield(StructTime.Sub(iSub). ...
-                                ([settings.SideA{iSegment}, 'sideSegm_', side, 'sideData']).([varsInt{iVar}]), ...
-                                (DimsC{iVar}))
-                            
-                            if iSub == 1 % to create legend
-                                Hfig(iSegment) = plot(xdata, StructTime.Sub(iSub). ...
-                                    ([settings.SideA{iSegment}, 'sideSegm_', side, 'sideData']). ...
-                                    ([varsInt{iVar}]).(DimsC{iVar})(1:10:end, 1), 'color', settings.ColorZ(iSegment), 'linewidth', settings.LineWidth);
-                            end
-
-                            plot(xdata, StructTime.Sub(iSub). ...
-                                ([settings.SideA{iSegment}, 'sideSegm_', side, 'sideData']). ...
-                                ([varsInt{iVar}]).(DimsC{iVar})(1:10:end, :), 'color', settings.ColorZ(iSegment), 'linewidth', settings.LineWidth);
-                        end
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']).([varsInt{iVar}]),...
+                            (DimsC{iVar}))
+                        
+                        if iSub==1 % to create legend
+                        Hfig(iSide) = plot(xdata, StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar})(1:10:end,1),'color',settings.ColorZ(iSide),'linewidth',1.5);
+                        end 
+                        
+                        plot(xdata, StructTime.Sub(iSub). ...
+                            ([settings.SideA{iSide}(iSide),'sideSegm_',SideS{iVar}(iSide),'sideData']). ...
+                            ([varsInt{iVar}]).(DimsC{iVar})(1:10:end,:),'color',settings.ColorZ(iSide),'linewidth',1.5);
+                        
+                        TelSub.(SideS{iVar}(iSide))=TelSub.(SideS{iVar}(iSide))+1;
                     end
                 end
-            end % iSide
-        end % iSegment       
-        ylabel(['Subno:', num2str(iSub)])
-    end % iSub
+            end
+        end % iSide        
+        
+        ylabel(['Subno:',num2str(iSub)])
+    end
     
     
     % Create legend
-    if strcmp(SideS{iVar}(iSide), 'I')
-        SidesLeg = settings.SideA;
-    elseif strcmp(SideS{iVar}(iSide), 'C')
-        SidesLeg = oppositeSide(settings.SideA);
-    else
-        SidesLeg = SideS{iVar};
+    for iSide = 1:length(settings.SideA)
+        SidesLeg{iSide} = SideS{iVar}(iSide);
     end
-    legend(Hfig, SidesLeg')
+    legend(Hfig,SidesLeg)
+    
     
     %%% Save
     if settings.SaveFig==1
@@ -196,199 +219,5 @@ for iVar = 1:length(varsInt)
 end % iVar
 
 
-%% Get Good Trials
-opts = detectImportOptions("41597_2023_2767_MOESM1_ESM.xlsx", ...
-    "Sheet","Table 3","ReadVariableNames",false);
-T = readtable("41597_2023_2767_MOESM1_ESM.xlsx",opts);
 
-unsorted_good_trials = struct([]);
-subjCounter = 0;
-
-% Column definitions
-subjCols = [1 7];
-fpCols   = {3:6, 9:12};   % FP blocks per subject
-
-for r = 1:height(T)
-    for s = 1:2   % two subjects per row
-        rawID = string(T{r, subjCols(s)});
-        if ~startsWith(rawID, "SUBJ")
-            continue
-        end
-
-        subjCounter = subjCounter + 1;
-        numID = sscanf(rawID,"SUBJ %d");
-
-        unsorted_good_trials(subjCounter).SubjID = numID;
-        unsorted_good_trials(subjCounter).folder = sprintf("SUBJ%02d", numID);
-
-        trialMap = configureDictionary("double", "struct");
-
-        % Parse FP columns
-        for fp = 1:numel(fpCols{s})
-            col = fpCols{s}(fp);
-            cellTxt = string(T{r, col});
-
-            if cellTxt == "X" || ismissing(cellTxt)
-                continue
-            end
-
-            entries = splitlines(cellTxt);
-            tok = regexp(entries, '([RL])\s*\((\d+)\)','tokens','once', 'forcecelloutput');
-
-            for e = 1:numel(entries)
-                if isempty(tok{e})
-                    continue
-                end
-
-                seg = tok{e}(1);
-                trial = str2double(tok{e}(2));
-
-                if ~isKey(trialMap, trial)
-                    trialMap(trial) = struct( ...
-                        'forceplates', [], ...
-                        'segments', string.empty);
-                end
-
-                tmp = trialMap(trial);
-                tmp.forceplates(end+1) = fp;
-                tmp.segments(end+1) = seg;
-                trialMap(trial) = tmp;
-            end
-        end
-
-        % Build filenames + trials
-        trialNums = sort((keys(trialMap)));
-
-        for iTrial = 1:numel(trialNums)
-            tr = trialNums(iTrial);
-
-            unsorted_good_trials(subjCounter).filenames(iTrial) = ...
-                sprintf("SUBJ%d (%d).c3d", numID, tr);
-
-            unsorted_good_trials(subjCounter).trials(iTrial).forceplates = ...
-                trialMap(tr).forceplates;
-
-            unsorted_good_trials(subjCounter).trials(iTrial).segments = ...
-                trialMap(tr).segments;
-        end
-    end
-end
-[~, order] = sort([unsorted_good_trials.SubjID]);
-good_trials = unsorted_good_trials(order);
-
-%% Look at C3D Files of Good Data
-addpath("C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB4\ezc3d_matlab")
-file_path = "C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB4\data files\138_HealthyPiG_10.05";
-
-dimension = dictionary('x', 1, 'y', 2, 'z', 3, 'n', 1);
-variable = dictionary('GroundReactionForce', 'force', 'GroundReactionMoment', 'moment', 'CenterOfPressure', 'center_of_pressure');
-% Graph per var:
-for iVar = 1:length(varsInt)
-    disp(['Working on plotting var for C3D file: ',varsInt{iVar}])
-    % Initiate figure
-    figure, set(gcf,'name',varsInt{iVar},'color',[1 1 1],'position',...
-        [scrplt.x(1) scrplt.y(1) scrplt.x(2) scrplt.y(2)])    
-
-    % Plot individual data
-    tiledlayout%(settings.iCol,settings.iRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
-    for iSub = 1%length(good_trials)
-        numID = good_trials(iSub).SubjID;
-        nexttile 
-        hold on
-
-        % xdata = 0:10:1000; 
-        % plot(xdata, zeros(size(xdata)), '-k')
-        % hold on
-
-        file_names = good_trials(iSub).filenames;
-        n_trials = length(file_names);
-        trial_offset = 0;
-
-        subj_forceplates = [];
-        subj_segments = [];
-        h = gobjects(0);
-        for iTrial=1:n_trials
-            c3d_filename = fullfile(file_path, good_trials(iSub).folder, file_names(iTrial));
-            [c3d fp] = ezc3dRead(convertStringsToChars(c3d_filename));
-            fp_sampling_freq = c3d.parameters.ANALOG.RATE.DATA;
-            markers_sampling_freq = c3d.parameters.POINT.RATE.DATA;
-            start_time = c3d.parameters.TRIAL.ACTUAL_START_FIELD.DATA(1)./markers_sampling_freq;
-            event_times = c3d.parameters.EVENT.TIMES.DATA(2, :) - start_time;
-
-            for iSegment=1:length(settings.SideA)
-                if strcmp(settings.SideA{iSegment}, 'L')
-                    iSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Left');
-                else
-                    iSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Right');
-                end
-                iFootStrike = strcmp(c3d.parameters.EVENT.LABELS.DATA, 'Foot Strike');
-                iFootOff = strcmp(c3d.parameters.EVENT.LABELS.DATA, 'Foot Off');
-                FootStrikes{iSegment} = event_times(iSide & iFootStrike);
-                FootOffs{iSegment} = event_times(iSide & iFootOff);
-                % xline(event_times(iSide & iFootStrike), '-',  LineWidth=settings.LineWidth, Color=settings.ColorZ(iSegment))
-                % xline(event_times(iSide & iFootOff), '--',  LineWidth=settings.LineWidth, Color=settings.ColorZ(iSegment))
-            end % iSegment
-
-            forceplates = good_trials(iSub).trials(iTrial).forceplates;
-            segments = good_trials(iSub).trials(iTrial).segments;
-            mass = c3d.parameters.PROCESSING.Bodymass.DATA;
-            subj_forceplates = [subj_forceplates forceplates];
-            subj_segments = [subj_segments segments];
-            n_forceplates = length(forceplates);
-
-            if matches(varsInt{iVar}, ["GroundReactionForce" "GroundReactionMoment" "CenterOfPressure"])
-                for idx=1:n_forceplates
-                    fp_num = forceplates(idx);
-                    iSegment = find(strcmp(settings.SideA, segments(idx)));
-                    iOppositeSegment = find(strcmp(settings.SideA, oppositeSide(segments(idx))));
-                    data = fp(fp_num).(variable(varsInt{iVar}))(dimension(DimsC{iVar}), :) ./ mass;
-                    data_filt = filter_data(data, fp_sampling_freq);
-                    time = (0:length(data_filt)-1)./fp_sampling_freq;
-                    data_cut = cut_step(data_filt, time, FootStrikes{iSegment}, FootOffs{iSegment});
-                    time_cut = (0:length(data_cut)-1)./fp_sampling_freq;
-                    h = [h plot(time_cut, data_cut, LineWidth=settings.LineWidth, Color=settings.ColorZ(iSegment))];
-                end
-            else
-                var_idx = strfind(c3d.parameters.POINT.LABELS, varsInt{iVar});
-                data = squeeze(c3d.data.points(dimension(DimsC{iVar}), var_idx, :));
-                data_filt = filter_data(data, fp_sampling_freq);
-                time = (0:length(data)-1)./fp_sampling_freq;
-                h = [h plot(time, data_filt, LineWidth=settings.LineWidth)];
-            end
-        end % iTrial
-        ylabel(['Subno:', num2str(numID)])
-        legend(h, "FP" + subj_forceplates + " " + subj_segments)
-    end % iSub
-end
-
-function data_filt = filter_data(data, sampling_freq)
-    % Inputs
-    Fs = sampling_freq; % Sampling frequency (Hz) — adjust to your data
-    Fc = 10;            % Low-pass cutoff frequency (Hz)
-    order = 4;
-
-    % Normalize cutoff frequency
-    Wn = Fc / (Fs/2);
-
-    % Design Butterworth filter
-    [b, a] = butter(order, Wn, 'low');
-
-    % Apply zero-phase (forward-backward) filtering
-    data_filt = filtfilt(b, a, data);
-end
-
-function step_cut = cut_step(step, time, FootStrikes, FootOffs)
-    sorted_foot_strikes = sort(FootStrikes)';
-    sorted_foot_offs = sort(FootOffs)';
-
-    [~, ICindices] = min(abs(sorted_foot_strikes - repmat(time, length(sorted_foot_strikes), 1)), [], 2);
-    [~, TOindices] = min(abs(sorted_foot_offs - repmat(time, length(sorted_foot_offs), 1)), [], 2);
-
-    [~, iPeak] = max(step);
-
-    [~, iIC] = min(abs(step(iPeak) - step(ICindices)));
-    [~, iTO] = min(abs(step(iPeak) - step(TOindices)));
-
-    step_cut = step(ICindices(iIC):TOindices(iTO));
-end
 % EOF
