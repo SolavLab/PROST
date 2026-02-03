@@ -39,7 +39,7 @@ classdef PROSTAnalyzer < handle
         SamplesTableSize = 0; % Size of the populated part of the samples table
         SummaryTableSize = 0; % Size of the populated part of the summary table
         PointClouds = {}; % Cell array of all point clouds.
-        IgnoreObject = PROST.PROSTIgnore(); % List of ignored trials
+        IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
         FirstUniqueDatasetId = 1; % Counter for generating unique dataset IDs.
     end
 
@@ -156,7 +156,6 @@ classdef PROSTAnalyzer < handle
     methods (Access = private)
         % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side)  
         % add_to_summary_table(obj, dataset_id);
-        % 
         % delete_from_data_records(obj, dataset_id, index);
         % delete_from_summary_table(obj, index);
         % filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatomical_side);

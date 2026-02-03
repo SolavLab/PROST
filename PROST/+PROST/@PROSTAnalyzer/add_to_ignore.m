@@ -11,5 +11,5 @@ function add_to_ignore(obj, dataset_id, participants, trials, side)
 %          then adds to both Left and Right.
 
     side = PROST.utils.capitalize(side);
-    obj.IgnoreObject.add_ignored(dataset_id, participants, trials, side);
+    obj.IgnoreObject.add_to_list(dataset_id, participants, trials, side);
 end

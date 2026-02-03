@@ -21,17 +21,17 @@ function tf = is_ignored(obj, dataset_id, participant_id, trials, side)
 
     % Is specific dataset ignored
     if nargin == 2
-        tf = obj.IgnoreObject.is_ignored_dataset(dataset_id);
+        tf = obj.IgnoreObject.is_in_list_dataset(dataset_id);
         return
     end
 
     % Is specific participant ignored
     if nargin == 3
-        tf = obj.IgnoreObject.is_ignored_participants(dataset_id, participant_id);
+        tf = obj.IgnoreObject.is_in_list_participants(dataset_id, participant_id);
         return
     end
 
     % Are specific trials ignored
     side = PROST.utils.capitalize(side);
-    tf = obj.IgnoreObject.is_ignored_trials(dataset_id, participant_id, trials, side);
+    tf = obj.IgnoreObject.is_in_list_trials(dataset_id, participant_id, trials, side);
 end

@@ -11,5 +11,5 @@ function delete_from_ignore(obj, dataset_id, participants, trials, side)
 %          then deletes both Left and Right.
 
     side = PROST.utils.capitalize(side);
-    obj.IgnoreObject.delete_ignored(dataset_id, participants, trials, side);
+    obj.IgnoreObject.delete_from_list(dataset_id, participants, trials, side);
 end
