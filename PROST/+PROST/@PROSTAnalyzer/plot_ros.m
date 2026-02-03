@@ -25,24 +25,16 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
         number_of_axes_in_fig = 6;
     end
     if nargin < 2 || isempty(who_to_plot)
-        n_data_records = length(obj.DataRecords);
-        who_to_plot = cell(n_data_records, 2);
-        who_to_plot(:, 1) = {obj.DataRecords.Dataset_id}';
-    end
-    for who_index=1:size(who_to_plot, 1)
-        if size(who_to_plot, 2) == 1 || isempty(who_to_plot{who_index, 2})
-            dataset_id = who_to_plot{who_index, 1};
-            dataset = obj.get_dataset(dataset_id);
-            who_to_plot{who_index, 2} = [dataset.Data.Participant_id];
+        who_to_plot = PROST.PROSTDatasetList();
+        dataset_ids = [obj.DataRecords.Dataset_id];
+        for dataset_id=dataset_ids
+            who_to_plot.add_to_list(dataset_ids);
         end
     end
 
     % Set plot parameters
-    x_limits = [-100 200];
-    y_limits = [-100 50];
     color_arc = dictionary(["right" "left"], {obj.COLOR_RIGHT_DARK obj.COLOR_LEFT_DARK});
     color_scatter = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
-    % color_scatter = dictionary(["right" "left"], {[0.0, 1.0, 0.0] [1.0, 0.0, 0.0]});
     x_label = "x [mm]";
     y_label = "z [mm]";
 
@@ -51,17 +43,27 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
     if strcmp(show, 'off')
         disp("Saving figures...")
     end
-    for who=who_to_plot'
+    for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
-        dataset_id = who{1};
+        
+        % Get data
+        dataset_id = who_to_plot.List(i).Dataset_id;
         if ~obj.dataset_exists(dataset_id)
             error(PROST.PROSTError("DataRecords", "MissingDataset", ...
                 "Dataset %d not in data records.", dataset_id));
         end
+        dataset = obj.get_dataset(dataset_id);
         dataset_name = obj.get_dataset_name(dataset_id);
-        participants = who{2};
+        participants = [dataset.Data.Participant_id];
+        participant_idx = participants(who_to_plot.is_in_list_participants(dataset_id, participants));
+        participants = participants(participant_idx);
+
         for participant_id=participants
-            [samples, entry_numbers] = obj.get_sample_entry(dataset_id, participant_id);
+            sides = ["left" "right"];
+            left_idx = who_to_plot.is_in_list_side(dataset_id, participant_id, "Left");
+            right_idx = who_to_plot.is_in_list_side(dataset_id, participant_id, "Right");
+
+            [samples, entry_numbers] = obj.get_sample_entry(dataset_id, participant_id, sides([left_idx right_idx]));
             if isempty(samples)
                 continue
             end
@@ -69,7 +71,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig  = figure(Name="ROS PLots: " + dataset_name + " Plot " + fig_counter, Visible=show);
+                fig  = figure(Name="ROS Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
                 tiledlayout(fig)
             end
 
@@ -81,17 +83,16 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
             grid(ax, "on")
             axis(ax, "equal");
             pbaspect(ax, [1 1 1]);
-            xticks(ax, x_limits(1):50:x_limits(2));
-            yticks(ax, y_limits(1):50:y_limits(2));
-            ax.XLim = x_limits;
-            ax.YLim = y_limits;
-            text(ax, x_limits(1), y_limits(2) - 10, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
-            plot(0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")
+            plot(0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")  
 
             % Plot trials of participant
-            for i=1:height(samples)
-                entry_number = entry_numbers(i);
-                sample = samples(i, :);
+            R = [];
+            X = [];
+            Z = [];
+            Res = [];
+            for j=1:height(samples)
+                entry_number = entry_numbers(j);
+                sample = samples(j, :);
 
                 % get point cloud of corresponding entry in samples table.
                 point_cloud = obj.PointClouds{entry_number};
@@ -99,12 +100,18 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 % Assuming point_cloud is an Nx3 matrix with columns: x, z, num_trial
                 x = point_cloud(:, 1);
                 z = point_cloud(:, 2);
-                trial_num = point_cloud(:, 3);
-                unique_trial_num = unique(trial_num);
+                trial_nums = point_cloud(:, 3);
+                unique_trial_nums = unique(trial_nums);
 
                 % Get arc parameters
                 [radius, center_x, center_z, ang_start, ang_end, residual] = ...
                     deal(sample.Radius, sample.Center_x, sample.Center_z, sample.Ang_start, sample.Ang_end, sample.Residual);
+                
+                % Save arc parameters
+                R = [R radius];
+                X = [X center_x];
+                Z = [Z center_z];
+                Res = [Res residual];
 
                 % Get side
                 side = sample.Side;
@@ -117,9 +124,9 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
 
                 % Plot point cloud and arc
-                for k = unique_trial_num(:)'
-                    idx = trial_num == k;
-                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE, color_scatter{side}, obj.MARKER_DOT); % point cloud
+                for k = unique_trial_nums(:)'
+                    idx = trial_nums == k;
+                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE_SCATTER, color_scatter{side}, obj.MARKER_DOT); % point cloud
 
                     % Optional: custom datatip text field
                     trialVals = repmat(k, sum(idx), 1);
@@ -130,14 +137,24 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
                 plot(ax, center_x, center_z, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % center
                 
-                % Print parameter values and residual
-                txt = sprintf("radius: %.2f [mm], center: (%.2f, %.2f) [mm], residual: %.2f [mm]", radius, center_x, center_z, residual);
-                text(ax, x_limits(1), y_limits(2) - i*(obj.FONT_SIZE + 5), txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT)
-
                 xlabel(ax, x_label);
                 ylabel(ax, y_label);
             end
+            
+            % Print Text on axis
+            text(ax, 0, 1, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Units="normalized")
+            for j=1:height(samples)
+                sample = samples(j, :);
+                side = sample.Side;
 
+                % Print parameter values and residual
+                txt = sprintf("(%.2f, %.2f), R: %.2f [mm]", X(j), Z(j), R(j));
+                text(ax, X(j), Z(j), txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT)
+
+                % Print parameter values and residual
+                txt = sprintf("residual: %.2f [mm]", Res(j));
+                text(0, 1 - 0.05*j, txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT, Units="normalized")
+            end
             axes_counter = axes_counter + 1;
 
             % Create legend
@@ -146,12 +163,12 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 sides = ["right", "left"];
                 n_sides = length(sides);
                 h = gobjects(n_sides*4, 1);
-                for i=1:n_sides
-                    side = sides(i);
-                    h(i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=side);
-                    h(i + 2) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
-                    h(i + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
-                    h(i + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");
+                for j=1:n_sides
+                    side = sides(j);
+                    h(j) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=side);
+                    h(j + 2) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
+                    h(j + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
+                    h(j + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");
                 end
 
                 lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
