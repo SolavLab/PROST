@@ -1,4 +1,4 @@
-clearvars -except DB_1 DB_2 DB_3
+clearvars -except -regexp ^DB\w*
 close all
 clc
 
@@ -21,7 +21,7 @@ for index = 1:length(var_names)
     end
 end
  
-clearvars -except DB_1 DB_2 DB_3
+clearvars -except -regexp ^DB\w*
 close all 
 clc
 
@@ -41,11 +41,11 @@ DB_3_ID = dataset_ids(3);
 %% Clean data
 % Some participants have bad data and should be ignored so we add them to an
 % ignored list
-ignore_list = PROST.PROSTIgnore();
-ignore_list.add_ignored(DB_1_ID, [3 5 14 15 16], [], "Left");
-ignore_list.add_ignored(DB_1_ID, [5 14 15 16], [], "Right");
-ignore_list.add_ignored(DB_2_ID, [31], [], "Left");
-ignore_list.add_ignored(DB_3_ID, [43, 47], [], "Left");
+ignore_list = PROST.PROSTDatasetList();
+ignore_list.add_to_list(DB_1_ID, [3 5 14 15 16], [], "Left");
+ignore_list.add_to_list(DB_1_ID, [5 14 15 16], [], "Right");
+ignore_list.add_to_list(DB_2_ID, [31], [], "Left");
+ignore_list.add_to_list(DB_3_ID, [43, 47], [], "Left");
 
 PROSTObj.clean_data(ignore_list);
 
@@ -56,4 +56,5 @@ for index=1:n_datasets
 end
 
 %% Save PROST Object
+disp("Saving PROST object...")
 save("PROSTObj.mat","PROSTObj")
