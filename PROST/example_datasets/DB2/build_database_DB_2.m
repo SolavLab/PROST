@@ -7,20 +7,22 @@
 clearvars -except good_trials DB_1 DB_3 DB_4;
 % close all
 clc
-% 
-% % Turn off a few of the specific warnings:
-% warning('off', 'MATLAB:colon:nonIntegerIndex');
-% warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
+
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
+
+% Define data files folder
+data_path = ".\Data Files";
 
 % Add ezc3d package
-addpath("C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB2\ezc3d_matlab");
+addpath(".\ezc3d_matlab");
 
-% Add PROST package to path
-addpath("C:\Users\chenr\Documents\PROST\PROST\");
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
 
-% Add data files to path
-dataset_path = "C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB2\c3d files";
-addpath(dataset_path);
 
 %% -----------------------------
 %  General Database info:
@@ -182,9 +184,9 @@ DB_2.Experiment_protocol = Experiment_protocol;
 %                  "2015032_C5_03";
 %                  "2015032_C5_04";
 %                  "2015032_C5_05"];
-% [ignore_trials, ignore_participants] = make_ignore_list(dataset_path, DB_2.Markers_guide.reference_guide);
+% [ignore_trials, ignore_participants] = make_ignore_list(data_path, DB_2.Markers_guide.reference_guide);
 if ~exist("good_trials")
-    good_trials = get_good_trials(dataset_path, DB_2.Markers_guide.reference_guide);
+    good_trials = get_good_trials(data_path, DB_2.Markers_guide.reference_guide);
 end
 
 %% -----------------------------
@@ -221,11 +223,11 @@ for participant_number=1:n_participants
     %                              ---------
 
     % Get participant trial data path
-    trial_path = fullfile(dataset_path, participant_ID, good_trials_file_name(1));
+    trial_path = fullfile(data_path, participant_ID, good_trials_file_name(1));
 
     % Get standing trial path
     standing_trial_file = participant_ID + "_ST.c3d";
-    standing_trial_path = fullfile(dataset_path, participant_ID, standing_trial_file);
+    standing_trial_path = fullfile(data_path, participant_ID, standing_trial_file);
     
     % Get metadata
     [metadata, standing_trial] = get_metadata(trial_path, standing_trial_path, markers_guide);
@@ -252,7 +254,7 @@ for participant_number=1:n_participants
         original_trial_number = good_trials_trial_number(trial_number);
 
         % Get the data of this trial
-        trial_path = fullfile(dataset_path, participant_ID, good_trials_file_name(trial_number));
+        trial_path = fullfile(data_path, participant_ID, good_trials_file_name(trial_number));
 
         [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide.reference_guide);
         n_steps = forceplate_data.n_forceplates;
@@ -1215,12 +1217,12 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.OIC_index = n_temporal_alignment;
 end
 
-function good_trials = get_good_trials(dataset_path, reference_guide)
+function good_trials = get_good_trials(data_path, reference_guide)
 %GET_GOOD_TRIALS Returns a list of the file names of good trials. Good trials 
 % are defined as trials that exist in the dataset and include all the important 
 % markers needed for our dataset.
 % Input : 
-%   dataset_path - the path to the data files.
+%   data_path - the path to the data files.
 %   reference_guide - the reference guide for all the important markers in the 
 %                     dataset.
 % Output :
@@ -1231,7 +1233,7 @@ function good_trials = get_good_trials(dataset_path, reference_guide)
 
 
     % Get all participant IDs
-    folders = dir(dataset_path); % List all items
+    folders = dir(data_path); % List all items
     folders = folders([folders.isdir]); % Keep only directories
     participant_IDs = setdiff({folders.name}, {'.','..'}); % Remove '.' and '..'
     
@@ -1254,7 +1256,7 @@ function good_trials = get_good_trials(dataset_path, reference_guide)
         for condition_num = ["C1" "C2" "C3" "C4" "C5"]
             for trial_num = ["01" "02" "03" "04" "05"]
                 file_name = participant_ID + "_" + condition_num + "_" + trial_num + ".c3d";
-                file_path = fullfile(dataset_path, participant_ID, file_name);
+                file_path = fullfile(data_path, participant_ID, file_name);
                 if (isfile(file_path))
                     c3d = ezc3dRead(convertStringsToChars(file_path));
 
