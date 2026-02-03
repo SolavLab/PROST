@@ -4,16 +4,17 @@
 % -------------------------------------------------------------------
 clc; close all; clearvars -except DB_1 DB_2 DB_4
 
-% Turn off a few of the specific warnings:
-% warning('off', 'MATLAB:colon:nonIntegerIndex');
-% warning('off', 'MATLAB:table:ModifiedAndSavedVarnames');
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
 
-% Add data files to path
-data_path = "C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB3\Data files";
-addpath(data_path);
+% Define data files folder
+data_path = ".\Data Files";
 
-% Add PROST package to path
-addpath("C:\Users\chenr\Documents\PROST\PROST\");
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
 
 %% -----------------------------
 %  General Database info:
@@ -126,7 +127,7 @@ markers_guide = DB_3.Markers_guide;
 for participant_number = 1:n_participants
     right_steps_counter = 0; left_steps_counter = 0;
     participant_name = "participant_" + participant_number;
-    load("Subject" + participant_number + ".mat");
+    load(fullfile(data_path, "Subject" + participant_number + ".mat"));
     n_markers = size(s.MarkerVarName, 1);
     n_grf = size(s.GrfVarName, 1);
 
@@ -171,7 +172,6 @@ for participant_number = 1:n_participants
     metadata.Is_shod.method = "given";
 
     % standing trial
-    load("Subject"+participant_number+".mat");
     ST_data = s.StandingData.Marker;
     
     % Marker names:

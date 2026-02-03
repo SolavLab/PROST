@@ -6,12 +6,17 @@
 %
 clc; close all; clearvars -except DB_2 DB_3 DB_4;
 
-% Add data files to path
-data_path = "C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB1\Subjects_Data";
-addpath(data_path);
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
 
-% Add PROST package to path
-addpath("C:\Users\chenr\Documents\PROST\PROST\");
+% Define data files folder
+data_path = ".\Data Files";
+
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
 
 %% -----------------------------
 %  General Database info:
@@ -122,9 +127,9 @@ for participant_number=participant_numbers
     % load the data:
     participant_id = "Participant_" + participant_number;
     participant_name = "participant_" + participant_number;
-    participant_data = load(fullfile("Subjects_Data", erase(participant_id, "_"), "Raw_Data.mat"));
+    participant_data = load(fullfile(data_path, erase(participant_id, "_"), "Raw_Data.mat"));
     participant_raw_data = participant_data.("Subject" + participant_number + "_raw");
-    metadata_array = split(string(fileread(fullfile("Subjects_Data", erase(participant_id, "_"), "Metadata.txt"))));
+    metadata_array = split(string(fileread(fullfile(data_path, erase(participant_id, "_"), "Metadata.txt"))));
 
     %                              -------------------------------------
     % DB_1 / Data / participant_# / participant_ID_in_original_structure :
