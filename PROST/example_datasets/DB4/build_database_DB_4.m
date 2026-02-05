@@ -143,14 +143,15 @@ markers_guide = DB_4.Markers_guide;
 for participant_number=1:n_participants
     % Get participant name and original ID from number
     participant_ID = good_trials(participant_number).SubjID;
+    original_participant_number =  good_trials(participant_number).SubjNum;
     participant_name = "participant_" + string(participant_number);
    
     % Initializing counters for right and left steps of all trials
     right_steps_counter = 0; left_steps_counter = 0;
 
     % Get participant metadata and standing trial data
-    standing_trial_data = raw_data(participant_number).standing_trial;
-    participant_metadata = all_metadata(participant_number);
+    standing_trial_data = raw_data(original_participant_number).standing_trial;
+    participant_metadata = all_metadata(original_participant_number);
 
     %                              -------------------------------------
     % DB_4 / Data / participant_# / participant_ID_in_original_structure :
@@ -187,12 +188,9 @@ for participant_number=1:n_participants
         original_trial_number = good_trials(participant_number).trials(trial_number).trial_num;
         
         % Raw data of trial
-        trial_data = raw_data(participant_number).trial(original_trial_number == [raw_data(participant_number).trial.trial_num]);
+        trial_data = raw_data(original_participant_number).trial(original_trial_number == [raw_data(original_participant_number).trial.trial_num]);
         good_forceplates = good_trials(participant_number).trials(trial_number).forceplates;
         good_segments = good_trials(participant_number).trials(trial_number).segments;
-        if participant_number == 63 && trial_number == 2
-            disp("!!!")
-        end
         [marker_data, forceplate_data, event_data] = get_trial_data(trial_data, markers_guide.reference_guide);
         % Number of steps in a trial
         n_steps = 3; % There should be 3 full steps at each trial (IC to TO of the same foot)
@@ -208,7 +206,7 @@ for participant_number=1:n_participants
 
         % Save data into easier to store format
         [GRF, COP] = save_forceplate_data(forceplate_data);
-        trajectories = save_marker_data(marker_data);
+            trajectories = save_marker_data(marker_data);
 
         %                                                            -------
         % DB_4 / Data / participant_# / processed_original_data / trial(#) / origin
@@ -243,6 +241,10 @@ for participant_number=1:n_participants
         % we will check the walking direction by checking if the direction
         % that the SXS marker is moving is +x (+1) or -x (-1)
         direction_marker = trajectories.(markers_guide.reference_guide{"Walking Direction Marker"}{1}).x;
+        direction_marker = direction_marker(~isnan(direction_marker));
+        if isempty(direction_marker)
+            error("PROST:OnlyNaNs", "Direction marker contains only NaNs.")
+        end
         walking_direction = sign(direction_marker(end) - direction_marker(1));
         DB_4.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value = walking_direction;
         DB_4.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.explenation=...
@@ -410,7 +412,7 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
 %   metadata - the anthropometric data of the participant.
 %   standing_trial - the standing trial measurement data.
 
-   
+    
     % Get standing trial
     standing_trial.data = standing_trial_raw.c3d.data.points;
     standing_trial.marker_names = string(standing_trial_raw.c3d.parameters.POINT.LABELS.DATA);
@@ -418,6 +420,17 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     assert(standing_trial.n_markers == size(standing_trial.data, 2))
     assert(3 == size(standing_trial.data, 1))
     standing_trial.unit = string(standing_trial_raw.c3d.parameters.POINT.UNITS.DATA);
+    
+    important_markers = [markers_guide.reference_guide{"Right Lateral Ankle"}{1}, ...
+                         markers_guide.reference_guide{"Left Lateral Ankle"}{1}, ...
+                         markers_guide.reference_guide{"Right Lateral Knee"}{1}, ...
+                         markers_guide.reference_guide{"Left Lateral Knee"}{1}, ...
+                         markers_guide.reference_guide{"Right ASIS"}{1}, ...
+                         markers_guide.reference_guide{"Left ASIS"}{1}];
+    if ~all(ismember(important_markers, standing_trial.marker_names))
+        missing_markers = important_markers(~ismember(important_markers, standing_trial.marker_names));
+        error("PROST:BadTrial", "Bad Trial: missing %s", join(missing_markers, ", "))
+    end
 
     % age
     metadata.Age.value = participant_metadata.Age.value;
@@ -454,38 +467,44 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     % knee - Lateral Knee (KNE)
     % asis - ASIS (ASI)
     i_right_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Ankle"}{1}); % RANK
-    right_ankle = standing_trial.data(:, i_right_ankle); % RANK
+    right_ankle = standing_trial.data(:, i_right_ankle, :); % RANK
+    right_ankle = mean(squeeze(right_ankle), 2, "omitmissing");
 
     i_left_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Ankle"}{1}); % LANK
-    left_ankle = standing_trial.data(:, i_left_ankle); % LANK
+    left_ankle = standing_trial.data(:, i_left_ankle, :); % LANK
+    left_ankle = mean(squeeze(left_ankle), 2, "omitmissing");
     
     i_right_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Knee"}{1}); % RKNE
-    right_knee = standing_trial.data(:, i_right_knee); % RKNE
+    right_knee = standing_trial.data(:, i_right_knee, :); % RKNE
+    right_knee = mean(squeeze(right_knee), 2, "omitmissing");
     
     i_left_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Knee"}{1}); % LKNE
-    left_knee = standing_trial.data(:, i_left_knee); % LKNE
+    left_knee = standing_trial.data(:, i_left_knee, :); % LKNE
+    left_knee = mean(squeeze(left_knee), 2, "omitmissing");
 
     i_right_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right ASIS"}{1}); % RASI
-    right_asis = standing_trial.data(:, i_right_asis); % RASI
+    right_asis = standing_trial.data(:, i_right_asis, :); % RASI
+    right_asis = mean(squeeze(right_asis), 2, "omitmissing");
 
     i_left_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left ASIS"}{1}); % LASI
-    left_asis = standing_trial.data(:,  i_left_asis); % LASI
-    
+    left_asis = standing_trial.data(:,  i_left_asis, :); % LASI
+    left_asis = mean(squeeze(left_asis), 2, "omitmissing");
+
     % leg length - from ASIS to lateral ankle
-    metadata.Leg_length.right.value = PROST.utils.convert_units(norm(right_asis - right_ankle), standing_trial.unit, "m");
-    metadata.Leg_length.left.value = PROST.utils.convert_units(norm(left_asis - left_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.right = PROST.utils.convert_units(norm(right_asis - right_ankle), standing_trial.unit, "m");
+    metadata.Leg_length.left = PROST.utils.convert_units(norm(left_asis - left_ankle), standing_trial.unit, "m");
     metadata.Leg_length.unit = "m";
     metadata.Leg_length.method = "calculated by distance between ASIS and lateral ankle markers in the standing trial";
 
     % thigh length - from ASIS to lateral knee
-    metadata.Thigh_length.right.value = PROST.utils.convert_units(norm(right_asis - right_knee), standing_trial.unit, "m");
-    metadata.Thigh_length.left.value = PROST.utils.convert_units(norm(left_asis - left_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.right = PROST.utils.convert_units(norm(right_asis - right_knee), standing_trial.unit, "m");
+    metadata.Thigh_length.left = PROST.utils.convert_units(norm(left_asis - left_knee), standing_trial.unit, "m");
     metadata.Thigh_length.unit = "m";
     metadata.Thigh_length.method = "calculated by distance between ASIS and lateral knee markers in the standing trial";
     
     % shank length - from lateral knee to lateral ankle
-    metadata.Shank_length.right.value = PROST.utils.convert_units(norm(right_knee - right_ankle), standing_trial.unit, "m");
-    metadata.Shank_length.left.value = PROST.utils.convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
+    metadata.Shank_length.right = PROST.utils.convert_units(norm(right_knee - right_ankle), standing_trial.unit, "m");
+    metadata.Shank_length.left = PROST.utils.convert_units(norm(left_knee - left_ankle), standing_trial.unit, "m");
     metadata.Shank_length.unit = "m";
     metadata.Shank_length.method = "calculated by distance between lateral knee and lateral ankle markers in the standing trial";
 end
@@ -536,7 +555,7 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data,
         important_markers(contains(important_markers, "Virtual")) = [];
         if ~all(ismember(important_markers, marker_data.marker_names))
             missing_markers = important_markers(~ismember(important_markers, marker_data.marker_names));
-            error("Bad Trial: missing %s", join(missing_markers, ", "))
+            error("PROST:BadTrial", "Bad Trial: missing %s", join(missing_markers, ", "))
         end
     end
 
@@ -847,7 +866,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
                 steps_info(step_num).events.IC.trajectory_index = new_trajectory_IC_index;
             end
             if ~(mod(steps_info(step_num).events.IC.forceplate_index, 1) == 0) || ~(mod(steps_info(step_num).events.IC.trajectory_index, 1) == 0)
-                error("IC index not an integer.\n" + ...
+                error("PROST:NonIntegerIndex", "IC index not an integer.\n" + ...
                     "Forceplate index: %d. Trajectory index: %d", steps_info(step_num).events.IC.forceplate_index, steps_info(step_num).events.IC.trajectory_index)
             end
             
@@ -880,7 +899,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
                 steps_info(step_num).events.TO.trajectory_index = new_trajectory_TO_index;
             end
             if ~(mod(steps_info(step_num).events.TO.forceplate_index, 1) == 0) || ~(mod(steps_info(step_num).events.TO.trajectory_index, 1) == 0)
-                error("TO index not an integer.\n" + ...
+                error("PROST:NonIntegerIndex", "TO index not an integer.\n" + ...
                       "Forceplate index: %d. Trajectory index: %d", steps_info(step_num).events.TO.forceplate_index, steps_info(step_num).events.TO.trajectory_index)
             end
         end
@@ -1157,12 +1176,13 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.Ankle.lateral.y = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).y;
     interpolated_Markers.Ankle.lateral.z = trajectories.(markers_guide.reference_guide{foot + " Lateral Ankle"}{1}).z;
     interpolated_Markers.Ankle.medial = [];
+
         % For the knee:
     interpolated_Markers.Knee.lateral.x = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Knee"}{1}).x;
     interpolated_Markers.Knee.lateral.y = walking_direction*trajectories.(markers_guide.reference_guide{foot + " Lateral Knee"}{1}).y;
     interpolated_Markers.Knee.lateral.z = trajectories.(markers_guide.reference_guide{foot + " Lateral Knee"}{1}).z;
     interpolated_Markers.Knee.medial = [];
-    
+
         % Cut the ankle markers data from IC to OIC and temporally align it to 101 points :
     interpolated_Markers.Ankle.lateral.x = interp1(IC_index:OIC_index, interpolated_Markers.Ankle.lateral.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_Markers.Ankle.lateral.y = interp1(IC_index:OIC_index, interpolated_Markers.Ankle.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
@@ -1171,6 +1191,12 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     % We don't have medial markers so the mean equals the lateral
     interpolated_Markers.Ankle.mean = interpolated_Markers.Ankle.lateral;
 
+    if any(isnan(interpolated_Markers.Ankle.lateral.x) | ...
+            isnan(interpolated_Markers.Ankle.lateral.y) | ...
+            isnan(interpolated_Markers.Ankle.lateral.z))
+        error("PROST:ContainsNaNs", "Ankle marker contains NaNs.")
+    end
+
     % Cut the knee markers data from IC to OIC and temporally align it to 101 points :
     interpolated_Markers.Knee.lateral.x = interp1(IC_index:OIC_index, interpolated_Markers.Knee.lateral.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_Markers.Knee.lateral.y = interp1(IC_index:OIC_index, interpolated_Markers.Knee.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
@@ -1178,6 +1204,12 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
    
     % Calculate mean knee marker from medial and lateral
     interpolated_Markers.Knee.mean = interpolated_Markers.Knee.lateral;
+
+    if any(isnan(interpolated_Markers.Knee.lateral.x) | ...
+           isnan(interpolated_Markers.Knee.lateral.y) | ...
+           isnan(interpolated_Markers.Knee.lateral.z))
+        error("PROST:ContainsNaNs", "Knee marker contains NaNs.")
+    end
 
     interpolated_Markers.unit = "mm";
     interpolated_Markers.temporal_alignment = "weight acceptance + single support";
@@ -1286,19 +1318,21 @@ function good_trials = read_good_trials_table(data_path)
     good_trials = unsorted_good_trials(order);
 
     % Manual corrections to good trials list due to record mistakes
-    good_trials(9).trials([good_trials(9).trials.trial_num] == 3).segments = "L";
-    good_trials(10).trials([good_trials(10).trials.trial_num] == 2) = [];
-    good_trials(19).trials([good_trials(19).trials.trial_num] == 3).segments = "L";
-    good_trials(20).trials([good_trials(20).trials.trial_num] == 3).segments = ["L" "R" "L"];
-    good_trials(44).trials([good_trials(44).trials.trial_num] == 5) = [];
-    good_trials(66).trials([good_trials(66).trials.trial_num] == 1) = [];
-    good_trials(79).trials([good_trials(79).trials.trial_num] == 2) = [];
-    good_trials(84).trials([good_trials(84).trials.trial_num] == 1).segments = ["R" "L" "R"];
-    good_trials(84).trials([good_trials(84).trials.trial_num] == 4).segments = ["R" "L" "R"];
-    good_trials(95).trials([good_trials(95).trials.trial_num] == 3).segments = ["R" "L" "R"];
-    good_trials(108).trials([good_trials(108).trials.trial_num] == 2).forceplates = [1, 2];
-    good_trials(108).trials([good_trials(108).trials.trial_num] == 2).segments = ["L" "R"];
-    good_trials(136).trials([good_trials(136).trials.trial_num] == 2).segments = ["R" "L"];
+    good_trials([good_trials.SubjNum] == 9).trials([good_trials([good_trials.SubjNum] == 9).trials.trial_num] == 3).segments = "L"; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 10).trials([good_trials([good_trials.SubjNum] == 10).trials.trial_num] == 2) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 19).trials([good_trials([good_trials.SubjNum] == 19).trials.trial_num] == 3).segments = "L"; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 20).trials([good_trials([good_trials.SubjNum] == 20).trials.trial_num] == 3).segments = ["L" "R" "L"]; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 37) = []; % Missing markers in standing trial
+    good_trials([good_trials.SubjNum] == 44).trials([good_trials([good_trials.SubjNum] == 44).trials.trial_num] == 5) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 66).trials([good_trials([good_trials.SubjNum] == 66).trials.trial_num] == 1) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 79).trials([good_trials([good_trials.SubjNum] == 79).trials.trial_num] == 2) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 84).trials([good_trials([good_trials.SubjNum] == 84).trials.trial_num] == 1).segments = ["R" "L" "R"]; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 84).trials([good_trials([good_trials.SubjNum] == 84).trials.trial_num] == 4).segments = ["R" "L" "R"]; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 95).trials([good_trials([good_trials.SubjNum] == 95).trials.trial_num] == 3).segments = ["R" "L" "R"]; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 100) = [];  % Missing markers in standing trial
+    good_trials([good_trials.SubjNum] == 108).trials([good_trials([good_trials.SubjNum] == 108).trials.trial_num] == 2).forceplates = [1, 2]; % Wrong Force plates
+    good_trials([good_trials.SubjNum] == 108).trials([good_trials([good_trials.SubjNum] == 108).trials.trial_num] == 2).segments = ["L" "R"]; % Wrong Segments
+    good_trials([good_trials.SubjNum] == 136).trials([good_trials([good_trials.SubjNum] == 136).trials.trial_num] == 2).segments = ["R" "L"]; % Wrong Segments
 end
 
 function metadata = read_metadata_table(data_path)
@@ -1390,11 +1424,8 @@ function data_offseted = offset_data(data, start_index, end_index)
 %   start_index, end_index - the start and end indices for the signal. We ignore
 %                            this part of the data since we want to calibrate
 %                            to 0.
-try
+
     calibration_data = [data(:, 1:start_index) data(:, end_index:end)];
-catch
-    disp("!!!")
-end
     [~, dim] = max(size(calibration_data));
     assert(dim == 2);
     zero_offset = mean(calibration_data, dim, 'omitnan');
