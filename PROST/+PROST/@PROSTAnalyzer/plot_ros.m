@@ -18,17 +18,17 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
     if nargin < 5
         file_type = [];
     end
-    if nargin < 4
+    if nargin < 4 || isempty(show)
         show = 'on';
     end
-    if nargin < 3
+    if nargin < 3 || isempty(number_of_axes_in_fig)
         number_of_axes_in_fig = 6;
     end
     if nargin < 2 || isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
         for dataset_id=dataset_ids
-            who_to_plot.add_to_list(dataset_ids);
+            who_to_plot.add_to_list(dataset_id);
         end
     end
 

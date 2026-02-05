@@ -14,11 +14,11 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
     if nargin < 7
         file_type = [];
     end
-    if nargin < 6
+    if nargin < 6 || isempty(show)
         show = 'on';
     end
     if nargin < 5
-        norm_var_name = "Height";
+        norm_var_name = [];
     end
     if nargin < 3
         labels_list = {};
@@ -34,7 +34,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
     n_labels = numel(label_names);
 
     % Prep Input Arguments
-    if nargin < 4
+    if nargin < 4 || isempty(number_of_axes_in_fig)
         number_of_axes_in_fig = length(label_names);
     end
 

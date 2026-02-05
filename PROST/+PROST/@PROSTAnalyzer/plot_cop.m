@@ -2,6 +2,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
 %PLOT_COP Summary of this function goes here
 %   Detailed explanation goes here
 
+    disp("Plotting COP...")
     % Prep Input Arguments
     if nargin < 6 || isempty(anatomical_side)
         anatomical_side = "lateral";
@@ -19,7 +20,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
         for dataset_id=dataset_ids
-            who_to_plot.add_to_list(dataset_ids);
+            who_to_plot.add_to_list(dataset_id);
         end
     end
    
