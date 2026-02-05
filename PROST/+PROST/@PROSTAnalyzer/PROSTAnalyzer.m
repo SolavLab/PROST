@@ -23,7 +23,7 @@ classdef PROSTAnalyzer < handle
         MARKER_SQUARE = 'square';
         MARKER_UP = '^';
         MARKERS = 'o^sd*xv><phn';
-        MARKER_SIZE = 10;
+        MARKER_SIZE = 5;
         MARKER_SIZE_SCATTER = 100;
         MARKER_FACE_ALPHA = 0.6;
         LINE_WIDTH = 2;

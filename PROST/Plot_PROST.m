@@ -18,9 +18,10 @@ end
 
 dataset_ids = [PROSTObj.DataRecords.Dataset_id];
 dataset_names = [PROSTObj.DataRecords.Dataset_name];
-DB_1_ID = dataset_ids(contains(dataset_names, "Moreira"));
-DB_2_ID = dataset_ids(contains(dataset_names, "Schreiber"));
-DB_3_ID = dataset_ids(contains(dataset_names, "Lencioni"));
+DB_1_ID = dataset_ids(matches(dataset_names, "Dataset 1"));
+DB_2_ID = dataset_ids(matches(dataset_names, "Dataset 2"));
+DB_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
+DB_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
 %% Plot data
 who_to_plot = PROST.PROSTDatasetList();

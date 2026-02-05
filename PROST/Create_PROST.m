@@ -12,7 +12,10 @@ cd(toolbox_root); % Change to folder of current script
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %% Build data
-db_list = ["DB_1", fullfile(dataset_dir, "DB_1.mat"); "DB_2", fullfile(dataset_dir, "DB_2.mat"); "DB_3", fullfile(dataset_dir, "DB_3.mat")];
+db_list = ["DB_1", fullfile(dataset_dir, "DB_1.mat"); ...
+           "DB_2", fullfile(dataset_dir, "DB_2.mat"); ...
+           "DB_3", fullfile(dataset_dir, "DB_3.mat"); ...
+           "DB_4", fullfile(dataset_dir, "DB_4.mat")];
 
 var_names = db_list(:, 1);
 for index = 1:length(var_names)
@@ -29,7 +32,10 @@ clc
 %   load_list - a cell array where each row contains pairs of dataset name and 
 %               path to the dataset. Example:
 %               {"DB 1 Name", "path/to/DB1.mat"; "DB 2 Name", "path/to/DB2.mat"}
-load_list = {DB_1, "Moreira et. al. (2021)"; DB_2, "Schreiber & Moissenet (2019)"; DB_3, "Lencioni et. al. (2019)"};
+load_list = {DB_1, "Dataset 1"; ...
+             DB_2, "Dataset 2"; ... 
+             DB_3, "Dataset 3"; ...
+             DB_4, "Dataset 4"};
 n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
@@ -37,6 +43,7 @@ n_datasets = size(load_list, 1);
 DB_1_ID = dataset_ids(1);
 DB_2_ID = dataset_ids(2);
 DB_3_ID = dataset_ids(3);
+DB_4_ID = dataset_ids(4);
 
 %% Clean data
 % Some participants have bad data and should be ignored so we add them to an

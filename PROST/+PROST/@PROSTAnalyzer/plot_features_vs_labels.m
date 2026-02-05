@@ -5,6 +5,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 %   features_list - list of anthropometric parameters to plot.
 %   labels_list - list of ROS parameters to plot.
 %   number_of_axes_in_fig - number of axes per figure to plot.
+%   norm_var_name - variable name by which we normalize the labels.
 %   show - whether to show the figures or save them. Either "on"
 %          (default) for showing the figures or "off" for saving them.
 %   file_type - the type to save the figure if saved.
@@ -44,7 +45,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
     n_sides =  length(unique_sides);
 
     % Get Dataset IDs
-    dataset_ids = "DB " + table2array(obj.get_sample_var("Dataset_id"));
+    dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
     unique_dataset_ids = unique(dataset_ids)';
     n_dataset_ids = length(unique_dataset_ids);
 
@@ -140,7 +141,8 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
             for i_side=1:n_sides
                 for i_dataset=1:n_dataset_ids
                     i = (i_side - 1).*n_dataset_ids + i_dataset;
-                    h(i).DisplayName = sprintf('%s %s', unique_dataset_ids(i_dataset), unique_sides(i_side));
+                    dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
+                    h(i).DisplayName = sprintf('%s %s', dataset_name, unique_sides(i_side));
                     h(i).Color = color{unique_sides(i_side)};
                     h(i).MarkerFaceColor = color{unique_sides(i_side)};
                     h(i).MarkerEdgeColor = color{unique_sides(i_side)};
@@ -178,10 +180,10 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
                 % h_left = gobjects(n_dataset_ids_left, 1);
                 % h_right = gobjects(n_dataset_ids_right, 1);
                 % for i=unique_dataset_ids_left
-                %     h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Left DB" + i);
+                %     h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Left Dataset" + i);
                 % end
                 % for i=unique_dataset_ids_right
-                %     h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Right DB" + i);
+                %     h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Right Dataset" + i);
                 % end
                 % lgd = legend([h_left h_right], FontSize=12, FontWeight="bold");
                 % lgd.Layout.Tile = 'east';
