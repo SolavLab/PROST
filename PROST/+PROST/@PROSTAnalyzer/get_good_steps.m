@@ -15,11 +15,7 @@ function [good_steps] = get_good_steps(steps, min_speed)
     counter = 1;
     for step_num=1:length(steps)
         step = steps(step_num);
-        try
         step_speed = step.speed.km_per_hour.value;
-        catch
-            disp("!!!")
-        end
         is_included = step.Is_included;
         if is_included && step_speed >= min_speed
             % add this step:

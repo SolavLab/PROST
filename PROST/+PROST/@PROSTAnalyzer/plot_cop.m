@@ -62,8 +62,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 trial = dataset.Data(participant_id).Uniform_data.(side).step(step_number);
 
                 if ~trial.Is_included
-                    error(PROST.PROSTError("DataRecords", "TrialNotIncluded", ...
-                        "Step %d (%s) of participant %d in dataset %d not included in samples.",step_number,  dataset_id));
+                    continue
                 end
 
                 % Create new figure for new set of axes
