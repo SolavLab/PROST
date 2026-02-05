@@ -26,11 +26,12 @@ DB_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 %% Plot data
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(DB_1_ID, 1);
+who_to_plot.add_to_list(DB_4_ID, 1);
 PROSTObj.plot_ros(who_to_plot, 12, 'on', 'fig');
 
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
-figure(Name="Histogram:Residuals Histogram vs Normal Distribution Comparison");
+figure(Name="Histogram:Residuals vs Normal Distribution Comparison");
 residuals = table2array(PROSTObj.get_samples("Residual"));
 is_shod = table2array(PROSTObj.get_samples("Is_shod"));
 shod_residuals = residuals(is_shod == "Yes");
@@ -68,17 +69,17 @@ xlabel("Residual [mm]")
 legend(FontSize=12)
 
 %% Analyze Radius and Center x
-disp("Plotting histogram of normalized radius and center x (by height)")
 PROSTObj.plot_histogram("Radius", "Height", "on", [], 'Normalization', 'pdf')
 PROSTObj.plot_histogram("Center_x", "Height", "on", [], 'Normalization', 'pdf')
 
 %% Plot Features vs Labels
-PROSTObj.plot_features_vs_labels([], ["Radius" "Center_x"])
+PROSTObj.plot_features_vs_labels([], ["Radius" "Center_x"], [], [], 'on', 'fig')
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(DB_2_ID, [12], [1], "Left");
-PROSTObj.plot_cop(who_to_plot, [], 'on', 'png');
+who_to_plot.add_to_list(DB_4_ID, [1], [1], "Left");
+PROSTObj.plot_cop(who_to_plot, 12, 'on', 'fig');
 
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
