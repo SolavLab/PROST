@@ -1,13 +1,10 @@
-PROST/example_datasets/DB1/DB_1.mat
-PROST/example_datasets/DB2/DB_2.mat
-PROST/example_datasets/DB3/DB_3.mat
 PROST/example_datasets/DB2/tests/DB_2_old.mat
 PROST/example_datasets/DB2/tests/DB_2_alt.mat
 PROST/example_datasets/DB_1.mat
 PROST/example_datasets/DB_2.mat
 PROST/example_datasets/DB_3.mat
+PROST/example_datasets/DB_4.mat
 *.asv
 PROST/example_datasets/DB4/data files/MAT_normalizedData_AbleBodiedAdults_v06-03-23.mat
 PROST/PROSTObj.mat
-PROST/example_datasets/DB_4.mat
 PROST/example_datasets/DB4/Data Files/raw_data.mat
