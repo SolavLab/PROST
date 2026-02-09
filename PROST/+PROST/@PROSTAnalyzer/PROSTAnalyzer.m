@@ -14,9 +14,9 @@ classdef PROSTAnalyzer < handle
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
 
         % Some constants for graphics so everything looks uniform
-        COLOR_RIGHT_BRIGHT  = [0 0.85 0]; % greenish bright
-        COLOR_LEFT_BRIGHT = [0.85 0 0]; % reddish bright
-        COLOR_RIGHT_DARK  = [0 0.5 0.4]; % greenish dark
+        COLOR_RIGHT_BRIGHT = [0 0.9 0]; % greenish bright
+        COLOR_LEFT_BRIGHT = [0.9 0 0]; % reddish bright
+        COLOR_RIGHT_DARK = [0 0.5 0.4]; % greenish dark
         COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
         MARKER_CIRCLE = 'o';
         MARKER_DOT = '.';
@@ -24,13 +24,13 @@ classdef PROSTAnalyzer < handle
         MARKER_UP = '^';
         MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 5;
-        MARKER_SIZE_SCATTER = 100;
+        MARKER_SIZE_SCATTER = 50;
         MARKER_FACE_ALPHA = 0.6;
         LINE_WIDTH = 2;
         LINE_STYLE_SOLID = "-";
         LINE_STYLE_DASHED = "--";
         LINE_COLOR = "black";
-        FONT_SIZE = 12;
+        FONT_SIZE = 10;
         FONT_WEIGHT = "bold";
     end
     properties(Access=public)
@@ -156,7 +156,7 @@ classdef PROSTAnalyzer < handle
         % tf = is_in_samples_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
         % plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
-        % plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type);
+        % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);

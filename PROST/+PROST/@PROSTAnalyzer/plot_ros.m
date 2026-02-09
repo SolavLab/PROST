@@ -1,12 +1,11 @@
-function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
+function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type)
 %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc for all
 % participants in who_to_plot.
 % Input :
-%   who_to_plot - a cell array with pairs of dataset id and
-%                 list of participants to plot. Example: {1, [1 2 3 4]}
-%                 plots the data and ROS arc of the left and right feet
-%                 for participant 1, 2, 3 and 4 in dataset 1. Plots all
-%                 participants of all datasets if non are provided.
+%   who_to_plot - A PROSTDatasetList object that lists the datasets and
+%                 participants to plot for each side. 
+%                 Default: all participants and all datasets are plotted for
+%                 both left and right sides.
 %   number_of_axes_in_fig - number of axes per figure to plot.
 %                           Default: 6.
 %   show - whether to show the figures or save them. Either "on"
@@ -15,8 +14,11 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
 
     disp("Plotting ROS...")
     % Prep Input Arguments
-    if nargin < 5
+    if nargin < 6
         file_type = [];
+    end
+    if nargin < 5 || isempty(plot_type)
+        plot_type = "circle";
     end
     if nargin < 4 || isempty(show)
         show = 'on';
@@ -71,8 +73,10 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig  = figure(Name="ROS Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
-                tiledlayout(fig)
+                fig = figure(Name="ROS Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
+                n_cols = ceil(sqrt(number_of_axes_in_fig));
+                n_rows = ceil(number_of_axes_in_fig / n_cols);
+                tiledlayout(fig, n_rows, n_cols)
             end
 
             % Initialize axis
@@ -83,13 +87,17 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
             grid(ax, "on")
             axis(ax, "equal");
             pbaspect(ax, [1 1 1]);
-            plot(0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")  
+            title(ax, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
 
+            % Plot 0 point
+            plot(ax, 0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")  
+            
             % Plot trials of participant
             R = [];
             X = [];
             Z = [];
             Res = [];
+            offset = 0;
             for j=1:height(samples)
                 entry_number = entry_numbers(j);
                 sample = samples(j, :);
@@ -123,52 +131,70 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                 circle_vec = linspace(0, 360, length(x));
                 circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
 
-                % Plot point cloud and arc
+                % Plot point cloud
                 for k = unique_trial_nums(:)'
                     idx = trial_nums == k;
-                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE_SCATTER, color_scatter{side}, obj.MARKER_DOT); % point cloud
+                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE_SCATTER, color_scatter{side}, obj.MARKER_DOT, MarkerEdgeAlpha=obj.MARKER_FACE_ALPHA, MarkerFaceAlpha=obj.MARKER_FACE_ALPHA); % point cloud
 
                     % Optional: custom datatip text field
                     trialVals = repmat(k, sum(idx), 1);
                     h_scat.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trialVals);
                 end
-
-                plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
-                plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
-                plot(ax, center_x, center_z, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % center
                 
+                % Plot ROS fitted arc and circle
+                plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
+                if strcmp(plot_type, "circle")
+                    plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
+                    plot(ax, center_x, center_z, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % center
+                elseif strcmp(plot_type, "azimuth")
+                    plot(ax, center_x, min(circle_points(2, :)), Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % azimuth
+                else
+                    error(PROST.PROSTError("PlotROS", "WrongPlotType", ...
+                        "plot_type should be either 'circle' or 'azimuth'."))
+                end
+
+                % Print Text on axis
+                txt = sprintf("(%.2f, %.2f), R: %.2f [mm],\nresidual: %.2f [mm]", center_x, center_z, radius, residual);
+                t = text(ax, ...
+                         0, 1 - offset, txt, ...
+                         Units="normalized", ...
+                         Color=color_arc{side}, ...
+                         FontSize=obj.FONT_SIZE, ...
+                         FontName="FixedWidth", ...
+                         FontWeight=obj.FONT_WEIGHT, ...
+                         HorizontalAlignment="left", ...
+                         VerticalAlignment="top");
+                % if strcmp(show, "on")
+                    drawnow
+                % end
+                offset = offset + t.Extent(4);
+    
                 xlabel(ax, x_label);
                 ylabel(ax, y_label);
             end
-            
-            % Print Text on axis
-            text(ax, 0, 1, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Units="normalized")
-            for j=1:height(samples)
-                sample = samples(j, :);
-                side = sample.Side;
 
-                % Print parameter values and residual
-                txt = sprintf("(%.2f, %.2f), R: %.2f [mm]", X(j), Z(j), R(j));
-                text(ax, X(j), Z(j), txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT)
-
-                % Print parameter values and residual
-                txt = sprintf("residual: %.2f [mm]", Res(j));
-                text(0, 1 - 0.05*j, txt, Color=color_arc{side}, FontSize=obj.FONT_SIZE, FontName="FixedWidth", FontWeight=obj.FONT_WEIGHT, Units="normalized")
-            end
+            % Update axis counter
             axes_counter = axes_counter + 1;
 
-            % Create legend
+            % Create legend and save figures
             if axes_counter == number_of_axes_in_fig || participant_id == participants(end)
                 % Dummy plots for legend in last axes
-                sides = ["right", "left"];
+                sides = ["left", "right"];
                 n_sides = length(sides);
-                h = gobjects(n_sides*4, 1);
+                n_plots = 3 + strcmp(plot_type, "circle");
+                h = gobjects(n_sides*n_plots, 1);
                 for j=1:n_sides
+                    i = 0;
                     side = sides(j);
-                    h(j) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=side);
-                    h(j + 2) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
-                    h(j + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
-                    h(j + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");
+                    h(j + i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=string(side));
+                    i = i + n_sides;
+                    h(j + i) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
+                    i = i + n_sides;
+                    if strcmp(plot_type, "circle")
+                        h(j + i) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
+                        i = i + n_sides;
+                    end
+                    h(j + i) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " " + "circle");
                 end
                 
                 % Legend

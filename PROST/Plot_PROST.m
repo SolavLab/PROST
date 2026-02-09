@@ -25,9 +25,10 @@ DB_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
 %% Plot data
 who_to_plot = PROST.PROSTDatasetList();
-who_to_plot.add_to_list(DB_1_ID, 1);
-who_to_plot.add_to_list(DB_4_ID, 1);
-PROSTObj.plot_ros(who_to_plot, 12, 'on', 'fig');
+who_to_plot.add_to_list(DB_1_ID);
+% who_to_plot.add_to_list(DB_2_ID);
+% who_to_plot.add_to_list(DB_3_ID);
+% who_to_plot.add_to_list(DB_4_ID);
 PROSTAnalyzer.plot_ros(who_to_plot, 12, 'azimuth', 'on', 'fig');
 
 %% Analyze Residuals
@@ -78,13 +79,13 @@ PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], [], 'on', '
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
-who_to_plot.add_to_list(DB_2_ID, [12], [1], "Left");
-who_to_plot.add_to_list(DB_4_ID, [1], [1], "Left");
+who_to_plot.add_to_list(DB_2_ID, 12, 1, "Left");
+who_to_plot.add_to_list(DB_4_ID, 1, 1, "Left");
 PROSTAnalyzer.plot_cop(who_to_plot, 12, 'on', 'fig');
 
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-% PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "fig")
+PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "png")
 % close all
