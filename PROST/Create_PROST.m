@@ -23,10 +23,6 @@ for index = 1:length(var_names)
         load(db_list(index, 2))
     end
 end
- 
-clearvars -except -regexp ^DB\w*
-close all 
-clc
 
 %% Load and ignore lists
 %   load_list - a cell array where each row contains pairs of dataset name and 
@@ -39,7 +35,7 @@ load_list = {DB_1, "Dataset 1"; ...
 n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
-[PROSTObj, dataset_ids] = PROST.PROSTAnalyzer(load_list);
+[PROSTAnalyzer, dataset_ids] = PROST.PROSTAnalyzer(load_list, toolbox_root);
 DB_1_ID = dataset_ids(1);
 DB_2_ID = dataset_ids(2);
 DB_3_ID = dataset_ids(3);
@@ -54,14 +50,14 @@ ignore_list.add_to_list(DB_1_ID, [5 14 15 16], [], "Right");
 ignore_list.add_to_list(DB_2_ID, [31], [], "Left");
 ignore_list.add_to_list(DB_3_ID, [43, 47], [], "Left");
 
-PROSTObj.clean_data(ignore_list);
+PROSTAnalyzer.clean_data(ignore_list);
 
 %% Add to samples table data from datasets
 for index=1:n_datasets
-    dataset_name = PROSTObj.get_dataset_name(dataset_ids(index));
-    PROSTObj.add_samples(dataset_ids(index));
+    dataset_name = PROSTAnalyzer.get_dataset_name(dataset_ids(index));
+    PROSTAnalyzer.add_samples(dataset_ids(index));
 end
 
 %% Save PROST Object
 disp("Saving PROST object...")
-save("PROSTObj.mat","PROSTObj")
+save("PROSTAnalyzer.mat","PROSTAnalyzer")

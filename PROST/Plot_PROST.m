@@ -1,4 +1,4 @@
-clearvars -except PROSTObj -regexp ^DB\w*
+clearvars -except PROSTAnalyzer -regexp ^DB\w*
 close all
 clc
 
@@ -12,12 +12,12 @@ cd(toolbox_root); % Change to folder of current script
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %% Load PROST Object
-if ~exist("PROSTObj", "var")
-    load("PROSTObj.mat")
+if ~exist("PROSTAnalyzer", "var")
+    load("PROSTAnalyzer.mat")
 end
 
-dataset_ids = [PROSTObj.DataRecords.Dataset_id];
-dataset_names = [PROSTObj.DataRecords.Dataset_name];
+dataset_ids = [PROSTAnalyzer.DataRecords.Dataset_id];
+dataset_names = [PROSTAnalyzer.DataRecords.Dataset_name];
 DB_1_ID = dataset_ids(matches(dataset_names, "Dataset 1"));
 DB_2_ID = dataset_ids(matches(dataset_names, "Dataset 2"));
 DB_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
@@ -32,8 +32,8 @@ PROSTObj.plot_ros(who_to_plot, 12, 'on', 'fig');
 %% Analyze Residuals
 disp("Plotting histogram of residuals")
 figure(Name="Histogram:Residuals vs Normal Distribution Comparison");
-residuals = table2array(PROSTObj.get_samples("Residual"));
-is_shod = table2array(PROSTObj.get_samples("Is_shod"));
+residuals = table2array(PROSTAnalyzer.get_samples("Residual"));
+is_shod = table2array(PROSTAnalyzer.get_samples("Is_shod"));
 shod_residuals = residuals(is_shod == "Yes");
 not_shod_residuals = residuals(is_shod == "No");
 
@@ -69,11 +69,11 @@ xlabel("Residual [mm]")
 legend(FontSize=12)
 
 %% Analyze Radius and Center x
-PROSTObj.plot_histogram("Radius", "Height", "on", [], 'Normalization', 'pdf')
-PROSTObj.plot_histogram("Center_x", "Height", "on", [], 'Normalization', 'pdf')
+PROSTAnalyzer.plot_histogram("Radius", "Height", "on", [], 'Normalization', 'pdf')
+PROSTAnalyzer.plot_histogram("Center_x", "Height", "on", [], 'Normalization', 'pdf')
 
 %% Plot Features vs Labels
-PROSTObj.plot_features_vs_labels([], ["Radius" "Center_x"], [], [], 'on', 'fig')
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], [], 'on', 'fig')
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
