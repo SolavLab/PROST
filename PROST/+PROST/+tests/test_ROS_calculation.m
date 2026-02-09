@@ -2,8 +2,8 @@ dataset_id = 1;
 participant_id = 1;
 side = "right";
 
-dataset_idx = PROSTObj.DataRecordsIDLookup(dataset_id);
-steps = PROSTObj.DataRecords(dataset_idx).Data(participant_id).Uniform_data.(side).step;
+dataset_idx = PROSTAnalyzer.DataRecordsIDLookup(dataset_id);
+steps = PROSTAnalyzer.DataRecords(dataset_idx).Data(participant_id).Uniform_data.(side).step;
 % steps = steps(8);
 
 % Time vector
