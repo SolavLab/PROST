@@ -163,7 +163,8 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 % Create Legend
                 if axes_counter == number_of_axes_in_fig || (participant_id == participants(end) && s_idx == length(step_numbers))
                     if strcmp(show, 'off')
-                        PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/COP Plots", file_type);
+                        file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/COP Plots");
+                        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
                     end
                     axes_counter = 0;
                 end

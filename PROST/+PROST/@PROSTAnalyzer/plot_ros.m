@@ -170,14 +170,18 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, show, file_type)
                     h(j + 4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
                     h(j + 6) = plot(ax,  NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " center");
                 end
-
+                
+                % Legend
                 lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
                 lgd.Layout.Tile = 'east';
-
+                
+                % Save figures
                 if strcmp(show, 'off')
-                    PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/ROS Plots", file_type);
+                    file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/ROS Plots");
+                    PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
                 end
-
+                
+                % Reset axis counter
                 axes_counter = 0;
             end
         end

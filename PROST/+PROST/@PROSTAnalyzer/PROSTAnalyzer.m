@@ -44,10 +44,13 @@ classdef PROSTAnalyzer < handle
         IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
         FirstUniqueDatasetId = 1; % Counter for generating unique dataset IDs.
     end
+    properties(Access=private)
+        toolbox_root = '';
+    end
 
     %% PUBLIC METHODS
     methods
-        function [obj, dataset_ids] = PROSTAnalyzer(load_list)
+        function [obj, dataset_ids] = PROSTAnalyzer(load_list, toolbox_root)
         %PROSTAnalyzer Constructor
         % Input :
         %   load_list - a cell array where each row contains pairs of 
@@ -55,6 +58,7 @@ classdef PROSTAnalyzer < handle
         %               Example:
         %               {"DB Name 1", "path/to/DB1.mat"; "DB Name", 
         %               "path/to/DB2.mat"}
+        %   toolbox_root - the root path where the toolbox is saved.
 
             % Pre Initialization
             samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
@@ -66,7 +70,12 @@ classdef PROSTAnalyzer < handle
             summary_var_types = {'doublenan',  'string',       'string',       'string'   'doublenan',      'string',      'string'       'string'            'doublenan'         'doublenan',       'categorical', 'logical'};
             summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod',     'Has_medial'};
             summary_numCols = numel(summary_var_names);
-    
+            
+            if nargin < 2 || isempty(toolbox_root)
+                obj.toolbox_root = uigetdir([], "Where is the toolbox saved?");
+            else
+                obj.toolbox_root = toolbox_root;
+            end
             if nargin == 0 || isempty(load_list)
                 disp("Creating empty PROSTAnalyzer object...")
                 obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});

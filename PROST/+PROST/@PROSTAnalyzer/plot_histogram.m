@@ -57,7 +57,8 @@ function plot_histogram(obj, var_name, normalizer_name, show, file_type, varargi
     legend(FontSize=obj.FONT_SIZE)
     hold off
     if strcmp(show, 'off')
-        PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/Histogram", file_type);
+        file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Histogram");
+        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
         disp("All figures saved.")
     end
 end

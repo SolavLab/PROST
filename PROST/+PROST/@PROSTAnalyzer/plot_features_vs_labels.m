@@ -189,7 +189,8 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
                 % lgd.Layout.Tile = 'east';
 
                 if strcmp(show, 'off')
-                    PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/Features vs Labels", file_type);
+                    file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Features vs Labels");
+                    PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
                 end
 
                 axes_counter = 0;

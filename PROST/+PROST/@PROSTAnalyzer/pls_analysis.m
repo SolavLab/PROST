@@ -58,7 +58,8 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     % grid on
     % if strcmp(show, 'off')
     %     disp("Saving figure...")
-    %     PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/PLS", file_type);
+    %     file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
+    %     PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
     %     disp("Figure saved.")
     % end
 
@@ -70,7 +71,8 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     grid on
     if strcmp(show, 'off')
         disp("Saving figure...")
-        PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/PLS", file_type);
+        file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
+        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
         disp("Figure saved.")
     end
 
@@ -83,7 +85,8 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     xlabel('Number of Components')
     if strcmp(show, 'off')
         disp("Saving figure...")
-        PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/PLS", file_type);
+        file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
+        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
         disp("Figure saved.")
     end
 
@@ -131,7 +134,8 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     end
     if strcmp(show, 'off')
         disp("Saving figures...")
-        PROST.PROSTAnalyzer.save_figure(fig, "../../figures/ROS Analysis/PLS", file_type);
+        file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
+        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
         disp("All figure saved.")
     end
 end
