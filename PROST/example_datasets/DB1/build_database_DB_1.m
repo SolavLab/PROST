@@ -472,9 +472,7 @@ for participant_number=participant_numbers
                 interpolated_COP.y = interp1(IC_index:OIC_index, one_step_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.z = NaN(size(interpolated_COP.x));
                 interpolated_COP.unit = "mm";
-                interpolated_COP.temporal_alignment = "weight acceptance + single support";
-                interpolated_COP.IC_index = 1;
-                interpolated_COP.OIC_index = n_temporal_alignment;
+                interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";
 
                 DB_1.Data.(participant_name).uniform_data.(side).step(relevant_index).COP = interpolated_COP;
 
@@ -502,10 +500,11 @@ for participant_number=participant_numbers
                 interpolated_GRF.y = interp1(IC_index:TO_index, one_step_GRF.y(IC_index:TO_index), linspace(IC_index, TO_index, n_temporal_alignment));
                 interpolated_GRF.z = interp1(IC_index:TO_index, one_step_GRF.z(IC_index:TO_index), linspace(IC_index, TO_index, n_temporal_alignment));
                 interpolated_GRF.unit = "N";
-                interpolated_GRF.temporal_alignment = "stance phase";
-                interpolated_GRF.IC_index = 1;
-                interpolated_GRF.OIC_index = round(n_temporal_alignment*(OIC_index - IC_index)/(TO_index - IC_index));
-                interpolated_GRF.TO_index = n_temporal_alignment;
+                interpolated_GRF.temporal_alignment = "Initial contact to toe off (stance phase).";
+                
+                % OIC event after temporal alignment
+                interpolated_GRF.OIC.time = round((n_temporal_alignment - 1)*(OIC_index - IC_index)/(TO_index - IC_index));
+                interpolated_GRF.OIC.index = interpolated_GRF.OIC.time + 1;
 
                 DB_1.Data.(participant_name).uniform_data.(side).step(relevant_index).GRF = interpolated_GRF;
 
@@ -561,7 +560,7 @@ for participant_number=participant_numbers
                 interpolated_Markers.Knee.mean.z = (interpolated_Markers.Knee.lateral.z + interpolated_Markers.Knee.medial.z) / 2;
 
                 interpolated_Markers.unit = "mm";
-                interpolated_Markers.temporal_alignment = "weight acceptance + single support";
+                interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
                 DB_1.Data.(participant_name).uniform_data.(side).step(relevant_index).Markers = interpolated_Markers;
 
                 %                                                                       ------

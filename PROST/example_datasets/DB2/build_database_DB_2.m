@@ -363,7 +363,7 @@ for participant_number=1:n_participants
         % summery of temporal alignment:
         % -------------------------
         % the GRF should be temporally aligned (to 101 points) in the stance phase (SP) -> from initial contact to toe off 
-        % while the COP and Markers should be temporally aligned (to 101 points) in the weight acceptance + single support phase (SS) -> from initial contact to opposite initial contact 
+        % while the COP and Markers should be temporally aligned (to 101 points) from initial contact to opposite initial contact 
 
         %                                               ---------------------
         % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#)
@@ -1020,9 +1020,8 @@ end
 
 function interpolated_COP = interpolate_COP(COP, step_info, walking_direction, n_temporal_alignment)
 %INTERPOLATE_COP converts the center of pressure (COP) measurements to our 
-% coordinate system and interpolates into n_temporal_alignment points of the 
-% weight acceptance + single support phase (from initial contact to opposite 
-% initial contact).
+% coordinate system and interpolates into n_temporal_alignment points from 
+% initial contact to opposite initial contact.
 % By default n_temporal_alignment is 101 points thus the trajectories are 
 % aligned to a percent of the phase.
 % Input :
@@ -1057,10 +1056,8 @@ function interpolated_COP = interpolate_COP(COP, step_info, walking_direction, n
     interpolated_COP.y = interp1(IC_index:OIC_index, interpolated_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_COP.z = interp1(IC_index:OIC_index, interpolated_COP.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
 
-    interpolated_COP.unit = COP.unit;
-    interpolated_COP.temporal_alignment = "weight acceptance + single support";
-    interpolated_COP.OIC_index = n_temporal_alignment;
-    interpolated_COP.IC_index = 1;
+    interpolated_COP.unit = "mm";
+    interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";
 end
 
 function interpolated_GRF = interpolate_GRF(GRF, step_info, walking_direction, n_temporal_alignment)
@@ -1102,11 +1099,12 @@ function interpolated_GRF = interpolate_GRF(GRF, step_info, walking_direction, n
     interpolated_GRF.y = interp1(IC_index:TO_index, interpolated_GRF.y(IC_index:TO_index), linspace(IC_index, TO_index, n_temporal_alignment));
     interpolated_GRF.z = interp1(IC_index:TO_index, interpolated_GRF.z(IC_index:TO_index), linspace(IC_index, TO_index, n_temporal_alignment));
 
-    interpolated_GRF.unit = GRF.unit;
-    interpolated_GRF.temporal_alignment = "stance phase";
-    interpolated_GRF.TO_index = n_temporal_alignment;
-    interpolated_GRF.OIC_index = round(n_temporal_alignment*(OIC_index - IC_index)/(TO_index - IC_index));
-    interpolated_GRF.IC_index = 1;
+    interpolated_GRF.unit = "N";
+    interpolated_GRF.temporal_alignment = "Initial contact to toe off (stance phase).";
+
+    % OIC event after temporal alignment
+    interpolated_GRF.OIC.time = round((n_temporal_alignment - 1)*(OIC_index - IC_index)/(TO_index - IC_index));
+    interpolated_GRF.OIC.index = interpolated_GRF.OIC.time + 1;
 end
 
 function interpolated_Markers = interpolate_trajectories(trajectories, step_info, markers_guide, walking_direction, n_temporal_alignment)
@@ -1191,9 +1189,7 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.Knee.mean.z = (interpolated_Markers.Knee.lateral.z + interpolated_Markers.Knee.medial.z)/2;
 
     interpolated_Markers.unit = "mm";
-    interpolated_Markers.temporal_alignment = "weight acceptance + single support";
-    interpolated_Markers.IC_index = 1;
-    interpolated_Markers.OIC_index = n_temporal_alignment;
+    interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
 end
 
 function good_trials = get_good_trials(data_path, reference_guide)
