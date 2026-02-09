@@ -1,7 +1,6 @@
 %% ------------------------------------------------------------------
-%  build a matlab structure containing the second database data
-%  Created by Dani Feal
-%  Edited by Chen Reichsbouscher, 11.06.2025
+%  build a matlab structure containing the fourth dataset data
+%  Created by Chen Reichsbouscher, 11.12.2025
 % -------------------------------------------------------------------
 %
 clearvars -except good_trials raw_data all_metadata -regexp ^DB\w*
@@ -1321,6 +1320,7 @@ function good_trials = read_good_trials_table(data_path)
     good_trials([good_trials.SubjNum] == 20).trials([good_trials([good_trials.SubjNum] == 20).trials.trial_num] == 3).segments = ["L" "R" "L"]; % Wrong Segments
     good_trials([good_trials.SubjNum] == 37) = []; % Missing markers in standing trial
     good_trials([good_trials.SubjNum] == 44).trials([good_trials([good_trials.SubjNum] == 44).trials.trial_num] == 5) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 63).trials([good_trials([good_trials.SubjNum] == 63).trials.trial_num] == 2) = []; % Bad trial
     good_trials([good_trials.SubjNum] == 66).trials([good_trials([good_trials.SubjNum] == 66).trials.trial_num] == 1) = []; % Bad trial
     good_trials([good_trials.SubjNum] == 79).trials([good_trials([good_trials.SubjNum] == 79).trials.trial_num] == 2) = []; % Bad trial
     good_trials([good_trials.SubjNum] == 84).trials([good_trials([good_trials.SubjNum] == 84).trials.trial_num] == 1).segments = ["R" "L" "R"]; % Wrong Segments

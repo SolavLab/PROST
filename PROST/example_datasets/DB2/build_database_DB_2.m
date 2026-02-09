@@ -1,5 +1,5 @@
 %% ------------------------------------------------------------------
-%  build a matlab structure containing the second database data
+%  build a matlab structure containing the second dataset data
 %  Created by Dani Feal
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------

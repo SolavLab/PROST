@@ -1,5 +1,5 @@
 %% ------------------------------------------------------------------
-%  build a matlab structure containing the first database data
+%  build a matlab structure containing the first dataset data
 %  Created by Dani Feal
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------

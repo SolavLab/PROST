@@ -1,5 +1,5 @@
 % ------------------------------------------------------------------
-%  build a matlab structure containing the third database data
+%  build a matlab structure containing the third dataset data
 %  Created by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 clc; close all; clearvars -except -regexp ^DB\w*
