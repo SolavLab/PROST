@@ -1,19 +1,23 @@
-clearvars -except DB_1 
-close all; 
-clc
+clc; close all; clearvars -except -regexp ^Dataset\w*
 
-addpath("C:\Users\chenr\Documents\PROST\")
-addpath("C:\Users\chenr\Documents\PROST\DB1\")
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
 
-set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
 
-if ~exist("DB_1", "var")
-    load("DB_1.mat");
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+
+if ~exist("Dataset_1", "var")
+    load("../../Dataset_1.mat");
 end
 
 %% Change accordingly to your test
 % What database to test
-DB = DB_1;
+Dataset = Dataset_1;
 
 % Database relevant marker names
 ankle_marker_name = "LA";
@@ -57,7 +61,7 @@ for p=1:n_participants
         test_sides = ["left" "right"];
     end
     if isempty(trials_test_processsed)
-        total_trials = min(length(DB.Data.(participant_name).uniform_data.(test_sides(1)).step), length(DB.Data.(participant_name).uniform_data.(test_sides(end)).step));
+        total_trials = min(length(Dataset.Data.(participant_name).uniform_data.(test_sides(1)).step), length(Dataset.Data.(participant_name).uniform_data.(test_sides(end)).step));
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else
@@ -73,7 +77,7 @@ for p=1:n_participants
     for t=trials
         for side=test_sides
             try
-                trial = DB.Data.(participant_name).uniform_data.(side).step(t);
+                trial = Dataset.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -121,7 +125,7 @@ for p=1:n_participants
     tiledlayout(f, "flow")
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
+            total_trials = length(Dataset.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -133,7 +137,7 @@ for p=1:n_participants
 
         for t=trials
             try
-                trial = DB.Data.(participant_name).uniform_data.(side).step(t);
+                trial = Dataset.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -201,7 +205,7 @@ for p=1:n_participants
     tiledlayout
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
+            total_trials = length(Dataset.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -213,14 +217,14 @@ for p=1:n_participants
 
         for t=trials
             try
-                trial_uniform = DB.Data.(participant_name).uniform_data.(side).step(t);
+                trial_uniform = Dataset.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
                 end
             end
             t_processed_original = trial_uniform.source.original_trial_number_in_database;
-            trial = DB.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
+            trial = Dataset.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
             
             for step_num=step_nums.(side)
                 foot = steps_feet(step_num);
@@ -299,7 +303,7 @@ for p=1:n_participants
     tiledlayout
     for side=test_sides
         if isempty(trials_test_processsed)
-            total_trials = length(DB.Data.(participant_name).uniform_data.(side).step);
+            total_trials = length(Dataset.Data.(participant_name).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else
@@ -311,14 +315,14 @@ for p=1:n_participants
 
         for t=trials
              try
-                trial_uniform = DB.Data.(participant_name).uniform_data.(side).step(t);
+                trial_uniform = Dataset.Data.(participant_name).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
                 end
             end
             t_processed_original = trial_uniform.source.original_trial_number_in_database;
-            trial = DB.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
+            trial = Dataset.Data.(participant_name).processed_original_data.("trial_" + t_processed_original);
 
             h = [];
             for step_num=step_nums.(side)
