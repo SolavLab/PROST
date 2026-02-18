@@ -33,11 +33,17 @@ who_to_plot.add_to_list(Dataset_4_ID, 1:12);
 PROSTAnalyzer.plot_ros(who_to_plot, 6, 'nadir', 'on', 'fig');
 
 %% Analyze Residuals
-PROSTAnalyzer.plot_histogram("Residual", [], "Is_shod", "on", [], "Normalization", "pdf");
+PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", [], "on", [], "Normalization", "pdf", 'BinMethod', 'auto');
 
 %% Analyze Radius and Center x
-PROSTAnalyzer.plot_histogram("Radius", "Height", "Is_shod", "on", [], "Normalization", "pdf");
-PROSTAnalyzer.plot_histogram("Center_x", "Height", "Is_shod", "on", [], "Normalization", "pdf");
+PROSTAnalyzer.plot_stats("Radius", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'auto');
+PROSTAnalyzer.plot_stats("Center_x", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'auto');
+PROSTAnalyzer.plot_stats("Radius", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'fd');
+PROSTAnalyzer.plot_stats("Center_x", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'fd');
+PROSTAnalyzer.plot_stats("Radius", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'scott');
+PROSTAnalyzer.plot_stats("Center_x", "Height", [], [], "on", [], "Normalization", "pdf", 'BinMethod', 'scott');
+% PROSTAnalyzer.plot_stats("Radius", "Height", "Gender", "on", [], "Normalization", "pdf", 'BinMethod', 'auto');
+% PROSTAnalyzer.plot_stats("Center_x", "Height", "Gender", "on", [], "Normalization", "pdf", 'BinMethod', 'auto');
 
 %TODO: find a way to also plot KDEs
 %% Plot Features vs Labels

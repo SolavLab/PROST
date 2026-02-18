@@ -158,6 +158,7 @@ classdef PROSTAnalyzer < handle
         % plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
+        % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);
         % set_dataset_name(obj, dataset_id, dataset_name);
