@@ -24,6 +24,6 @@ function foot_length = estimate_foot_length(steps)
     foot_length = mead_d / 0.83;
 
     % Convert to [m]
-    foot_length = convert_units(foot_length, cop(1).unit, "m");
+    foot_length = PROST.utils.convert_units(foot_length, cop(1).unit, "m");
 end
 

@@ -18,13 +18,4 @@ function dataset_id = add_dataset(obj, dataset_name, dataset)
     dataset_id = obj.add_to_data_records(dataset_name, dataset);
     obj.add_to_summary_table(dataset_id);
     obj.add_samples(dataset_id);
-
-    % Add to ignore list if there are participants to ignore
-    if nargin == 4
-        participants_to_ignore_right = [];
-    end
-    if nargin > 3 && (~isempty(participants_to_ignore_left) || ~isempty(participants_to_ignore_right))
-        obj.add_to_ignore_list({dataset_id, participants_to_ignore_left, participants_to_ignore_right});
-    end
-
 end

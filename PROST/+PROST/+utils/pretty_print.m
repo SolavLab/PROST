@@ -147,9 +147,6 @@ function print_struct(s, data_flag, indent)
 
     k = strfind(fields{1}, '_');
     first_field = fields{1};
-    % if strcmp(first_field, 'participant_1')
-    %     disp("!!!")
-    % end
     if ~isempty(k) && isscalar(k) && all(contains(fields, first_field(1:k)))
         n_fields = min(max_elem_size, n_fields);
     end
