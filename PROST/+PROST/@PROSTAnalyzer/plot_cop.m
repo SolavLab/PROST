@@ -23,6 +23,12 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
         end
     end
    
+    % Set plot parameters
+    colormap_dictionary = dictionary(["right" "left"], {obj.COLORMAP_RIGHT obj.COLORMAP_LEFT});
+    x_label = "x [mm]";
+    y_label = "z [mm]";
+
+
     % Start plotting
     fig_counter = 0;
     if strcmp(show, 'off')
@@ -59,6 +65,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
             for s_idx=1:length(step_numbers)
                 step_number = step_numbers(s_idx);
                 side = step_sides(s_idx);
+                capitalized_side = PROST.utils.capitalize(side);
 
                 % Get step data
                 trial = dataset.Data(participant_id).Uniform_data.(side).step(step_number);
@@ -71,7 +78,9 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
                     fig  = figure(Name="COP Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
-                    tOuter = tiledlayout(fig, 'TileSpacing', 'tight', 'Padding', 'tight');
+                    n_cols = ceil(sqrt(number_of_axes_in_fig));
+                    n_rows = ceil(number_of_axes_in_fig / n_cols);
+                    tOuter = tiledlayout(fig, n_rows, n_cols, 'TileSpacing', 'tight', 'Padding', 'tight');
                     sgtitle(fig, replace(fig.Name, "_", " "))
                 end
 
@@ -79,7 +88,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 % World and Shank Frames
                 tInner = tiledlayout(tOuter, 1, 2, 'Units','normalized', 'Padding', 'tight', 'TileSpacing','tight');
                 tInner.Layout.Tile = axes_counter + 1;
-                title(tInner, "P" + participant_id + " (" + side + "): Step " + num2str(step_number))
+                title(tInner, "P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
@@ -105,18 +114,20 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 %     :-+@#:
                 %     .-+*.
                 ax1 = nexttile(tInner, 1);
+                
                 X = [ankle.x; knee.x];
                 Y = [ankle.z; knee.z];
                 plot(ax1, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=obj.LINE_WIDTH, Color=obj.LINE_COLOR)
                 hold(ax1, 'on');
                 grid(ax1, "on");
-                axis(ax1, 'tight');
                 axis(ax1, 'equal');
                 pbaspect(ax1, [1 1 1])
                 s = scatter(ax1, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
                 s = scatter(ax1, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
                 s = scatter(ax1, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
-                title(ax1, "World Frame")
+                title(ax1, "World Frame", FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                xlabel(ax1, x_label)
+                ylabel(ax1, y_label)
 
                 % Get data in shank frame
                 shank_cop = trial.Shank_cop.(anatomical_side);
@@ -146,19 +157,18 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 plot(ax2, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=obj.LINE_WIDTH, Color=obj.LINE_COLOR)
                 hold(ax2, 'on');
                 grid(ax2, "on");
-                axis(ax2, 'tight');
                 axis(ax2, 'equal');
-                % pbaspect([1 1 1])
+                pbaspect([1 1 1])
                 h = gobjects(3, 1);
                 h(1) = scatter(ax2, shank_ankle.x, shank_ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
                 h(2) = scatter(ax2, shank_knee.x, shank_knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
                 h(3) = scatter(ax2, shank_cop.x, shank_cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
-                title(ax2, "Shank Frame")
-                xlabel(tInner, "x [mm]")
-                ylabel(ax1, "z [mm]")
+                title(ax2, "Shank Frame", FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                xlabel(ax2, x_label)
+                ylabel(ax2, y_label)
                 legend(ax2, h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="best");
                 cb = colorbar(ax2, 'eastoutside', FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
-                cb.Label.String = 'WA + SS %';
+                cb.Label.String = "IC to OIC";
                 axes_counter = axes_counter + 1;
 
                 % Create Legend

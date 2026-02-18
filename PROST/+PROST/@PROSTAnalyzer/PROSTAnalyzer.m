@@ -18,6 +18,8 @@ classdef PROSTAnalyzer < handle
         COLOR_LEFT_BRIGHT = [0.9 0 0]; % reddish bright
         COLOR_RIGHT_DARK = [0 0.5 0.4]; % greenish dark
         COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
+        COLORMAP_RIGHT = "summer";
+        COLORMAP_LEFT = "autumn";
         MARKER_CIRCLE = 'o';
         MARKER_DOT = '.';
         MARKER_SQUARE = 'square';
@@ -31,7 +33,7 @@ classdef PROSTAnalyzer < handle
         LINE_STYLE_DASHED = "--";
         LINE_COLOR = "black";
         FONT_SIZE = 10;
-        FONT_WEIGHT = "bold";
+        FONT_WEIGHT = "normal";
     end
     properties(Access=public)
         DataRecords = struct([]); % Data records

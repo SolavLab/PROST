@@ -91,7 +91,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
             title(ax, erase(dataset_name, "_") + " P" + participant_id, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
 
             % Plot 0 point
-            plot(ax, 0, 0, MarkerSize=obj.MARKER_SIZE, Marker=obj.MARKER_CIRCLE, MarkerEdgeColor="black", MarkerFaceColor="black")  
+            scatter(ax, 0, 0, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled");
             
             % Plot trials of participant
             R = [];
@@ -146,9 +146,9 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
                 if strcmp(plot_type, "circle")
                     plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
-                    plot(ax, center_x, center_z, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % center
+                    scatter(ax, center_x, center_z, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
                 elseif strcmp(plot_type, "azimuth")
-                    plot(ax, center_x, min(circle_points(2, :)), Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE); % azimuth
+                    scatter(ax, center_x, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % azimuth
                 else
                     error(PROST.PROSTError("PlotROS", "WrongPlotType", ...
                         "plot_type should be either 'circle' or 'azimuth'."))
@@ -162,7 +162,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                          Color=color_arc{side}, ...
                          FontSize=obj.FONT_SIZE, ...
                          FontName="FixedWidth", ...
-                         FontWeight=obj.FONT_WEIGHT, ...
+                         FontWeight="bold", ...
                          HorizontalAlignment="left", ...
                          VerticalAlignment="top");
                 % if strcmp(show, "on")
@@ -183,24 +183,26 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 sides = ["left", "right"];
                 n_sides = length(sides);
                 n_plots = 3 + strcmp(plot_type, "circle");
-                h = gobjects(n_sides*n_plots, 1);
-                for j=1:n_sides
-                    i = 0;
-                    side = sides(j);
-                    h(j + i) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{side}(1, :), obj.MARKER_DOT, DisplayName=string(side));
-                    i = i + n_sides;
-                    h(j + i) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted arc");
-                    i = i + n_sides;
-                    if strcmp(plot_type, "circle")
-                        h(j + i) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH, DisplayName=string(side) + " fitted circle");
-                        i = i + n_sides;
-                    end
-                    h(j + i) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, MarkerSize=obj.MARKER_SIZE, DisplayName=string(side) + " " + "circle");
+                h = gobjects(2*n_plots + 1, 1);
+                h(1) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled", DisplayName="ankle point");
+                h(2) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"left"}(1, :), obj.MARKER_DOT, DisplayName="left");
+                h(3) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"right"}(1, :), obj.MARKER_DOT, DisplayName="right");
+                h(4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted arc");
+                h(5) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted arc");
+                
+                if strcmp(plot_type, "circle")
+                    h(6) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted circle");
+                    h(7) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted circle");
+                    h(8) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left center");
+                    h(9) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right center");
+
+                else
+                    h(6) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left azimuth");
+                    h(7) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right azimuth");
                 end
                 
                 % Legend
-                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
-                lgd.Layout.Tile = 'east';
+                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="bestoutside");
                 
                 % Save figures
                 if strcmp(show, 'off')

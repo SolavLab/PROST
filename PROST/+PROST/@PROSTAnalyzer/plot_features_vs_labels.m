@@ -150,7 +150,6 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
                 end
             end
             % end
-            lgd = legend(FontSize=12, FontWeight="bold");
 
             % Set axis limits
             xlim(ax, 'padded');
@@ -158,10 +157,18 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 
             % Plot regression model if numeric
             if x_numeric && y_numeric
-                plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
-                x_limits = xlim(ax);
-                y_limits = ylim(ax);
-                text(ax, x_limits(1), y_limits(2) - 0.25, "Rsquared = " + Rsquared, FontSize=obj.FONT_SIZE, FontWeight="bold", Color=obj.LINE_COLOR)
+                if Rsquared > 0.5
+                    plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
+                end
+                text(ax, ...
+                     0, 1, "Rsquared = " + Rsquared, ...
+                     Units="normalized", ...
+                     Color=obj.LINE_COLOR, ...
+                     FontSize=obj.FONT_SIZE, ...
+                     FontName="FixedWidth", ...
+                     FontWeight=obj.FONT_WEIGHT, ...
+                     HorizontalAlignment="left", ...
+                     VerticalAlignment="top");
             end
 
             % Set axis params
@@ -177,6 +184,8 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 
             % Save figures and reset axes counter
             if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
+                lgd = legend(FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
+                lgd.Location = "eastoutside";
                 if strcmp(show, 'off')
                     file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Features vs Labels");
                     PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
