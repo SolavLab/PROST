@@ -30,7 +30,7 @@ who_to_plot = PROST.PROSTDatasetList();
 % who_to_plot.add_to_list(Dataset_3_ID);
 % who_to_plot.add_to_list(Dataset_4_ID);
 who_to_plot.add_to_list(Dataset_4_ID, 1:12);
-PROSTAnalyzer.plot_ros(who_to_plot, 6, 'azimuth', 'on', 'fig');
+PROSTAnalyzer.plot_ros(who_to_plot, 6, 'nadir', 'on', 'fig');
 
 %% Analyze Residuals
 PROSTAnalyzer.plot_histogram("Residual", [], "Is_shod", "on", [], "Normalization", "pdf");

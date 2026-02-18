@@ -147,11 +147,11 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 if strcmp(plot_type, "circle")
                     plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
                     scatter(ax, center_x, center_z, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
-                elseif strcmp(plot_type, "azimuth")
-                    scatter(ax, center_x, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % azimuth
+                elseif strcmp(plot_type, "nadir")
+                    scatter(ax, center_x, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
                 else
                     error(PROST.PROSTError("PlotROS", "WrongPlotType", ...
-                        "plot_type should be either 'circle' or 'azimuth'."))
+                        "plot_type should be either 'circle' or 'nadir'."))
                 end
 
                 % Print Text on axis
@@ -197,8 +197,8 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                     h(9) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right center");
 
                 else
-                    h(6) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left azimuth");
-                    h(7) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right azimuth");
+                    h(6) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left nadir");
+                    h(7) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right nadir");
                 end
                 
                 % Legend
