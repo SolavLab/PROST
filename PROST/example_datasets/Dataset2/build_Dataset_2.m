@@ -4,7 +4,7 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clearvars -except good_trials -regexp ^DB\w*
+clearvars -except good_trials -regexp ^Dataset\w*
 close all
 clc
 
@@ -15,20 +15,19 @@ cd(script_folder);
 % Define data files folder
 data_path = ".\Data Files";
 
-% Add ezc3d package
-addpath(".\ezc3d_matlab");
-
 % Add PROST package root to path
 toolbox_root = split(script_folder, filesep);
 toolbox_root = fullfile(toolbox_root{1:end-2});
 addpath(toolbox_root); % Add PROST package to path
 
+% Add ezc3d package
+addpath(fullfile(toolbox_root, "lib-ext", "ezc3d_matlab"));
 
 %% -----------------------------
 %  General Database info:
 % ------------------------------
 %       -------------
-% DB_2 / article_data :
+% Dataset_2 / article_data :
 %       -------------
 article_data.article_name = "A multimodal dataset of human gait at different walking speeds established on injury-free adult participants";
 article_data.authors = "Céline Schreiber & Florent Moissenet";
@@ -36,10 +35,10 @@ article_data.link_to_paper = "https://doi.org/10.1038/s41597-019-0124-4";
 article_data.link_to_dataset = "https://doi.org/10.6084/m9.figshare.7734767.v8";
 article_data.published_year = 2019;
 
-DB_2.Article_data = article_data;
+Dataset_2.Article_data = article_data;
 
 %       -------------
-% DB_2 / marker_names :
+% Dataset_2 / marker_names :
 %       -------------
 markers_guide.explanation_txt = "The field reference_guide containes a dictionary that maps our naming of important markers to the names and indices in the original dataset.\n" + ...
                                 "The keys: our naming of important markers for cohesiveness between the different datasets.\n" + ...
@@ -90,10 +89,10 @@ markers_guide.reference_guide = dictionary(keys, values);
 % markers_guide.virtual_markers = dictionary(["Right Lateral Knee" "Right Medial Knee" "Left Lateral Knee" "Left Medial Knee"], ...
 %                                 ["R_LatVirtualKnee"   "R_MedVirtualKnee"  "L_LatVirtualKnee"  "L_MedVirtualKnee"]);
 
-DB_2.Markers_guide = markers_guide;
+Dataset_2.Markers_guide = markers_guide;
 
 %       --------------------
-% DB_2 / Lab_system :
+% Dataset_2 / Lab_system :
 %       --------------------
 Lab_system.lab_frame = ...
     "X Direction: \n" + ...
@@ -108,10 +107,10 @@ Lab_system.lab_frame = ...
     "The z direction is pointing up.";
 Lab_system.num_forceplates = 2;
 
-DB_2.Lab_system = Lab_system;
+Dataset_2.Lab_system = Lab_system;
 
 %       ---------------------
-% DB_2 / Experiment_protocol :
+% Dataset_2 / Experiment_protocol :
 %       ---------------------
 
 % Explanation for how the experiment was conducted generally.
@@ -142,7 +141,7 @@ Experiment_protocol.speed_categories = "C1 is a speed between 0 and 0.4 m.s−
                                        "C5 is a self-selected fast speed.";
 Experiment_protocol.num_participants = 50;
 
-DB_2.Experiment_protocol = Experiment_protocol;
+Dataset_2.Experiment_protocol = Experiment_protocol;
 
 %% Create List of Trials to Keep
 % Bad trials are missing crucial info so we only keep those that aren't.
@@ -184,9 +183,9 @@ DB_2.Experiment_protocol = Experiment_protocol;
 %                  "2015032_C5_03";
 %                  "2015032_C5_04";
 %                  "2015032_C5_05"];
-% [ignore_trials, ignore_participants] = make_ignore_list(data_path, DB_2.Markers_guide.reference_guide);
+% [ignore_trials, ignore_participants] = make_ignore_list(data_path, Dataset_2.Markers_guide.reference_guide);
 if ~exist("good_trials")
-    good_trials = get_good_trials(data_path, DB_2.Markers_guide.reference_guide);
+    good_trials = get_good_trials(data_path, Dataset_2.Markers_guide.reference_guide);
 end
 
 %% -----------------------------
@@ -197,7 +196,7 @@ good_participants = unique(good_trials(:, 1));
 n_participants = length(good_participants);
 
 % Get relevant marker names in original dataset
-markers_guide = DB_2.Markers_guide;
+markers_guide = Dataset_2.Markers_guide;
 
 for participant_number=1:n_participants
     % Get participant name and original ID from number
@@ -213,13 +212,13 @@ for participant_number=1:n_participants
     right_steps_counter = 0; left_steps_counter = 0;
 
     %                              -------------------------------------
-    % DB_2 / Data / participant_# / participant_ID_in_original_structure :
+    % Dataset_2 / Data / participant_# / participant_ID_in_original_structure :
     %                              -------------------------------------
     % the participant ID in the original data structure:
-    DB_2.Data.(participant_name).participant_ID_in_original_structure = participant_ID;
+    Dataset_2.Data.(participant_name).participant_ID_in_original_structure = participant_ID;
 
     %                              ---------
-    % DB_2 / Data / participant_# / metadata :
+    % Dataset_2 / Data / participant_# / metadata :
     %                              ---------
 
     % Get participant trial data path
@@ -231,21 +230,21 @@ for participant_number=1:n_participants
     
     % Get metadata
     [metadata, standing_trial] = get_metadata(trial_path, standing_trial_path, markers_guide);
-    DB_2.Data.(participant_name).metadata = metadata;
+    Dataset_2.Data.(participant_name).metadata = metadata;
     
     %                                               ---------------------
-    % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#)
+    % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#)
     %                                               ---------------------
     % Prepping uniform data database
-    DB_2.Data.(participant_name).uniform_data.right.step = [];
-    DB_2.Data.(participant_name).uniform_data.left.step = [];
+    Dataset_2.Data.(participant_name).uniform_data.right.step = [];
+    Dataset_2.Data.(participant_name).uniform_data.left.step = [];
 
     % Get the number of trials
     n_trials = length(good_trials_indices);
     
     for trial_number=1:n_trials
         %                               ---------------- -----------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#)
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#)
         %                               ---------------- -----------
         
         % Get the signals:
@@ -271,66 +270,66 @@ for participant_number=1:n_participants
         trajectories = save_marker_data(marker_data, standing_trial, markers_guide);
 
         %                                                            -------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / origin
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / origin
         %                                                            -------
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.catagory = original_category_number;
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = original_trial_number;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.catagory = original_category_number;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = original_trial_number;
 
         %                                                            ----------------------------------------------------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / step_#_info / events , step_quality , foot , plate
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / step_#_info / events , step_quality , foot , plate
         %                                                            ----------------------------------------------------        
         for step_number=1:n_steps
-            DB_2.Data.(participant_name).processed_original_data.trial(trial_number).("step_" + step_number + "_info") = steps_info(step_number);
+            Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).("step_" + step_number + "_info") = steps_info(step_number);
         end
 
         %                                                            --------------------------------------------------------------------------------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / GRF / n_forceplates , n_samples , time_vector , sampling_freq , plate_# ,  unit
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / GRF / n_forceplates , n_samples , time_vector , sampling_freq , plate_# ,  unit
         %                                                            --------------------------------------------------------------------------------
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).GRF = GRF;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).GRF = GRF;
 
         %                                                            --------------------------------------------------------------------------------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / COP / n_forceplates , n_samples , time_vector , sampling_freq , plate_# ,  unit
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / COP / n_forceplates , n_samples , time_vector , sampling_freq , plate_# ,  unit
         %                                                            --------------------------------------------------------------------------------
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).COP = COP;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).COP = COP;
 
         %                                                            -------------------------------------------------------------------------------------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / trajectories / n_markers , n_samples , time_vector , sampling_freq , markers ,  unit
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / trajectories / n_markers , n_samples , time_vector , sampling_freq , markers ,  unit
         %                                                            -------------------------------------------------------------------------------------
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).trajectories = trajectories;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).trajectories = trajectories;
 
         %                                                            ------------------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / walking_direction
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / walking_direction
         %                                                            ------------------
         % we will check the walking direction by checking if the direction
         % that the SXS marker is moving is +x (+1) or -x (-1)
         direction_marker = trajectories.(markers_guide.reference_guide{"Walking Direction Marker"}{1}).x;
         walking_direction = sign(direction_marker(end) - direction_marker(1));
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value = walking_direction;
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.explenation=...
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value = walking_direction;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.explenation=...
         "1 - the walking was in the direction from plate 1 to plate 2.\n" + ... 
         "-1 - the walking was in the direction from plate 2 to plate 1.\n";
 
         %                                                            ------
-        % DB_2 / Data / participant_# / processed_original_data / trial(#) / speed
+        % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / speed
         %                                                            ------
         % get the data from steps files:
         speed = calculate_speed(trajectories, event_data, markers_guide.reference_guide{"Walking Direction Marker"}{1});  
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.value = speed;
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.method = ...
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.value = speed;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.method = ...
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.";
         
         speed_km_per_hr = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.value = speed_km_per_hr;
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.method = ...
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.value = speed_km_per_hr;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.method = ...
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.\n" + ...
         "Converted from [m/sec] to [km/hr]";
 
         %                              ---------------
-        % DB_2 / Data / participant_# / uniform_data
+        % Dataset_2 / Data / participant_# / uniform_data
         %                              ---------------
 
         % reminder: the frame of reference of the processed_original data:
@@ -366,7 +365,7 @@ for participant_number=1:n_participants
         % while the COP and Markers should be temporally aligned (to 101 points) from initial contact to opposite initial contact 
 
         %                                               ---------------------
-        % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#)
+        % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#)
         %                                               ---------------------
         n_steps = length(steps_info);
         for step_number=1:n_steps
@@ -383,72 +382,69 @@ for participant_number=1:n_participants
             end
 
             %                                                                      -------
-            % DB_2 / Data / participant_# / uniform_data / right,left / step(#) / source
+            % Dataset_2 / Data / participant_# / uniform_data / right,left / step(#) / source
             %                                                                      -------
             %                                                                               ---------------
             %                                                                               / original trial
             %                                                                               ---------------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial = original_category_number + "_" + original_trial_number;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial = original_category_number + "_" + original_trial_number;
             %                                                                               ----------------------------------
             %                                                                               / original trial number in database
             %                                                                               ----------------------------------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial_number_in_database = trial_number;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial_number_in_database = trial_number;
             %                                                                               ---------------------
             %                                                                               / step number in trial
             %                                                                               ---------------------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.step_number = step_number;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.step_number = step_number;
             %                                                                               -------------
             %                                                                               / plate number
             %                                                                               -------------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.plate_number = steps_info(step_number).plate;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.plate_number = steps_info(step_number).plate;
             %                                                                               ------------------------------------------
             %                                                                               / original_IC , original_OIC , original_TO
             %                                                                               ------------------------------------------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_IC = steps_info(step_number).events.IC;
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_OIC = steps_info(step_number).events.OIC;
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_TO = steps_info(step_number).events.TO;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_IC = steps_info(step_number).events.IC;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_OIC = steps_info(step_number).events.OIC;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_TO = steps_info(step_number).events.TO;
 
             % Get the walking direction of the trial
-            walking_direction = DB_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value;
+            walking_direction = Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction.value;
 
             % Size of temporal alignment. We want 101 points so data is
             % in percentage of stance phase \ single support phase.
             n_temporal_alignment = 101;
 
             %                                                                      ----------------------------
-            % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#) / COP   -  temporally aligned
+            % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#) / COP   -  temporally aligned
             %                                                                      ----------------------------
             interpolated_COP = interpolate_COP(COP, steps_info(step_number), walking_direction, n_temporal_alignment);
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).COP = interpolated_COP;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).COP = interpolated_COP;
 
             %                                                                      ----------------------------
-            % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#) / GRF   -  temporally aligned
+            % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#) / GRF   -  temporally aligned
             %                                                                      ----------------------------
             % get data:
             interpolated_GRF = interpolate_GRF(GRF, steps_info(step_number), walking_direction, n_temporal_alignment);
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).GRF = interpolated_GRF;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).GRF = interpolated_GRF;
 
             %                                                                      --------------------------------
-            % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#) / Markers   -  temporally aligned
+            % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#) / Markers   -  temporally aligned
             %                                                                      --------------------------------
 
             interpolated_Markers = interpolate_trajectories(trajectories, steps_info(step_number), markers_guide, walking_direction, n_temporal_alignment);
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).Markers = interpolated_Markers;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).Markers = interpolated_Markers;
 
 
             %                                                                       ------
-            % DB_2 / Data / participant_# / uniform_data / Right,Left / step(#) / speed
+            % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#) / speed
             %                                                                       ------
-            DB_2.Data.(participant_name).uniform_data.(side).step(step_index).speed = ...
-                DB_2.Data.(participant_name).processed_original_data.trial(trial_number).speed;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).speed = ...
+                Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed;
         end
     end
 end
 
-% Something wrong with participant 34?
-% DB_2.Data.participant_34.uniform_data.left.step(2)=[];
-
-save("..\DB_2.mat","DB_2")
+save("..\Dataset_2.mat","Dataset_2")
 
 %% ----------------------------
 %  Auxiliary Functions
