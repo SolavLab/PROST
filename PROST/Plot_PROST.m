@@ -32,50 +32,14 @@ who_to_plot.add_to_list(DB_1_ID);
 PROSTAnalyzer.plot_ros(who_to_plot, 12, 'azimuth', 'on', 'fig');
 
 %% Analyze Residuals
-disp("Plotting histogram of residuals")
-figure(Name="Histogram:Residuals vs Normal Distribution Comparison");
-residuals = table2array(PROSTAnalyzer.get_samples("Residual"));
-is_shod = table2array(PROSTAnalyzer.get_samples("Is_shod"));
-shod_residuals = residuals(is_shod == "Yes");
-not_shod_residuals = residuals(is_shod == "No");
-
-h_shod = histogram(shod_residuals);
-h_shod.Normalization = 'pdf';
-h_shod.BinWidth = 0.25;
-h_shod.FaceAlpha = 0.5;
-h_shod.FaceColor = [0 0.4470 0.7410];
-h_shod.DisplayName = "Shod";
-
-hold on
-h_not_shod = histogram(not_shod_residuals);
-h_not_shod.Normalization = 'pdf';
-h_not_shod.FaceAlpha = 0.5;
-h_not_shod.BinWidth = h_shod.BinWidth;
-h_not_shod.FaceColor = [0.8500 0.3250 0.0980];
-h_not_shod.DisplayName = "Not Shod";
-
-y_shod = 0:0.1:5.5;
-mu_shod = mean(shod_residuals);
-sigma_shod = std(shod_residuals);
-f_shod = normpdf(y_shod, mu_shod, sigma_shod);
-plot(y_shod, f_shod, LineWidth=1.5, Color=h_shod.FaceColor, DisplayName="Shod")
-
-y_not_shod = y_shod;
-mu_not_shod = mean(not_shod_residuals);
-sigma_not_shod = std(not_shod_residuals);
-f_not_shod = normpdf(y_not_shod, mu_not_shod, sigma_not_shod);
-plot(y_not_shod, f_not_shod, LineWidth=1.5, Color=h_not_shod.FaceColor, DisplayName="Not Shod")
-
-title("Residuals Histogram vs Normal Distribution Comparison")
-xlabel("Residual [mm]")
-legend(FontSize=12)
+PROSTAnalyzer.plot_histogram("Residual", [], "Is_shod", "on", [], "Normalization", "pdf");
 
 %% Analyze Radius and Center x
-PROSTAnalyzer.plot_histogram("Radius", "Height", "on", [], 'Normalization', 'pdf')
-PROSTAnalyzer.plot_histogram("Center_x", "Height", "on", [], 'Normalization', 'pdf')
+PROSTAnalyzer.plot_histogram("Radius", "Height", "Is_shod", "on", [], "Normalization", "pdf");
+PROSTAnalyzer.plot_histogram("Center_x", "Height", "Is_shod", "on", [], "Normalization", "pdf");
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], [], 'on', 'fig')
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], "Height", 'on', 'fig')
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
