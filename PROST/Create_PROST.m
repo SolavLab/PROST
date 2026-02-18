@@ -59,5 +59,5 @@ for index=1:n_datasets
 end
 
 %% Save PROST Object
-disp("Saving PROST object...")
+fprintf("Saving PROSTAnalyzer object...\n");
 save("PROSTAnalyzer.mat","PROSTAnalyzer")

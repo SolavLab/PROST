@@ -111,8 +111,6 @@ classdef PROSTAnalyzer < handle
     
             
             % Creating summary table
-            disp("Creating summary table...")
-
             % Create an empty table for the data with the desired variable names:
             summary_table = table('Size', [n_datasets summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
             obj.SummaryTable = summary_table;

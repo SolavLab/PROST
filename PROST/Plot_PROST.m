@@ -87,5 +87,5 @@ PROSTAnalyzer.plot_cop(who_to_plot, 12, 'on', 'fig');
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
 
 %% Save figures
-PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "png")
+% PROST.utils.save_all_open_figures("./figures/ROS Analysis", [], "png")
 % close all
