@@ -2,7 +2,7 @@
 %  Convert C3D files to MAT Files
 %  Created by Chen Reichsbouscher, 12.01.2026
 % -------------------------------------------------------------------
-clearvars -except good_trials DB_1 DB_3 DB_4;
+clearvars -except good_trials raw_data all_metadata -regexp ^Dataset\w*
 close all
 clc
 
@@ -14,13 +14,13 @@ cd(script_folder);
 data_path = ".\Data Files";
 subjects_path = fullfile(data_path, "\138_HealthyPiG_10.05");
 
-% Add ezc3d package
-addpath(".\ezc3d_matlab");
-
 % Add PROST package root to path
 toolbox_root = split(script_folder, filesep);
 toolbox_root = fullfile(toolbox_root{1:end-2});
 addpath(toolbox_root); % Add PROST package to path
+
+% Add ezc3d package
+addpath(fullfile(toolbox_root, "lib-ext", "ezc3d_matlab"));
 
 %%
 raw_data(138) = struct;

@@ -1,28 +1,29 @@
 %% Initialize script - DO NOT CHANGE
-clearvars -except DB_4
-close all; 
+clearvars -except good_trials raw_data all_metadata -regexp ^Dataset\w*
+close all
 clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script
 cd(script_folder);
 
+% Define data files folder
+data_path = "..\Data Files";
+
 % Add PROST package root to path
 toolbox_root = split(script_folder, filesep);
-iPROST = find(strcmp(toolbox_root, "PROST"), 1, "last");
-toolbox_root = fullfile(toolbox_root{1:iPROST});
+toolbox_root = fullfile(toolbox_root{1:end-2});
 addpath(toolbox_root); % Add PROST package to path
 
-set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 % Load dataset for testing
-if ~exist("DB_4", "var")
-    [filename, location] = uigetfile('*.mat', "", "DB_4.mat");
-    load(fullfile(location, filename));
+if ~exist("Dataset_4", "var")
+    load("../../Dataset_4.mat");
 end
-DB = DB_4;
+Dataset = Dataset_4;
 
-% Dataset parametersniform
+% Dataset parameters information
 dataset_ankle_marker_name = "ANK"; % Ankle marker name
 dataset_knee_marker_name = "KNE"; % Knee marker name
 dataset_n_steps = 3; % number of steps per trial
@@ -31,17 +32,17 @@ dataset_sides_uniform = ["right", "left"]; % side names in uniform format
 dataset_sides_original = ["R", "L"]; % side names in original dataset
 cmaps = dictionary("right", "summer", "left", "autumn"); % color maps for plotting sides
 
-%% Change according to your test
+%% Input according to your test
 % Which participant to test?
 % Define:
 % participants - list of participants to test. Leave empty to test all
 % participants in the dataset.
-participants = [1 50 100 138];
-% prompt = "Which participant to test?\n" + ...
-%          "Define a list of participants to test.\n" + ...
-%          "Leave empty to test all participants in the dataset.\n";
-% participants = input(prompt);
-% n_participants = length(participants);
+% participants = [1 50 100 138];
+prompt = "Which participant to test?\n" + ...
+         "Define a list of participants to test.\n" + ...
+         "Leave empty to test all participants in the dataset.\n";
+participants = input(prompt);
+n_participants = length(participants);
 
 
 % Which trials to test?
@@ -58,52 +59,52 @@ participants = [1 50 100 138];
 % trials and steps equivalent to the steps chosen previously for the uniform 
 % format data.
 % Example: {1, [1 2]; 2 []}
-how_to_test_trials = 2;
-n_steps = 2;
-tests_uniform.right = [1 2]; % specific step numbers to test from the uniform format
-tests_uniform.left = [1 2]; % specific step numbers to test from the uniform format
-tests_processed_orig = {}; % specific trial numbers and step numbers to test
-% n_steps = 0;
-% tests_uniform = []; % specific step numbers to test from the uniform format
+% how_to_test_trials = 2;
+% n_steps = 2;
+% tests_uniform.right = [1 2]; % specific step numbers to test from the uniform format
+% tests_uniform.left = [1 2]; % specific step numbers to test from the uniform format
 % tests_processed_orig = {}; % specific trial numbers and step numbers to test
-% while true
-%     prompt = "Which trials to test?\n" + ...
-%              "1 - Define the number of steps to test for each side.\n" + ...
-%              "    Steps are evenly distributed.\n" + ...
-%              "    This is for both uniform format data and processed original data.\n" + ...
-%              "2 - Define lists of specific steps and trials to test for the uniform format data\n" + ...
-%              "    and the processed original data.\n";
-%     how_to_test_trials = input(prompt);
-%     if how_to_test_trials == 1
-%         prompt = "How mant steps to test for each side?\n" + ...
-%                  "If there are less steps for a particular participant, then tests all steps.\n";
-%         n_steps = input(prompt);
-%         break
-%     elseif how_to_test_trials == 2
-%         prompt = "Define a list of specific step numbers for each side of the uniform format.\n" + ...
-%                  "Missing steps are ignored.\n" + ...
-%                  "Example: [1 2 3].\n";
-%         fprintf(prompt);
-% 
-%         % specific step numbers for both sides to test from the uniform format data
-%         prompt = dataset_sides_uniform(1) + ":\n";
-%         tests_uniform.(dataset_sides_uniform(1)) = input(prompt);
-%         prompt = dataset_sides_uniform(2) + ":\n";
-%         tests_uniform.(dataset_sides_uniform(2)) = input(prompt);
-% 
-%         % specific trial numbers and step numbers to test from the processed original data
-%         prompt = "Define a list of specific trial numbers and step numbers (at most " + dataset_n_steps + " steps) for each of the trials from the processed original data.\n" + ...
-%                  "Leave empty to use the  trials and steps equivalent to the steps chosen previously for the uniform format data.\n" + ...
-%                  "You can also define trial numbers without step numbers to test all " + dataset_n_steps + " steps.\n" + ...
-%                  "Bad quality steps are ignored.\n" + ...
-%                  "Example: {1, [1 2]; 2 []; 3, [1]}\n";
-%         tests_processed_orig = input(prompt);
-%         break
-%     end
-% end
+n_steps = 0;
+tests_uniform = []; % specific step numbers to test from the uniform format
+tests_processed_orig = {}; % specific trial numbers and step numbers to test
+while true
+    prompt = "Which trials to test?\n" + ...
+             "1 - Define the number of steps to test for each side.\n" + ...
+             "    Steps are evenly distributed.\n" + ...
+             "    This is for both uniform format data and processed original data.\n" + ...
+             "2 - Define lists of specific steps and trials to test for the uniform format data\n" + ...
+             "    and the processed original data.\n";
+    how_to_test_trials = input(prompt);
+    if how_to_test_trials == 1
+        prompt = "How mant steps to test for each side?\n" + ...
+                 "If there are less steps for a particular participant, then tests all steps.\n";
+        n_steps = input(prompt);
+        break
+    elseif how_to_test_trials == 2
+        prompt = "Define a list of specific step numbers for each side of the uniform format.\n" + ...
+                 "Missing steps are ignored.\n" + ...
+                 "Example: [1 2 3].\n";
+        fprintf(prompt);
+
+        % specific step numbers for both sides to test from the uniform format data
+        prompt = dataset_sides_uniform(1) + ":\n";
+        tests_uniform.(dataset_sides_uniform(1)) = input(prompt);
+        prompt = dataset_sides_uniform(2) + ":\n";
+        tests_uniform.(dataset_sides_uniform(2)) = input(prompt);
+
+        % specific trial numbers and step numbers to test from the processed original data
+        prompt = "Define a list of specific trial numbers and step numbers (at most " + dataset_n_steps + " steps) for each of the trials from the processed original data.\n" + ...
+                 "Leave empty to use the  trials and steps equivalent to the steps chosen previously for the uniform format data.\n" + ...
+                 "You can also define trial numbers without step numbers to test all " + dataset_n_steps + " steps.\n" + ...
+                 "Bad quality steps are ignored.\n" + ...
+                 "Example: {1, [1 2]; 2 []; 3, [1]}\n";
+        tests_processed_orig = input(prompt);
+        break
+    end
+end
 %% Loop over uniform format data
 if isempty(participants)
-    n_participants = numel(fieldnames(DB.Data));
+    n_participants = numel(fieldnames(Dataset.Data));
     participants = 1:n_participants;
 end
 
@@ -120,7 +121,7 @@ for particpant_num=participants % all participants
     if how_to_test_trials == 1
         for side=dataset_sides_uniform
             % Get step numbers to test
-            total_steps = length(DB.Data.(participant_name).uniform_data.(side).step);
+            total_steps = length(Dataset.Data.(participant_name).uniform_data.(side).step);
             if n_steps < total_steps
                 tests_uniform.(side) = round(linspace(1, total_steps, n_steps));
             else
@@ -137,7 +138,7 @@ for particpant_num=participants % all participants
         for step_num=tests_uniform.(side)
             % Get trial (if exists)
             try
-                step = DB.Data.(participant_name).uniform_data.(side).step(step_num);
+                step = Dataset.Data.(participant_name).uniform_data.(side).step(step_num);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -244,7 +245,7 @@ end % particpant_num
 
 %% Loop over processed original data
 if isempty(participants)
-    n_participants = numel(fieldnames(DB.Data));
+    n_participants = numel(fieldnames(Dataset.Data));
     participants = 1:n_participants;
 end
 
@@ -267,8 +268,8 @@ for particpant_num=participants
         for side=dataset_sides_uniform
             for step_num=tests_uniform.(side)
                 try
-                    trial_num = DB.Data.(participant_name).uniform_data.(side).step(step_num).source.original_trial_number_in_database;
-                    step_num = DB.Data.(participant_name).uniform_data.(side).step(step_num).source.step_number;
+                    trial_num = Dataset.Data.(participant_name).uniform_data.(side).step(step_num).source.original_trial_number_in_database;
+                    step_num = Dataset.Data.(participant_name).uniform_data.(side).step(step_num).source.step_number;
                 catch ME
                     if ME.identifier == 'MATLAB:badsubscript'
                         continue;
@@ -289,7 +290,7 @@ for particpant_num=participants
     for tdx=1:size(test_trials, 1)
         trial_num = test_trials{tdx, 1};
         step_nums = test_trials{tdx, 2};
-        trial = DB.Data.(participant_name).processed_original_data.trial(trial_num);
+        trial = Dataset.Data.(participant_name).processed_original_data.trial(trial_num);
         for step_num=step_nums
             % Get step info
             step_info = trial.("step_" + step_num + "_info");

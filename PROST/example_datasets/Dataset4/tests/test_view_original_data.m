@@ -1,3 +1,8 @@
+% % 11.01.2026, Chen Reichsbouscher TODO: make sure credit is ok
+%
+% Modified from ExampleCode_LoadStruct_PlotTimeNormVar_v1.m:
+% 19.09.2023, Lizeth Sloot, Heidelberg University / Newcastle University.
+% ------------------------------------------------------------------------------
 % READ-IN AND PLOT TIME-NORMALIZED DATA STRUCTURES AND ORIGINAL RAW DATA
 % Example code to use the structure.
 %
@@ -8,9 +13,6 @@
 % output: 
 % Figure of the selected variable of interest (.fig and .png)
 %
-% 11.01.2026, Chen Reichsbouscher
-%
-% Modified from ExampleCode_LoadStruct_PlotTimeNormVar_v1.m:
 % 19.09.2023, Lizeth Sloot, Heidelberg University / Newcastle University.
 %
 % MIT License:
@@ -35,15 +37,27 @@
 % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 % SOFTWARE.
 
-close all
-clear all
-clc
+clc; close all; clearvars -except -regexp ^Dataset\w*
+
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
+
+% Define data files folder
+data_path = "..\Data Files";
+
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+i_end = find(matches(toolbox_root, "PROST"), 1, "last");
+toolbox_root = fullfile(toolbox_root{1:i_end});
+addpath(toolbox_root); % Add PROST package to path
+
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as undocked windows 
 
 %% General Settings
 
 %%% 1. Set path to directory of the Structure you want to load!
-f = split(pwd, filesep);
-settings.mainDir = fullfile(join(f(1:end-1), filesep), "Data Files");
+settings.mainDir = data_path;
 
 %%% 2. Load Structure
 % Give the name of the structure you want to load:
@@ -62,7 +76,6 @@ settings.SaveDir = fullfile(settings.mainDir,'Figures');
 % For Able bodied (MAT_normalizedData_AbleBodiedAdults_v06-03-23), this is
 % left and right (or SideSegm = 'LR')
 settings.SideSegm = 'LR';
-settings.oppositeSideMap = dictionary('L', {'R'}, 'R', {'L'});
 
 % Both sides are plotted in a different color and line type. 
 % note, first side (defined above) will get the first color.
@@ -77,9 +90,10 @@ settings.LineWidth = 1.5;
 settings.nCol = 12;        
 settings.nRow = 12;    
 
-% 5. Raw data settings
+% Mappings for code - Do not change
 settings.dimensionMap = dictionary('x', 1, 'y', 2, 'z', 3, 'n', 1);
 settings.FPVariableMap = dictionary('GroundReactionForce', 'force', 'GroundReactionMoment', 'moment', 'CenterOfPressure', 'center_of_pressure');
+settings.oppositeSideMap = dictionary('L', {'R'}, 'R', {'L'});
 
 
 %% Select the data you want to plot
@@ -112,11 +126,11 @@ SideData = {'I', 'C'};
 % SideData = {'L'};
 
 % Get Screen size
-scrsz = get(0,'ScreenSize');
-scrplt.x(1) = round( scrsz(3)*0.05 );
-scrplt.x(2) = round( scrsz(3)*0.75 );
-scrplt.y(1) = round( scrsz(4)*0.05 );
-scrplt.y(2) = round( scrsz(4)*0.75 );
+% scrsz = get(0,'ScreenSize');
+% scrplt.x(1) = round( scrsz(3)*0.05 );
+% scrplt.x(2) = round( scrsz(3)*0.75 );
+% scrplt.y(1) = round( scrsz(4)*0.05 );
+% scrplt.y(2) = round( scrsz(4)*0.75 );
 
 %% Plot Time Normalized Data
 % Graph per var:
@@ -124,8 +138,7 @@ for iVar = 1:length(variables)
     disp(['Working on plotting var from time normalzied data: ',variables{iVar}])
     
     % Initiate figure
-    figure, set(gcf,'name',variables{iVar},'color',[1 1 1],'position',...
-        [scrplt.x(1) scrplt.y(1) scrplt.x(2) scrplt.y(2)])    
+    figure, set(gcf,'name',variables{iVar},'color',[1 1 1]);    
     
     % Plot individual data
     tiledlayout%(settings.nCol,settings.nRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
@@ -192,9 +205,9 @@ end % iVar
 
 
 %% Get Good Trials
-opts = detectImportOptions("41597_2023_2767_MOESM1_ESM.xlsx", ...
+opts = detectImportOptions(fullfile(data_path, "41597_2023_2767_MOESM1_ESM.xlsx"), ...
     "Sheet","Table 3","ReadVariableNames",false);
-Tgood = readtable("41597_2023_2767_MOESM1_ESM.xlsx",opts);
+Tgood = readtable(fullfile(data_path, "41597_2023_2767_MOESM1_ESM.xlsx"),opts);
 
 unsorted_good_trials = struct([]);
 subjCounter = 0;
@@ -274,9 +287,9 @@ end
 good_trials = unsorted_good_trials(order);
 
 %% Get Subject Metadata
-opts = detectImportOptions("41597_2023_2767_MOESM1_ESM.xlsx", ...
+opts = detectImportOptions(fullfile(data_path, "41597_2023_2767_MOESM1_ESM.xlsx"), ...
     "Sheet","Table 1","ReadVariableNames",false);
-Tmetadata = readtable("41597_2023_2767_MOESM1_ESM.xlsx",opts);
+Tmetadata = readtable(fullfile(data_path, "41597_2023_2767_MOESM1_ESM.xlsx"),opts);
 unsorted_metadata = struct([]);
 subjCounter = 0;
 
@@ -314,14 +327,11 @@ end
 metadata = unsorted_metadata(order);
 
 %% Plot Raw Data
-addpath("C:\Users\chenr\Documents\PROST\PROST\example_datasets\DB4\ezc3d_matlab")
-
 % Graph per var:
 for iVar = 1:length(variables)
     disp(['Working on plotting var from raw data: ',variables{iVar}])
     % Initiate figure
-    figure, set(gcf,'name',variables{iVar},'color',[1 1 1],'position',...
-        [scrplt.x(1) scrplt.y(1) scrplt.x(2) scrplt.y(2)])    
+    figure, set(gcf,'name',variables{iVar},'color',[1 1 1]);    
 
     % Plot individual data
     tiledlayout%(settings.nCol,settings.nRow, 'Padding', 'none', 'TileSpacing', 'compact'); 
@@ -355,14 +365,14 @@ for iVar = 1:length(variables)
             FootOffs = {};
             for iSegment=1:length(settings.SideSegm)
                 if strcmp(settings.SideSegm(iSegment), 'L')
-                    iSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Left');
+                    iEventSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Left');
                 else
-                    iSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Right');
+                    iEventSide = strcmp(c3d.parameters.EVENT.CONTEXTS.DATA, 'Right');
                 end
                 iFootStrike = strcmp(c3d.parameters.EVENT.LABELS.DATA, 'Foot Strike');
                 iFootOff = strcmp(c3d.parameters.EVENT.LABELS.DATA, 'Foot Off');
-                FootStrikes{iSegment} = sort(event_times(iSide & iFootStrike));
-                FootOffs{iSegment} = sort(event_times(iSide & iFootOff));
+                FootStrikes{iSegment} = sort(event_times(iEventSide & iFootStrike));
+                FootOffs{iSegment} = sort(event_times(iEventSide & iFootOff));
             end % iSegment
 
             forceplates = good_trials(iSub).trials(iTrial).forceplates;
@@ -391,43 +401,63 @@ for iVar = 1:length(variables)
                     data = fp(fp_num).(settings.FPVariableMap(variables{iVar}))(settings.dimensionMap(Dims{iVar}), :) ./ mass; % normalize by mass
                     data_filt = filter_data(data, fp_sampling_freq);
                     time = (0:length(data_filt) - 1) ./ fp_sampling_freq;
-                    [IC_indices, iIC, TO_indices, iTO] = find_event_indices(data_filt, time, FootStrikes{iSegment}, FootOffs{iSegment});
-                    IC_index = contacts_start(idx);
-                    if idx + 2 <= n_forceplates && contacts_start(idx + 2) > contacts_start(idx)
-                        IC_next_index = contacts_start(idx + 2);
-                    elseif idx - 2 >= 1 && contacts_start(idx - 2) > contacts_start(idx)
-                        IC_next_index = contacts_start(idx - 2);
-                    else
-                        IC_next_index = IC_indices(iIC + 1);
-                    end
-                    data_interp = interp1(IC_index:IC_next_index, data_filt(IC_index:IC_next_index), linspace(IC_index, IC_next_index, 1001));
-                    h = [h plot(0:10:1000, data_interp(1:10:end), LineWidth=settings.LineWidth)];
-                end
+                    for iSide = 1:strlength(SideData{iVar})
+                        if strcmp(SideData{iVar}(iSide), 'I')
+                            side = settings.SideSegm(iSegment);
+                        elseif strcmp(SideData{iVar}(iSide), 'C')
+                            side = settings.oppositeSideMap{settings.SideSegm(iSegment)};
+                        else
+                            side = SideData{iVar}(iSide);
+                        end
+                        iEventSide = strfind(settings.SideSegm, side);
+                        [IC_indices, iIC, TO_indices, iTO] = find_event_indices(data_filt, time, FootStrikes{iEventSide}, FootOffs{iEventSide});
+                        IC_index = contacts_start(idx);
+                        if idx + 2 <= n_forceplates && contacts_start(idx + 2) > contacts_start(idx)
+                            IC_next_index = contacts_start(idx + 2);
+                        elseif idx - 2 >= 1 && contacts_start(idx - 2) > contacts_start(idx)
+                            IC_next_index = contacts_start(idx - 2);
+                        else
+                            IC_next_index = IC_indices(iIC + 1);
+                        end
+                        data_interp = interp1(IC_index:IC_next_index, data_filt(IC_index:IC_next_index), linspace(IC_index, IC_next_index, 1001));
+                        h = [h plot(0:10:1000, data_interp(1:10:end), LineWidth=settings.LineWidth, DisplayName="FP" + fp_num + " " + segments(idx))];
+                    end % iSide
+                end % idx
             else
                 for iSegment=1:length(settings.SideSegm)
-                    iOppositeSegment = strfind(settings.SideSegm, settings.oppositeSideMap{settings.SideSegm(iSegment)});
+                    segment = settings.SideSegm(iSegment);
                     var_idx = find(strcmp(c3d.parameters.POINT.LABELS.DATA, [settings.SideSegm(iSegment), variables{iVar}]));
                     data = squeeze(c3d.data.points(settings.dimensionMap(Dims{iVar}), var_idx, :));
-                    data_filt = data; % filter_data(data, fp_sampling_freq);
+                    data_filt = filter_data(data, markers_sampling_freq);
                     time = (0:length(data)-1) ./ markers_sampling_freq;
-                    [IC_indices, iIC, TO_indices, iTO] = find_event_indices(data_filt, time, FootStrikes{iOppositeSegment}, FootOffs{iOppositeSegment});
-                    IC_index = IC_indices(iIC);
-                    IC_next_index = IC_indices(iIC + 1);
-                    % if idx + 2 <= n_forceplates && contacts_start(idx + 2) > contacts_start(idx)
-                    %     IC_next_index = contacts_start(idx + 2);
-                    % elseif idx - 2 >= 1 && contacts_start(idx - 2) > contacts_start(idx)
-                    %     IC_next_index = contacts_start(idx - 2);
-                    % else
-                    %     IC_next_index = IC_indices(iIC + 1);
-                    % end
-                    data_interp = interp1(IC_index:IC_next_index, data_filt(IC_index:IC_next_index), linspace(IC_index, IC_next_index, 1001));
-                    h = [h plot(0:10:1000, data_interp(1:10:end), LineWidth=settings.LineWidth)];
-                    % h = [h plot(time, data_filt, LineWidth=settings.LineWidth)];
+                    for iSide = 1:strlength(SideData{iVar})
+                        if strcmp(SideData{iVar}(iSide), 'I')
+                            side = settings.SideSegm(iSegment);
+                        elseif strcmp(SideData{iVar}(iSide), 'C')
+                            side = settings.oppositeSideMap{settings.SideSegm(iSegment)};
+                        else
+                            side = SideData{iVar}(iSide);
+                        end
+                        iEventSide = strfind(settings.SideSegm, side);
+                        [IC_indices, iIC, TO_indices, iTO] = find_event_indices(data_filt, time, FootStrikes{iEventSide}, FootOffs{iEventSide});
+                        IC_index = IC_indices(iIC);
+                        try
+                            IC_next_index = IC_indices(iIC + 1);
+                        catch
+                            continue
+                        end
+                        data_interp = interp1(IC_index:IC_next_index, data_filt(IC_index:IC_next_index), linspace(IC_index, IC_next_index, 1001));
+                        h = [h plot(0:10:1000, data_interp(1:10:end), LineWidth=settings.LineWidth, DisplayName=segment)];
+                        iStart = iTO;
+                        if iStart >= max(TO_indices)
+                            break
+                        end
+                    end % iSide
                 end % iSegment
-            end
+            end % matches
         end % iTrial
         ylabel(['Subno:', num2str(numID)])
-        legend(h, "FP" + subj_forceplates + " " + subj_segments)
+        legend(h)
     end % iSub
 end
 
@@ -457,7 +487,14 @@ function [ICindices, iIC, TOindices, iTO] = find_event_indices(step, time, FootS
     [~, iPeak] = max(step);
     
     [~, iIC] = min(abs(time(iPeak) - time(ICindices(ICindices <= iPeak))));
-    [~, iTO] = min(abs(time(iPeak) - time(TOindices)));
+    [~, iTO] = min(abs(time(iPeak) - time(TOindices(TOindices >= iPeak))));
+    if isempty(iIC)
+        iIC = 1;
+    end
+    if isempty(iTO)
+        iTO = length(time);
+    end
+        
 end
 
 function [contactStarts, contactEnds] = identify_events(step)
