@@ -181,6 +181,7 @@ classdef PROSTAnalyzer < handle
         % tf = is_in_summary_table(obj, dataset_id)
         % make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums, row_number, anatomical_side);
         % populate_table(obj, dataset_id, start_row, anatomical_side);
+        % update_num_included_summary(obj, dataset_ids);
     end
     
     %% STATIC METHODS

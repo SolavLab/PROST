@@ -30,7 +30,7 @@ function add_to_summary_table(obj, dataset_id)
     obj.SummaryTable.Speed_categories(entry_number) = dataset.Experiment_protocol.speed_categories;
     obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_protocol.num_participants;
     obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
-
+    
     % Example participant for existing data to check if participants are
     % shod and medial markers exist
     participant = dataset.Data(1);
@@ -41,4 +41,7 @@ function add_to_summary_table(obj, dataset_id)
         step = participant.Uniform_data.left.step(1);
     end
     obj.SummaryTable.Has_medial(entry_number) = ~isempty(step.Markers.Ankle.medial);
+
+    % Count all included participants and steps in dataset
+    obj.update_num_included_summary(dataset_id);
 end

@@ -54,5 +54,4 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
             end
         end
     end
-    obj.filter_data_by_bad_steps(dataset_id)
 end
