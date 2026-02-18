@@ -2,7 +2,6 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
 %PLOT_COP Summary of this function goes here
 %   Detailed explanation goes here
 
-    disp("Plotting COP...")
     % Prep Input Arguments
     if nargin < 6 || isempty(anatomical_side)
         anatomical_side = "lateral";
@@ -27,7 +26,9 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
     % Start plotting
     fig_counter = 0;
     if strcmp(show, 'off')
-        disp("Saving figures...")
+        fprintf("Saving COP...\n");
+    else
+        fprintf("Plotting COP...\n");
     end
     for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
@@ -172,6 +173,6 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
         end
     end
     if strcmp(show, 'off')
-        disp("All figures saved.")
+        fprintf("All figures saved.\n");
     end
 end

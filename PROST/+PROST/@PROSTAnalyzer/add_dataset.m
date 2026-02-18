@@ -1,24 +1,22 @@
-function dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right)
-%ADD_DATASET Adds a new dataset to data_records and to the feature
-% table.
+function dataset_id = add_dataset(obj, dataset_name, dataset)
+%ADD_DATASET Adds a new dataset to this object by adding it to the data records,
+% updating the summary table, and populating the samples table.
 % Input :
 %   dataset_name - the name of the dataset to add.
-%   dataset - the dataset struct to add.
-%   participants_to_ignore_left, participants_to_ignore_right -
-%   vectors of participant numbers to ignore for left and right
-%   steps respectively.
+%   dataset - struct containing dataset data in a uniform internal format.
 % Output :
-%   dataset_id - the unique ID of the added dataset.
+%   dataset_id - a generated unique ID of the added dataset. A positive integer 
+%                number.
+% NOTE:
+% Internal dataset indices are assigned in add_to_data_records and are
+% shared across data records and summary tables. DataRecordsIDLookup
+% provides the authoritative mapping from public dataset_id to internal
+% index.
 
-    disp("Adding dataset " + dataset_name + "...")
-
-    % Add to data records
+    fprintf("Adding dataset %s...\n", dataset_name);
+    
     dataset_id = obj.add_to_data_records(dataset_name, dataset);
-
-    % Add to summary table
     obj.add_to_summary_table(dataset_id);
-
-    % Add to samples table
     obj.add_samples(dataset_id);
 
     % Add to ignore list if there are participants to ignore

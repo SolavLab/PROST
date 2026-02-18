@@ -92,7 +92,7 @@ hold off
 
 %% Save figures
 figHandles = findall(0, 'Type', 'figure');
-disp("Saving figures...")
+fprintf("Saving figures...\n");
 for k = 1:numel(figHandles)
     f = figHandles(k);
     filepath = "..\figures\Speeds";

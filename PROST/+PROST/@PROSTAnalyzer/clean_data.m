@@ -5,7 +5,7 @@ function clean_data(obj, ignore_list)
 %   ignore_list - ROSIgnore object containing trials to ignore.
 
     obj.IgnoreObject = ignore_list;
-    disp("Filtering ignored data...")
+    fprintf("Filtering ignored data...\n");
     obj.filter_data_by_ignore();
-    disp("Data filtered.")
+    fprintf("Data filtered.\n");
 end

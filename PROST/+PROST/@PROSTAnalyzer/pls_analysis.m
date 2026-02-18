@@ -70,10 +70,10 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     ylabel('Percent Variance Explained in Y');
     grid on
     if strcmp(show, 'off')
-        disp("Saving figure...")
+        fprintf("Saving Percent Variance in Y...\n");
         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
         PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
-        disp("Figure saved.")
+        fprintf("Figure saved.\n");
     end
 
     fig = figure(Name="PLS:MSE per Num Components", Visible=show);
@@ -84,10 +84,10 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
     legend('MSE Predictors','MSE Response')
     xlabel('Number of Components')
     if strcmp(show, 'off')
-        disp("Saving figure...")
+        fprintf("Saving MSE per Num Components...\n");
         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
         PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
-        disp("Figure saved.")
+        fprintf("Figure saved.\n");
     end
 
     % Calculate PLS regression
@@ -133,9 +133,9 @@ function [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, fi
         grid(ax, "on");
     end
     if strcmp(show, 'off')
-        disp("Saving figures...")
+        fprintf("Saving Fit v.s. Data...\n");
         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/PLS");
         PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
-        disp("All figure saved.")
+        fprintf("All figure saved.\n");
     end
 end

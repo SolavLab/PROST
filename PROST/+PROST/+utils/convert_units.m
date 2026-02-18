@@ -23,7 +23,7 @@
         unit_in = freq_units(unit_in_name);
         unit_out = freq_units(unit_out_name);
     else
-        error("Both units need to be either of mass or of length.\n" + ...
+        error("Both units need to be either of mass, length, time or frequency.\n" + ...
               "The unit to convert from is %s and the unit to convert to is %s", unit_in_name, unit_out_name);
     end
     converted_value = value .* unit_out / unit_in;

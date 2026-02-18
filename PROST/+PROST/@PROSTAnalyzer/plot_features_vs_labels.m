@@ -10,7 +10,6 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 %          (default) for showing the figures or "off" for saving them.
 %   file_type - the type to save the figure if saved.
 
-    disp("Plotting Features vs Labels...")
     % Prep Input Arguments
     if nargin < 7
         file_type = [];
@@ -73,7 +72,9 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
     axes_counter = 0;
     fig_counter = 0;
     if strcmp(show, 'off')
-        disp("Saving figures...")
+        fprintf("Saving Features vs Labels...\n");
+    else
+        fprintf("Plotting Features vs Labels...\n");
     end
     for feature_index=1:n_features
         for label_index=1:n_labels
@@ -174,20 +175,8 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
             % Increment counter
             axes_counter = axes_counter + 1;
 
-            % % Create legend
+            % Save figures and reset axes counter
             if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
-                % Dummy plots for legend in last axes
-                % h_left = gobjects(n_dataset_ids_left, 1);
-                % h_right = gobjects(n_dataset_ids_right, 1);
-                % for i=unique_dataset_ids_left
-                %     h_left(i) = scatter(ax, NaN, NaN, marker_size, color_left, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Left Dataset" + i);
-                % end
-                % for i=unique_dataset_ids_right
-                %     h_right(i) = scatter(ax, NaN, NaN, marker_size, color_right, markers(i), MarkerEdgeColor="flat", MarkerFaceColor="flat", DisplayName="Right Dataset" + i);
-                % end
-                % lgd = legend([h_left h_right], FontSize=12, FontWeight="bold");
-                % lgd.Layout.Tile = 'east';
-
                 if strcmp(show, 'off')
                     file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Features vs Labels");
                     PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
@@ -198,6 +187,6 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
         end
     end
     if strcmp(show, 'off')
-        disp("All figures saved.")
+        fprintf("All figures saved.\n");
     end
 end

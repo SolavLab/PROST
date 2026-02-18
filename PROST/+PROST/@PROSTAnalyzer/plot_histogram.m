@@ -10,7 +10,6 @@ function plot_histogram(obj, var_name, normalizer_name, show, file_type, varargi
 %   file_type - the type to save the figure if saved.
 %   varargin - histogram parameters.
 
-    disp("Plotting Histogram...")
     if nargin < 5
         file_type = [];
     end
@@ -33,7 +32,9 @@ function plot_histogram(obj, var_name, normalizer_name, show, file_type, varargi
     end
     
     if strcmp(show, 'off')
-        disp("Saving figures...")
+        fprintf("Saving Histogram...\n");
+    else
+        fprintf("Plotting Histogram...\n");
     end
     fig_name = "Histogram:" + value_name;
     if any(strcmpi('pdf', varargin))
@@ -59,6 +60,6 @@ function plot_histogram(obj, var_name, normalizer_name, show, file_type, varargi
     if strcmp(show, 'off')
         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Histogram");
         PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
-        disp("All figures saved.")
+        fprintf("All figures saved.\n");
     end
 end

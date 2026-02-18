@@ -4,7 +4,7 @@ function delete_dataset(obj, dataset_id)
 %   dataset_id - the ID of the dataset to delete. A positive
 %                integer number.
 
-    disp("Deleting dataset " + dataset_id + "...")
+    fprintf("Deleting dataset %d\n...", dataset_id);
     if ~obj.dataset_exists(dataset_id)
         return
     end

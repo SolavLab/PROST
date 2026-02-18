@@ -77,7 +77,7 @@ classdef PROSTAnalyzer < handle
                 obj.toolbox_root = toolbox_root;
             end
             if nargin == 0 || isempty(load_list)
-                disp("Creating empty PROSTAnalyzer object...")
+                fprintf("Creating empty PROSTAnalyzer object...\n");
                 obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
                 obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
                 obj.SamplesTable = table('Size', [0 samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
@@ -88,7 +88,7 @@ classdef PROSTAnalyzer < handle
             end
                 
             % Loading data records
-            disp("Saving all datasets from load list...")
+            fprintf("Saving all datasets from load list:\n");
             n_datasets = size(load_list, 1);
             dataset_ids = NaN(n_datasets, 1);
             for dataset_idx=1:n_datasets
@@ -103,7 +103,7 @@ classdef PROSTAnalyzer < handle
                         "Load list is not in the correct format.\n" + ...
                         "Each element should be a pair of dataset and dataset name."));
                 end
-                disp("Adding dataset " + dataset_name + " to data records...")
+                fprintf("Adding dataset %s to data records...\n", dataset_name);
                 dataset_ids(dataset_idx) = obj.add_to_data_records(dataset_name, dataset);
             end
     
@@ -119,7 +119,7 @@ classdef PROSTAnalyzer < handle
             % Add to samples table data from datasets
             for dataset_idx=1:n_datasets
                 dataset_name = obj.get_dataset_name(dataset_ids(dataset_idx));
-                disp("Adding dataset " + dataset_name + " to summary table...")
+                fprintf("Adding dataset %s to summary table...\n", dataset_name);
                 obj.add_to_summary_table(dataset_ids(dataset_idx));
             end
     

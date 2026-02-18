@@ -7,7 +7,7 @@ function add_samples(obj, dataset_id)
     % Get the dataset
     dataset = obj.get_dataset(dataset_id);
     dataset_name = dataset.Dataset_name;
-    disp("Adding dataset " + dataset_name + " to samples table...")
+    fprintf("Adding dataset %s to samples table...\n", dataset_name);
     % Calculate number of rows needed to add to table
     n_participants = length(dataset.Data);
     start_row = obj.SamplesTableSize + 1;

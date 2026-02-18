@@ -35,7 +35,7 @@ function delete_samples(obj, flag, varargin)
         return
     end
     dataset_name = unique(obj.SamplesTable.Dataset_name(row_numbers));
-    disp("Deleting dataset " + join(dataset_name, ", ") + " from samples table...")
+    fprintf("Deleting datasets: %s from samples table...\n", join(dataset_name, ", "));
     obj.SamplesTable(row_numbers, :) = [];
     obj.SamplesTableSize = obj.SamplesTableSize - length(row_numbers);
     obj.PointClouds(row_numbers) = [];

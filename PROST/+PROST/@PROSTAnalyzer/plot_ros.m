@@ -12,7 +12,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
 %          (default) for showing the figures or "off" for saving them.
 %   file_type - the type to save the figure if saved.
 
-    disp("Plotting ROS...")
     % Prep Input Arguments
     if nargin < 6
         file_type = [];
@@ -43,7 +42,9 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
     % Start plotting
     fig_counter = 0;
     if strcmp(show, 'off')
-        disp("Saving figures...")
+        fprintf("Saving ROS...\n");
+    else
+        fprintf("Plotting ROS...\n");
     end
     for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
@@ -213,6 +214,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
         end
     end
     if strcmp(show, 'off')
-        disp("All figures saved.")
+        fprintf("All figures saved.\n");
     end
 end

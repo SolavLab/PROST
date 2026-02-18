@@ -23,7 +23,7 @@ function save_all_open_figures(file_path, sub_folders, file_type)
         sub_folders = extractBefore({fig_handles(:).Name}, ":"); % Create Subfolder
     end
 
-    disp("Saving figures...")
+    fprintf("Saving figures...\n");
 
     for k = 1:numel(fig_handles)
         % Get figure handle
@@ -56,5 +56,5 @@ function save_all_open_figures(file_path, sub_folders, file_type)
         end
     end
 
-    disp("All figures saved.")
+    fprintf("All figures saved.\n");
 end
