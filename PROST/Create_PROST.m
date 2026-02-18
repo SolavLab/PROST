@@ -1,4 +1,4 @@
-clearvars -except -regexp ^DB\w*
+clearvars -except -regexp ^Dataset\w*
 close all
 clc
 
@@ -12,10 +12,10 @@ cd(toolbox_root); % Change to folder of current script
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %% Build data
-db_list = ["DB_1", fullfile(dataset_dir, "DB_1.mat"); ...
-           "DB_2", fullfile(dataset_dir, "DB_2.mat"); ...
-           "DB_3", fullfile(dataset_dir, "DB_3.mat"); ...
-           "DB_4", fullfile(dataset_dir, "DB_4.mat")];
+db_list = ["Dataset_1", fullfile(dataset_dir, "Dataset_1.mat"); ...
+           "Dataset_2", fullfile(dataset_dir, "Dataset_2.mat"); ...
+           "Dataset_3", fullfile(dataset_dir, "Dataset_3.mat"); ...
+           "Dataset_4", fullfile(dataset_dir, "Dataset_4.mat")];
 
 var_names = db_list(:, 1);
 for index = 1:length(var_names)
@@ -27,28 +27,28 @@ end
 %% Load and ignore lists
 %   load_list - a cell array where each row contains pairs of dataset name and 
 %               path to the dataset. Example:
-%               {"DB 1 Name", "path/to/DB1.mat"; "DB 2 Name", "path/to/DB2.mat"}
-load_list = {DB_1, "Dataset 1"; ...
-             DB_2, "Dataset 2"; ... 
-             DB_3, "Dataset 3"; ...
-             DB_4, "Dataset 4"};
+%               {"Dataset 1 Name", "path/to/Dataset1.mat"; "Dataset 2 Name", "path/to/Dataset2.mat"}
+load_list = {Dataset_1, "Dataset 1"; ...
+             Dataset_2, "Dataset 2"; ... 
+             Dataset_3, "Dataset 3"; ...
+             Dataset_4, "Dataset 4"};
 n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
 [PROSTAnalyzer, dataset_ids] = PROST.PROSTAnalyzer(load_list, toolbox_root);
-DB_1_ID = dataset_ids(1);
-DB_2_ID = dataset_ids(2);
-DB_3_ID = dataset_ids(3);
-DB_4_ID = dataset_ids(4);
+Dataset_1_ID = dataset_ids(1);
+Dataset_2_ID = dataset_ids(2);
+Dataset_3_ID = dataset_ids(3);
+Dataset_4_ID = dataset_ids(4);
 
 %% Clean data
 % Some participants have bad data and should be ignored so we add them to an
 % ignored list
 ignore_list = PROST.PROSTDatasetList();
-ignore_list.add_to_list(DB_1_ID, [3 5 14 15 16], [], "Left");
-ignore_list.add_to_list(DB_1_ID, [5 14 15 16], [], "Right");
-ignore_list.add_to_list(DB_2_ID, [31], [], "Left");
-ignore_list.add_to_list(DB_3_ID, [43, 47], [], "Left");
+ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
+ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
+ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");
+ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left");
 
 PROSTAnalyzer.clean_data(ignore_list);
 

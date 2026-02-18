@@ -1,4 +1,4 @@
-clearvars -except PROSTAnalyzer -regexp ^DB\w*
+clearvars -except PROSTAnalyzer -regexp ^Dataset\w*
 close all
 clc
 
@@ -18,18 +18,19 @@ end
 
 dataset_ids = [PROSTAnalyzer.DataRecords.Dataset_id];
 dataset_names = [PROSTAnalyzer.DataRecords.Dataset_name];
-DB_1_ID = dataset_ids(matches(dataset_names, "Dataset 1"));
-DB_2_ID = dataset_ids(matches(dataset_names, "Dataset 2"));
-DB_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
-DB_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
+Dataset_1_ID = dataset_ids(matches(dataset_names, "Dataset 1"));
+Dataset_2_ID = dataset_ids(matches(dataset_names, "Dataset 2"));
+Dataset_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
+Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
 %% Plot data
 who_to_plot = PROST.PROSTDatasetList();
-who_to_plot.add_to_list(DB_1_ID);
-% who_to_plot.add_to_list(DB_2_ID);
-% who_to_plot.add_to_list(DB_3_ID);
-% who_to_plot.add_to_list(DB_4_ID);
-PROSTAnalyzer.plot_ros(who_to_plot, 12, 'azimuth', 'on', 'fig');
+% who_to_plot.add_to_list(Dataset_1_ID);
+% who_to_plot.add_to_list(Dataset_2_ID);
+% who_to_plot.add_to_list(Dataset_3_ID);
+% who_to_plot.add_to_list(Dataset_4_ID);
+who_to_plot.add_to_list(Dataset_4_ID, 1:12);
+PROSTAnalyzer.plot_ros(who_to_plot, 6, 'azimuth', 'on', 'fig');
 
 %% Analyze Residuals
 PROSTAnalyzer.plot_histogram("Residual", [], "Is_shod", "on", [], "Normalization", "pdf");
@@ -38,14 +39,15 @@ PROSTAnalyzer.plot_histogram("Residual", [], "Is_shod", "on", [], "Normalization
 PROSTAnalyzer.plot_histogram("Radius", "Height", "Is_shod", "on", [], "Normalization", "pdf");
 PROSTAnalyzer.plot_histogram("Center_x", "Height", "Is_shod", "on", [], "Normalization", "pdf");
 
+%TODO: find a way to also plot KDEs
 %% Plot Features vs Labels
 PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], "Height", 'on', 'fig')
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
-who_to_plot.add_to_list(DB_2_ID, 12, 1, "Left");
-who_to_plot.add_to_list(DB_4_ID, 1, 1, "Left");
-PROSTAnalyzer.plot_cop(who_to_plot, 12, 'on', 'fig');
+who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
+who_to_plot.add_to_list(Dataset_4_ID, 1, [1 2 3], "Left");
+PROSTAnalyzer.plot_cop(who_to_plot, 3, 'on', 'fig');
 
 %% PLS Regression
 % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
