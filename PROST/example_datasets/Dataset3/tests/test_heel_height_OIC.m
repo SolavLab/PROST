@@ -1,3 +1,4 @@
+% TEST_HEEL_OIC :
 % Tests the get_OIC_threshold function
 % Opposite initial contact between IC and TO.
 % We estimate it as the time where the other foot reaches the height 
@@ -8,19 +9,28 @@
 %    opposite foot).
 % 3. Use that height as the threshold of the heel height denoting 
 %    OIC for this trial.
-close all
-clear variables
-clc
+% ------------------------------------------------------------------------------
+clc; close all; clearvars -except -regexp ^Dataset\w*
 
-addpath("..\Data files")
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
 
-% Add path to PROST package
-addpath("C:\Users\chenr\Documents\PROST\");
+% Define data files folder
+data_path = "..\Data Files";
+
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+i_end = find(matches(toolbox_root, "PROST"), 1, "last");
+toolbox_root = fullfile(toolbox_root{1:i_end});
+addpath(toolbox_root); % Add PROST package to path
+
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %%
 for threshold_shift=[0 0.02 0.025 0.03 0.035 0.04]
     for participant_number=[6]
-        load("Data files\Subject" + num2str(participant_number) + ".mat")
+        load(fullfile(data_path, "Subject" + participant_number + ".mat"))
         n_markers = size(s.MarkerVarName, 1);
         n_grf = size(s.GrfVarName, 1);
     

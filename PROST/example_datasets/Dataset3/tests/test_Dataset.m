@@ -1,17 +1,27 @@
-clearvars -except DB_3; 
-close all; 
+clearvars -except good_trials raw_data all_metadata -regexp ^Dataset\w*
+close all
 clc
 
-addpath("../../Helper Functions/")
-addpath("../../")
-set(0, 'DefaultFigureWindowStyle', 'alwaysontop');
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
 
-if ~exist("DB_3", "var")
-    load("..\DB_3.mat");
+% Define data files folder
+data_path = "..\Data Files";
+
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
+
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+
+if ~exist("Dataset_3", "var")
+    load("../../Dataset_3.mat");
 end
 %% Change accordingly to your test
 % What database to test
-DB = DB_3;
+Dataset = Dataset_3;
 
 % Database relevant marker names
 ankle_marker_name = "LatMal";
@@ -39,7 +49,7 @@ for particpant_num=participants
     tiledlayout(f, "flow")
 
     if isempty(trials_test)
-        total_trials = min(length(DB.Data.(p).uniform_data.left.step), length(DB.Data.(p).uniform_data.right.step));
+        total_trials = min(length(Dataset.Data.(p).uniform_data.left.step), length(Dataset.Data.(p).uniform_data.right.step));
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else
@@ -52,7 +62,7 @@ for particpant_num=participants
         nexttile
         for side=sides.uniform
             try
-                trial = DB.Data.(p).uniform_data.(side).step(t);
+                trial = Dataset.Data.(p).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     continue;
@@ -87,7 +97,7 @@ for particpant_num=participants
     tiledlayout(f, "flow")
     for side=sides.uniform
        if isempty(trials_test)
-            total_trials = length(DB.Data.(p).uniform_data.(side).step);
+            total_trials = length(Dataset.Data.(p).uniform_data.(side).step);
             if n_trials < total_trials
                 trials = round(linspace(1, total_trials, n_trials));
             else 
@@ -98,7 +108,7 @@ for particpant_num=participants
         end
         for t=trials
             try
-                trial = DB.Data.(p).uniform_data.(side).step(t);
+                trial = Dataset.Data.(p).uniform_data.(side).step(t);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
                     % nexttile
@@ -156,7 +166,7 @@ for particpant_num=participants
     f = figure(Name=p + " Processed Original");
     tiledlayout
     if isempty(trials_test)
-        total_trials = length(DB.Data.(p).processed_original_data.trial);
+        total_trials = length(Dataset.Data.(p).processed_original_data.trial);
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else 
@@ -166,7 +176,7 @@ for particpant_num=participants
        trials = trials_test;
     end
     for t=trials
-        trial = DB.Data.(p).processed_original_data.trial(t);
+        trial = Dataset.Data.(p).processed_original_data.trial(t);
         for step_num=step_nums
             step_info = trial.("step_" + step_num + "_info");
             side = step_info.foot;
@@ -233,7 +243,7 @@ for particpant_num=participants
     f = figure(Name=p + " Forceplate Data");
     tiledlayout;
     if isempty(trials_test)
-        total_trials = length(DB.Data.(p).processed_original_data.trial);
+        total_trials = length(Dataset.Data.(p).processed_original_data.trial);
         if n_trials < total_trials
             trials = round(linspace(1, total_trials, n_trials));
         else 
@@ -243,7 +253,7 @@ for particpant_num=participants
        trials = trials_test;
     end
     for t=trials
-        trial = DB.Data.(p).processed_original_data.trial(t);
+        trial = Dataset.Data.(p).processed_original_data.trial(t);
         h = [];
         for step_num=step_nums
             step_info = trial.("step_" + step_num + "_info");

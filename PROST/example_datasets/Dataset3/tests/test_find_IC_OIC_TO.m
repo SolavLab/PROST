@@ -1,3 +1,4 @@
+% TEST_FIND_IC_OIC_TO :
 % The point of this is to find IC, OIC and TO of step.
 % Each trial is comprised of a step phase which includes 2 steps. The GRF
 % and COP data etc. was cut to only show single support from a single force 
@@ -9,12 +10,28 @@
 % the heel and toe of the other foot during that trial.
 % Where do they indicate OIC? Maybe look at a different trial where the
 % other foot was the main foot and see how IC looks for that foot.
+% ------------------------------------------------------------------------------
+clc; close all; clearvars -except -regexp ^Dataset\w*
 
-clear variables; close all; clc;
-addpath("..\Helper Functions\")
+script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder);
+
+% Define data files folder
+data_path = "..\Data Files";
+
+% Add PROST package root to path
+toolbox_root = split(script_folder, filesep);
+i_end = find(matches(toolbox_root, "PROST"), 1, "last");
+toolbox_root = fullfile(toolbox_root{1:i_end});
+addpath(toolbox_root); % Add PROST package to path
+
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+
+%%
 subjects = [1 5 10 25 50];
 for subject=subjects
-    load("Data files\Subject" + num2str(subject) + ".mat");
+    load(fullfile(data_path, "Subject" + subject + ".mat"));
     
     % make a vector with only the numbers of the walking trials:
     walking_data = s.Data(matches({s.Data.Task}, 'Walking'));
@@ -127,6 +144,3 @@ for subject=subjects
     plot(cut_marker_time + R_marker_time(skip_idx), cut_left_toe, '--', LineWidth=2, DisplayName="Left Toe (L)")
     plot(cut_marker_time + R_marker_time(skip_idx), cut_right_toe, '--', LineWidth=2, DisplayName="Right Toe (L)")
 end
-
-TileFigures
-
