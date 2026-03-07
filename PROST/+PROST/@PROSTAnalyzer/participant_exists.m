@@ -12,7 +12,7 @@ function tf = participant_exists(obj, dataset_id, participant_id)
 %        false (logical 1) otherwise.
 
     if ~obj.dataset_exists(dataset_id)
-        error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+        throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
             "Dataset %d not in data records.", dataset_id));
     end
     if isscalar(participant_id) && isnumeric(participant_id) && participant_id > 0 && participant_id == floor(participant_id)
@@ -20,7 +20,7 @@ function tf = participant_exists(obj, dataset_id, participant_id)
         participants = [obj.DataRecords(index).Data(:).Participant_id];
         tf = ismember(participant_id, participants);
     else
-        error(PROST.PROSTError("ParticipantID", "WrongFormat",...
+        throw(PROST.PROSTError("ParticipantID", "WrongFormat",...
             "Participant ID should be a positive integer number."));
     end
 

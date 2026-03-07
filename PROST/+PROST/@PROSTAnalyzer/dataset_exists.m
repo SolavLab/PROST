@@ -11,7 +11,7 @@ function tf = dataset_exists(obj, dataset_id)
     if isscalar(dataset_id) && isnumeric(dataset_id) && dataset_id > 0 && dataset_id == floor(dataset_id)
         tf = isKey(obj.DataRecordsIDLookup, dataset_id);
     else
-        error(PROST.PROSTError("DatasetID", "WrongFormat",...
+        throw(PROST.PROSTError("DatasetID", "WrongFormat",...
             "Dataset ID should be a positive integer number."));
     end
 end

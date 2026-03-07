@@ -8,7 +8,7 @@ function dataset = get_dataset(obj, dataset_id)
 %             doesn't exist.
 
     if ~obj.dataset_exists(dataset_id)
-        error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+        throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
             "Dataset %d not in data records.", dataset_id));
     end
     index = obj.DataRecordsIDLookup(dataset_id);

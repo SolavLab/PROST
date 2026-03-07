@@ -12,7 +12,7 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
     % Get dataset
     dataset = obj.get_dataset(dataset_id);
 
-    % Default anthropometric side is just lateral
+    % Default anatomical side is just lateral
     if nargin < 4
         anatomical_side = "lateral";
     end
@@ -20,15 +20,16 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
     % Check table is large enough for new data
     n_participants = length(dataset.Data);
     if size(obj.SamplesTable, 1) < start_row + obj.NUM_SIDES*n_participants - 1
-        error(PROST.PROSTError("SamplesTable", "AllocationError", ...
+        throw(PROST.PROSTError("SamplesTable", "AllocationError", ...
             "Not enough rows allocated to samples table.\n""" + ...
             "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.SamplesTable, 1)));
     end
 
     % Check if anatomical_side exists
     if ~obj.has_medial(dataset_id) && anatomical_side == "medial"
-        error(PROST.PROSTError("SamplesTable", "MissingMedial", ...
-            "Dataset does not contain medial markers."));
+        dataset_name = obj.get_dataset_name(dataset_id);
+        throw(PROST.PROSTError("SamplesTable", "MissingMedial", ...
+            "Dataset %s does not contain medial marker trajectories.", dataset_name));
     end
 
     % Loop over participants of dataset and process data of each

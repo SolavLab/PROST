@@ -14,7 +14,7 @@ function [features, names, units, types] = get_features(obj, list)
         idx = idx & ismember(string(obj.SamplesTable.Properties.VariableNames), list);
     end
     if ~any(idx)
-        error(PROST.PROSTError("SamplesTable", "FeatureDoesNotExist", ...
+        throw(PROST.PROSTError("SamplesTable", "FeatureDoesNotExist", ...
             "The features %s do not exist.", string(mat2str(list))));
     end
     names = obj.SamplesTable.Properties.VariableNames(idx);

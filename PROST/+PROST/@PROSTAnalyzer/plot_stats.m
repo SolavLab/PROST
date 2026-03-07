@@ -29,7 +29,7 @@ function fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, mode
     % Get variable
     var = obj.get_samples(var_name);
     if ~strcmp(var.Properties.VariableTypes, "double")
-        error(PROST.PROSTError("VariableType", "WrongVariableType", ...
+        throw(PROST.PROSTError("VariableType", "WrongVariableType", ...
                 "The chosen variable must be of numeric type but is of type %s", var.Properties.VariableTypes));
     end
     value = var.(var_name);
@@ -44,7 +44,7 @@ function fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, mode
     else
         cat_var = obj.get_samples(categorizer_name);
         if ~strcmp(cat_var.Properties.VariableTypes, "categorical")
-            error(PROST.PROSTError("VariableType", "WrongVariableType", ...
+            throw(PROST.PROSTError("VariableType", "WrongVariableType", ...
                 "The chosen category variable must be of categorical type but is of type %s", cat_var.Properties.VariableTypes));
         end
         categorizer = cat_var.(categorizer_name);
@@ -59,7 +59,7 @@ function fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, mode
     else
         normalizer = obj.get_samples(normalizer_name);
         if ~strcmp(normalizer.Properties.VariableTypes, "double")
-            error(PROST.PROSTError("SamplesVariable", "WrongVariableType", ...
+            throw(PROST.PROSTError("SamplesVariable", "WrongVariableType", ...
                 "The chosen normalizer must be of numeric type but is of type %s", var.Properties.VariableTypes));
         end
         try

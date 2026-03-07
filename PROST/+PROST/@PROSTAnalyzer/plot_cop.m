@@ -42,7 +42,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
         % Get data
         dataset_id = who_to_plot.List(i).Dataset_id;
         if ~obj.dataset_exists(dataset_id)
-            error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+            throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
                 "Dataset %d not in data records.", dataset_id));
         end
         dataset = obj.get_dataset(dataset_id);

@@ -6,7 +6,7 @@ function set_dataset(obj, dataset_id, dataset)
 %   dataset - the dataset object.
 
     if ~obj.dataset_exists(dataset_id)
-        error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+        throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
             "Dataset %d not in data records.", dataset_id));
     end
     index = obj.DataRecordsIDLookup(dataset_id);

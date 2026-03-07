@@ -25,7 +25,7 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
     
     for dataset_id=dataset_ids
         if ~obj.dataset_exists(dataset_id)
-            error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+            throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
                 "Dataset %d not in data records.", dataset_id));
         end
         dataset_index = obj.DataRecordsIDLookup(dataset_id);

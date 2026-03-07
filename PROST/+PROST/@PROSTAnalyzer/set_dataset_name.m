@@ -6,7 +6,7 @@ function set_dataset_name(obj, dataset_id, dataset_name)
 %   dataset_name - the new name to set.
 
     if ~obj.dataset_exists(dataset_id)
-        error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+        throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
             "Dataset %d not in data records.", dataset_id));
     end
     index = obj.DataRecordsIDLookup(dataset_id);

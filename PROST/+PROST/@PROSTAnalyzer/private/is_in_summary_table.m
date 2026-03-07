@@ -9,7 +9,7 @@ function tf = is_in_summary_table(obj, dataset_id)
     if isscalar(dataset_id) && isnumeric(dataset_id) && dataset_id > 0 && dataset_id == floor(dataset_id)
         tf = ismember(obj.SummaryTable.Dataset_id, dataset_id);
     else
-        error(PROST.PROSTError("DatasetID", "WrongFormat",...
+        throw(PROST.PROSTError("DatasetID", "WrongFormat",...
             "Dataset ID should be a positive integer number."));
     end
 end

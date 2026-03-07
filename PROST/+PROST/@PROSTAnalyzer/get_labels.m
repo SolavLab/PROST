@@ -14,7 +14,7 @@ function [labels, names, units, types] = get_labels(obj, list)
         idx = idx & ismember(string(obj.SamplesTable.Properties.VariableNames), list);
     end
     if ~any(idx)
-        error(PROST.PROSTError("SamplesTable", "LabelDoesNotExist", ...
+        throw(PROST.PROSTError("SamplesTable", "LabelDoesNotExist", ...
             "The labels %s do not exist.", string(mat2str(list))));
     end
     names = obj.SamplesTable.Properties.VariableNames(idx);

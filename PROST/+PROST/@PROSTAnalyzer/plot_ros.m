@@ -52,7 +52,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
         % Get data
         dataset_id = who_to_plot.List(i).Dataset_id;
         if ~obj.dataset_exists(dataset_id)
-            error(PROST.PROSTError("DataRecords", "MissingDataset", ...
+            throw(PROST.PROSTError("DataRecords", "MissingDataset", ...
                 "Dataset %d not in data records.", dataset_id));
         end
         dataset = obj.get_dataset(dataset_id);
@@ -150,7 +150,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 elseif strcmp(plot_type, "nadir")
                     scatter(ax, center_x, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
                 else
-                    error(PROST.PROSTError("PlotROS", "WrongPlotType", ...
+                    throw(PROST.PROSTError("PlotROS", "WrongPlotType", ...
                         "plot_type should be either 'circle' or 'nadir'."))
                 end
 

@@ -21,7 +21,7 @@ function fit_to_circular_arc(obj, entry_number)
 
     % Check if participant exists
     if entry_number > size(obj.SamplesTable, 1)
-        error(PROST.PROSTError("SamplesTable", "OutOfBounds", ...
+        throw(PROST.PROSTError("SamplesTable", "OutOfBounds", ...
             "Entry number %d is too large.\nSamples table has %d entries.", entry_number, size(obj.SamplesTable, 1)));
     end
 
@@ -30,7 +30,7 @@ function fit_to_circular_arc(obj, entry_number)
     point_cloud = obj.PointClouds{entry_number};
     point_cloud = point_cloud(:, 1:2);
     if any(isnan(point_cloud(:))) || any(isinf(point_cloud(:)))
-        error(PROST.PROSTError("PointCloud", "ContainsNaNInfs", ...
+        throw(PROST.PROSTError("PointCloud", "ContainsNaNInfs", ...
             "Point cloud contains NaN or Inf values"));
     end
     x = point_cloud(:, 1);
@@ -53,7 +53,7 @@ function fit_to_circular_arc(obj, entry_number)
     % options = optimoptions(options,'TolFun',1e-10,'TolX',1e-10,'MaxFunEvals',100000,'MaxIter',40000);
     % Ensure initial guess does not contain NaN or Inf values
     if any(isnan(initial_guess)) || any(isinf(initial_guess))
-        error(PROST.PROSTError("CircleFit", "ContainsNaNInfs", ...
+        throw(PROST.PROSTError("CircleFit", "ContainsNaNInfs", ...
             "Initial guess contains NaN or Inf values"));
     end
 
