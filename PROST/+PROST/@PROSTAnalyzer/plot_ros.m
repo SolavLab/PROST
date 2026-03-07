@@ -1,20 +1,25 @@
-function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type)
-%PLOT_ROS plots the shank frame CoP data and the fitted ROS arc for all
-% participants in who_to_plot.
+function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type)
+%PLOT_ROS plots the shank frame CoP data and the fitted ROS arc of each side for 
+% all participants in who_to_plot. It also plots either the nadir, or circle 
+% center with accompanying circle that matches each ROS arc.
 % Input :
 %   who_to_plot - A PROSTDatasetList object that lists the datasets and
 %                 participants to plot for each side. 
 %                 Default: all participants and all datasets are plotted for
 %                 both left and right sides.
-%   number_of_axes_in_fig - number of axes per figure to plot.
-%                           Default: 6.
-%   show - whether to show the figures or save them. Either "on"
-%          (default) for showing the figures or "off" for saving them.
-%   file_type - the type to save the figure if saved.
+%   number_of_axes_in_fig - number of axes per figure to plot. Default: 6.
+%   plot_type - either "nadir" for plotting the nadir point of the circle 
+%               matching the ROS arc, "circle" for the circle center point and
+%               the circle itself. Default: "circle".
+%   show - whether to show the figures or save them. Either "on" for showing the 
+%          figures or "off" for saving them. Default: "on".
+%   file_type - the type to save the figure if saved. Default: fig.
+% Output :
+%   fig - array of figure handles of all the created plots.
 
     % Prep Input Arguments
-    if nargin < 6
-        file_type = [];
+    if nargin < 6 || isempty(file_type)
+        file_type = "fig";
     end
     if nargin < 5 || isempty(plot_type)
         plot_type = "circle";
@@ -40,6 +45,7 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
     y_label = "z [mm]";
 
     % Start plotting
+    fig = gobjects(0);
     fig_counter = 0;
     if strcmp(show, 'off')
         fprintf("Saving ROS...\n");
@@ -74,14 +80,20 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig = figure(Name="ROS Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
+                fig(fig_counter) = figure(Name="ROS Plots: " + dataset_name, Visible=show);
+                if strcmp(show, "off")
+                    screen_size = get(0,'ScreenSize');
+                    fig(fig_counter).WindowStyle = 'normal';
+                    fig(fig_counter).Position = screen_size;
+                end
                 n_cols = ceil(sqrt(number_of_axes_in_fig));
                 n_rows = ceil(number_of_axes_in_fig / n_cols);
-                tiledlayout(fig, n_rows, n_cols)
+                tl = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
+                sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "))
             end
 
             % Initialize axis
-            ax = nexttile;
+            ax = nexttile(tl);
 
             % Set axis parameters
             hold(ax, "on")
@@ -94,10 +106,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
             scatter(ax, 0, 0, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled");
             
             % Plot trials of participant
-            R = [];
-            X = [];
-            Z = [];
-            Res = [];
             offset = 0;
             for j=1:height(samples)
                 entry_number = entry_numbers(j);
@@ -116,12 +124,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 [radius, center_x, center_z, ang_start, ang_end, residual] = ...
                     deal(sample.Radius, sample.Center_x, sample.Center_z, sample.Ang_start, sample.Ang_end, sample.Residual);
                 
-                % Save arc parameters
-                R = [R radius];
-                X = [X center_x];
-                Z = [Z center_z];
-                Res = [Res residual];
-
                 % Get side
                 side = sample.Side;
 
@@ -156,19 +158,17 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
 
                 % Print Text on axis
                 txt = sprintf("(%.2f, %.2f), R: %.2f [mm],\nresidual: %.2f [mm]", center_x, center_z, radius, residual);
-                t = text(ax, ...
-                         0, 1 - offset, txt, ...
-                         Units="normalized", ...
-                         Color=color_arc{side}, ...
-                         FontSize=obj.FONT_SIZE, ...
-                         FontName="FixedWidth", ...
-                         FontWeight="bold", ...
-                         HorizontalAlignment="left", ...
-                         VerticalAlignment="top");
-                % if strcmp(show, "on")
-                    drawnow
-                % end
-                offset = offset + t.Extent(4);
+                txt_handle = text(ax, ...
+                                  0, 1 - offset, txt, ...
+                                  Units="normalized", ...
+                                  Color=color_arc{side}, ...
+                                  FontSize=obj.FONT_SIZE, ...
+                                  FontName="FixedWidth", ...
+                                  FontWeight="bold", ...
+                                  HorizontalAlignment="left", ...
+                                  VerticalAlignment="top");
+                drawnow 
+                offset = offset + txt_handle.Extent(4);
     
                 xlabel(ax, x_label);
                 ylabel(ax, y_label);
@@ -180,8 +180,6 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
             % Create legend and save figures
             if axes_counter == number_of_axes_in_fig || participant_id == participants(end)
                 % Dummy plots for legend in last axes
-                sides = ["left", "right"];
-                n_sides = length(sides);
                 n_plots = 3 + strcmp(plot_type, "circle");
                 h = gobjects(2*n_plots + 1, 1);
                 h(1) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled", DisplayName="ankle point");
@@ -202,12 +200,14 @@ function plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file
                 end
                 
                 % Legend
-                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="bestoutside");
-                
+                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="layout");
+                lgd.Layout.Tile = "east";
+
                 % Save figures
                 if strcmp(show, 'off')
-                    file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/ROS Plots");
-                    PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
+                    drawnow
+                    figure_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/ROS Plots");
+                    PROST.PROSTAnalyzer.save_figure(fig(fig_counter), figure_path, file_type);
                 end
                 
                 % Reset axis counter

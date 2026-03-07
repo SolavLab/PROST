@@ -1,13 +1,34 @@
-function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anatomical_side)
-%PLOT_COP Summary of this function goes here
-%   Detailed explanation goes here
+function fig = plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anatomical_side)
+%PLOT_COP plots the both the shank frame and world frame COP data, ankle and 
+% knee trajectories for each trial in who_to_plot. 
+% Notice: here we can choose the anatomical side to use for the shank frame and 
+% the marker trajectories. This can be different than the default "lateral" as 
+% used in the PROST database for all other plots and analyses since we are 
+% taking the data directly from the data records. Leave empty to use the default 
+% "lateral".
+% Input :
+%   who_to_plot - A PROSTDatasetList object that lists the datasets, 
+%                 participants and trials to plot for each side. 
+%                 Default: all trials of all participants and all datasets are 
+%                 plotted for both left and right sides (not recommended unless 
+%                 there are a small number of trials overall).
+%   number_of_axes_in_fig - number of axes per figure to plot. Default: 6.
+%   show - whether to show the figures or save them. Either "on" for showing the 
+%          figures or "off" for saving them. Default: "on".
+%   file_type - the type to save the figure if saved. Default: fig.
+%   anatomical_side - which anatomical side to use for the knee and ankle
+%                     trajectories and calculation of the shank frame. Choose 
+%                     between: "lateral", "medial" and "mean". 
+%                     Default: "lateral".
+% Output :
+%   fig - array of figure handles of all the created plots.
 
     % Prep Input Arguments
     if nargin < 6 || isempty(anatomical_side)
         anatomical_side = "lateral";
     end
     if nargin < 5 || isempty(file_type)
-        file_type = [];
+        file_type = "fig";
     end
     if nargin < 4 || isempty(show)
         show = 'on';
@@ -31,6 +52,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
 
     % Start plotting
     fig_counter = 0;
+    fig = gobjects(0);
     if strcmp(show, 'off')
         fprintf("Saving COP...\n");
     else
@@ -77,16 +99,16 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 % Create new figure for new set of axes
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
-                    fig  = figure(Name="COP Plots: " + dataset_name + " Plot " + fig_counter, Visible=show);
+                    fig(fig_counter)  = figure(Name="COP Plots: " + "Plot " + fig_counter, Visible=show);
                     n_cols = ceil(sqrt(number_of_axes_in_fig));
                     n_rows = ceil(number_of_axes_in_fig / n_cols);
-                    tOuter = tiledlayout(fig, n_rows, n_cols, 'TileSpacing', 'tight', 'Padding', 'tight');
-                    sgtitle(fig, replace(fig.Name, "_", " "))
+                    tOuter = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
+                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "))
                 end
 
                 % Inner tile for pair of Ankle-Knee Trajectories and COPs in
                 % World and Shank Frames
-                tInner = tiledlayout(tOuter, 1, 2, 'Units','normalized', 'Padding', 'tight', 'TileSpacing','tight');
+                tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
                 title(tInner, "P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
 
@@ -98,6 +120,10 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 cop.z = 0.*cop.x;
                 ankle = trial.Markers.Ankle.(anatomical_side);
                 knee = trial.Markers.Knee.(anatomical_side);
+                if isempty(ankle) || isempty(knee)
+                    throw(PROST.PROSTError("DataRecords", "MissingAnatomicalSide", ...
+                        "The dataset %s has no marker trajectories with anatomical side %s.", dataset_name, anatomical_side));
+                end
 
                 % Plot ankle-knee trajectories in space.
                 % Should look like this:
@@ -130,7 +156,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 ylabel(ax1, y_label)
 
                 % Get data in shank frame
-                shank_cop = trial.Shank_cop.(anatomical_side);
+                shank_cop = obj.convert_to_shank_frame(cop, knee, ankle);
                 shank_ankle = obj.convert_to_shank_frame(ankle, knee, ankle);
                 shank_knee = obj.convert_to_shank_frame(knee, knee, ankle);
 
@@ -175,7 +201,7 @@ function plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anat
                 if axes_counter == number_of_axes_in_fig || (participant_id == participants(end) && s_idx == length(step_numbers))
                     if strcmp(show, 'off')
                         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/COP Plots");
-                        PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
+                        PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type);
                     end
                     axes_counter = 0;
                 end

@@ -1,4 +1,4 @@
-function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, norm_var_name, show, file_type)
+function fig = plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, norm_var_name, show, file_type)
 %PLOT_FEATURES_VS_LABELS plots the features (anthropometric parameters)
 % v.s. the labels (ROS parameters).
 % Input :
@@ -9,6 +9,8 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 %   show - whether to show the figures or save them. Either "on"
 %          (default) for showing the figures or "off" for saving them.
 %   file_type - the type to save the figure if saved.
+% Output :
+%   fig - array of figure handles of all the created plots.
 
     % Prep Input Arguments
     if nargin < 7
@@ -48,27 +50,11 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
     unique_dataset_ids = unique(dataset_ids)';
     n_dataset_ids = length(unique_dataset_ids);
 
-    % dataset_ids_left = dataset_ids(sides == "left");
-    % dataset_ids_right = dataset_ids(sides == "right");
-    % unique_dataset_ids_left = unique(dataset_ids_left)';
-    % unique_dataset_ids_right = unique(dataset_ids_right)';
-    % n_dataset_ids_left = length(unique_dataset_ids_left);
-    % n_dataset_ids_right = length(unique_dataset_ids_right);
-
-    % % Get Residuals
-    % residuals = table2array(obj.get_sample_var("Residual"));
-    %
-    % % Normalize inverse residuals for reasonable marker sizes
-    % inv_residuals  = 1 ./ residuals;
-    % norm_inv_residuals = (inv_residuals  / max(inv_residuals));
-    %
-    % % Scale marker sizes (adjust 200 as needed)
-    % sz_residuals  = obj.MARKER_SIZE_SCATTER * norm_inv_residuals;
-
     % Define colors for sides
     color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
 
     % Start plotting
+    fig = gobjects(0);
     axes_counter = 0;
     fig_counter = 0;
     if strcmp(show, 'off')
@@ -95,9 +81,9 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig  = figure(Name="Features vs Labels: " + x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + " Plot " + fig_counter, Visible=show);
-                tiledlayout(fig)
-                sgtitle(fig, fig.Name)
+                fig(fig_counter)  = figure(Name="Features vs Labels: " + x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + "_Plot " + fig_counter, Visible=show);
+                tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
+                sgtitle(fig(fig_counter), fig(fig_counter).Name)
             end
 
             % Initialize axis
@@ -166,7 +152,7 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
                      Color=obj.LINE_COLOR, ...
                      FontSize=obj.FONT_SIZE, ...
                      FontName="FixedWidth", ...
-                     FontWeight=obj.FONT_WEIGHT, ...
+                     FontWeight="bold", ...
                      HorizontalAlignment="left", ...
                      VerticalAlignment="top");
             end
@@ -184,11 +170,11 @@ function plot_features_vs_labels(obj, features_list, labels_list, number_of_axes
 
             % Save figures and reset axes counter
             if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
-                lgd = legend(FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
-                lgd.Location = "eastoutside";
+                lgd = legend(FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="layout");
+                lgd.Layout.Tile = "east";
                 if strcmp(show, 'off')
                     file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Features vs Labels");
-                    PROST.PROSTAnalyzer.save_figure(fig, file_path, file_type);
+                    PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type);
                 end
 
                 axes_counter = 0;

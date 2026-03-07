@@ -20,6 +20,13 @@ classdef PROSTAnalyzer < handle
         COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
         COLORMAP_RIGHT = "summer";
         COLORMAP_LEFT = "autumn";
+        COLOR_DEFAULT_BLUE = [0 0.4470 0.7410];
+        COLOR_DEFAULT_ORANGE = [0.8500 0.3250 0.0980];
+        COLOR_DEFAULT_YELLOW = [0.9290 0.6940 0.1250];
+        COLOR_DEFAULT_PURPLE = [0.4940 0.1840 0.5560];
+        COLOR_DEFAULT_GREEN = [0.4660 0.6740 0.1880];
+        COLOR_DEFAULT_LIGHTBLUE = [0.3010 0.7450 0.9330];
+        COLOR_DEFAULT_RED = [0.6350 0.0780 0.1840];
         MARKER_CIRCLE = 'o';
         MARKER_DOT = '.';
         MARKER_SQUARE = 'square';
@@ -31,6 +38,9 @@ classdef PROSTAnalyzer < handle
         LINE_WIDTH = 2;
         LINE_STYLE_SOLID = "-";
         LINE_STYLE_DASHED = "--";
+        LINE_STYLE_DOTTED = ":";
+        LINE_STYLE_DASHED_DOTTED = "-.";
+        LINE_STYLES = ["-" "--" ":" "-."];
         LINE_COLOR = "black";
         FONT_SIZE = 10;
         FONT_WEIGHT = "normal";
