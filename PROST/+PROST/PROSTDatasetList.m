@@ -9,9 +9,9 @@ classdef PROSTDatasetList < handle
         end
 
         function add_to_list(ig, dataset_id, participants, trials, side)
-        %ADD_TO_LIST adds the dataset with ID 'dataset_id' to the list, or the
-        % participant\s with ID 'participants' of that dataset or 'trials' of
-        % 'side' of 'participants' in 'dataset_id'.
+        %ADD_TO_LIST adds either a specific the dataset, a specific participant
+        % or list of participants, or a specific list of trials (of either
+        % 'Left' or 'Right' or both) to the list.
         % Input :
         %   dataset_id - the ID of the dataset. A positive integer number.
         %   participants - the ID or IDs of the participants. A positive integer 
