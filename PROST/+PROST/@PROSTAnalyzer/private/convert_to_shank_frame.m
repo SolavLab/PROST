@@ -1,15 +1,16 @@
 function shank_data = convert_to_shank_frame(data, knee, ankle)
-%COP_TO_SHANK_FRAME transforms the COP of the step to the shank
+%CONVEWRT_TO_SHANK_FRAME transforms the data to the shank
 % coordinate frame. The frame has the ankle as its origin with the
 % x direction pointing to the direction of walking, the z direction
 % is from the ankle to the knee (up) and the y direction completes
 % a right-handed system.
 % Input :
-%   step - the step data to transform. Includes COP and marker
-%          trajectories.
-%   anatomical_side - the anatomical side of the markers to use for
-%                     the transformation. Either "lateral" (default),
-%                     "medial" or "mean".
+%   data - the data to transform. Includes the 3-dimensional data in 3 separate
+%          fields: x, y, z.
+%   knee - the knee trajectories to use for the shank frame.Includes the 
+%          3-dimensional data in 3 separate fields: x, y, z.
+%   ankle - the ankle trajectories to use for the shank frame. Includes the 
+%           3-dimensional data in 3 separate fields: x, y, z.
 % Output :
 %   shank_cop - the COP in the Shank coordinate frame.
 
