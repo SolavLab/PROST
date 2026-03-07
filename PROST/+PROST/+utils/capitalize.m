@@ -4,7 +4,7 @@ function [capitalized] = capitalize(str)
 %   str - the string array to capitalize
 
 capitalized = split(string(str));
-capitalized = upper(extractBefore(capitalized,2)) + extractAfter(capitalized,1);
+capitalized = upper(extractBefore(capitalized, 2)) + extractAfter(capitalized, 1);
 capitalized = join(capitalized);
 end
 

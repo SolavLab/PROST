@@ -1,31 +1,50 @@
-function save_all_open_figures(file_path, sub_folders, file_type)
-    % SAVE_ALL_OPEN_FIGURES saves all open figures in the specified format.
-    % Example:
-    %   save_all_open_figures("C:/path/to/folder", "png")
-    %   save_all_open_figures("C:/path/to/folder", "fig")
+function save_all_open_figures(figures_path, sub_folders, file_type)
+% SAVE_ALL_OPEN_FIGURES saves all open figures in the specified format.
+%   figures_path - path to the figures directory.
+%   sub_folders - list of sub-folder names to save each figure inside the file 
+%                 path. If left empty, the function chooses a sub-folder for 
+%                 each figure according to its figure name based on a predefined 
+%                 format: the string appearing before ":" in the figure name is 
+%                 the name of the sub-folder of that figure. If not enough names 
+%                 are provided for all sub-folders or the figure name doesn't 
+%                 contain ":", Saves the remaining figures in the file path.
+%                 To save the figures in the file path directly without 
+%                 sub-folders, set to ".".
+%                 
+%   file_type - the file type to save. Default: "fig".
+% Example:
+%   save_all_open_figures("C:/path/to/folder", "png")
+%   save_all_open_figures("C:/path/to/folder", "fig")
 
-    if nargin < 3 || isempty(file_type)
-        file_type = "pdf";  % Default file type
+    if nargin < 2 || isempty(file_type)
+        file_type = "fig";  % Default file type
     end
-    if nargin < 1 || isempty(file_path)
-        file_path = "C:/Users/chenr/Documents/PROST/figures/";
+    if nargin < 1 || isempty(figures_path)
+        figures_path = uigetdir(pwd);
     end
 
     % Ensure output file path exists
-    if ~isfolder(file_path)
-        mkdir(file_path);
+    if ~isfolder(figures_path)
+        mkdir(figures_path);
     end
 
     % Find all open figure handles
     fig_handles = findall(0, 'Type', 'figure');
+    n_figs = numel(fig_handles);
 
+    % Define the sub folders for each figure
     if nargin < 2 || isempty(sub_folders)
-        sub_folders = extractBefore({fig_handles(:).Name}, ":"); % Create Subfolder
+        sub_folders = extractBefore({fig_handles(:).Name}, ":");
+        sub_folders = convertCharsToStrings(sub_folders);
     end
+    % replace missing with current folder as sub-folder so those folders are saved in the figures path.
+    sub_folders(ismissing(sub_folders)) = ".";
+    % pad so extra figures are also saved in figures path
+    sub_folders(end+1:n_figs) = ".";
 
     fprintf("Saving figures...\n");
 
-    for k = 1:numel(fig_handles)
+    for k = 1:n_figs
         % Get figure handle
         f = fig_handles(k);
         
@@ -33,7 +52,7 @@ function save_all_open_figures(file_path, sub_folders, file_type)
         sub_folder = sub_folders(k);
 
         % Ensure output folder exists
-        output_folder = fullfile(file_path, sub_folder);
+        output_folder = fullfile(figures_path, sub_folder);
         if ~isfolder(output_folder)
             mkdir(output_folder);
         end
@@ -45,14 +64,14 @@ function save_all_open_figures(file_path, sub_folders, file_type)
         end
 
         % Full file path
-        file_name = fullfile(output_folder, clean_name + "." + file_type);
+        file_path = fullfile(output_folder, clean_name + "." + file_type);
 
         % Save based on file type
         switch lower(file_type)
             case "fig"
-                savefig(f, file_name);
+                savefig(f, file_path);
             otherwise
-                exportgraphics(f, file_name, 'Resolution', 300);
+                exportgraphics(f, file_path, 'Resolution', 300);
         end
     end
 
