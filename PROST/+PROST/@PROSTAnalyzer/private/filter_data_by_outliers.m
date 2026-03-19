@@ -15,7 +15,15 @@ function filter_data_by_outliers(obj, var_list, method)
     if ~any(idx)
         return
     end
+    samples = obj.get_samples(var_list);
     outliers = any(isoutlier(obj.get_sample_var(var_list(idx)), method), 2);
-    entry_numbers = find(outliers);
-    obj.delete_samples('e', entry_numbers)
+    row_numbers = find(outliers);
+    if isempty(row_numbers)
+        return
+    end
+
+    for entry=row_numbers
+        dataset_id = obj.get_samples
+
+    obj.delete_samples('r', row_numbers)
 end

@@ -1,4 +1,4 @@
-function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type)
+function fig = plot_ros(obj, who_to_plot, opts)
 %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc of each side for 
 % all participants in who_to_plot. It also plots either the nadir, or circle 
 % center with accompanying circle that matches each ROS arc.
@@ -17,20 +17,22 @@ function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show
 % Output :
 %   fig - array of figure handles of all the created plots.
 
+    arguments
+        obj 
+        who_to_plot                {mustBePRSOTDatasetListOrEmpty(who_to_plot)} = []
+        opts.plot_type             {mustBeMember(opts.plot_type, ["circle" "nadir"])}
+        opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
+        opts.show                  {mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type             {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+
+    end
+
     % Prep Input Arguments
-    if nargin < 6 || isempty(file_type)
-        file_type = "fig";
-    end
-    if nargin < 5 || isempty(plot_type)
-        plot_type = "circle";
-    end
-    if nargin < 4 || isempty(show)
-        show = 'on';
-    end
-    if nargin < 3 || isempty(number_of_axes_in_fig)
-        number_of_axes_in_fig = 6;
-    end
-    if nargin < 2 || isempty(who_to_plot)
+    number_of_axes_in_fig = opts.number_of_axes_in_fig;
+    show = opts.show;
+    file_type = opts.file_type;
+    plot_type = opts.plot_type;
+    if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
         for dataset_id=dataset_ids
@@ -218,4 +220,12 @@ function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show
     if strcmp(show, 'off')
         fprintf("All figures saved.\n");
     end
+end
+
+% --------- helper functions ------------
+function mustBePRSOTDatasetListOrEmpty(x)
+    if isempty(x)
+        return
+    end
+    mustBeA(x, "PROST.PROSTDatasetList");
 end

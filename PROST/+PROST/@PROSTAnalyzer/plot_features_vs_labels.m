@@ -1,4 +1,4 @@
-function fig = plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, norm_var_name, show, file_type)
+function fig = plot_features_vs_labels(obj, features_list, labels_list, opts)
 %PLOT_FEATURES_VS_LABELS plots the features (anthropometric parameters)
 % v.s. the labels (ROS parameters).
 % Input :
@@ -12,22 +12,19 @@ function fig = plot_features_vs_labels(obj, features_list, labels_list, number_o
 % Output :
 %   fig - array of figure handles of all the created plots.
 
+arguments
+    obj
+    features_list           {mustBeFeatureOrEmpty(features_list, obj)} = []
+    labels_list             {mustBeLabelOrEmpty(labels_list, obj)} = []
+    opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
+    opts.norm_var_name      {mustBeTextScalarOrEmpty} = []
+    opts.show               {mustBeMember(opts.show, ["on" "off"])} = "on"
+    opts.file_type          {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+end
     % Prep Input Arguments
-    if nargin < 7
-        file_type = [];
-    end
-    if nargin < 6 || isempty(show)
-        show = 'on';
-    end
-    if nargin < 5
-        norm_var_name = [];
-    end
-    if nargin < 3
-        labels_list = {};
-    end
-    if nargin < 2
-        features_list = {};
-    end
+    number_of_axes_in_fig = opts.number_of_axes_in_fig;
+    show = opts.show;
+    file_type = opts.file_type;
 
     % Get Data
     [features, feature_names, feature_units, feature_types] = obj.get_features(features_list);
@@ -184,4 +181,32 @@ function fig = plot_features_vs_labels(obj, features_list, labels_list, number_o
     if strcmp(show, 'off')
         fprintf("All figures saved.\n");
     end
+end
+
+% --------- helper functions ------------
+function mustBeFeatureOrEmpty(x, obj)
+    if isempty(x)
+        return
+    end
+
+    features_i = strcmp(obj.SamplesTable.Properties.VariableTypes, "feature");
+    features = string(obj.SamplesTable.Properties.VariableNames{features_i});
+    ismember(x, features);
+end
+
+function mustBeLabelOrEmpty(x, obj)
+    if isempty(x)
+        return
+    end
+
+    labels_i = strcmp(obj.SamplesTable.Properties.VariableTypes, "label");
+    labels = string(obj.SamplesTable.Properties.VariableNames{labels_i});
+    ismember(x, labels);
+end
+
+function mustBeTextScalarOrEmpty(x)
+    if isempty(x)
+       return
+    end
+    mustBeTextScalar(x);
 end

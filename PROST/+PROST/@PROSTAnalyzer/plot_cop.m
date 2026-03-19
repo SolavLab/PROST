@@ -1,4 +1,4 @@
-function fig = plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type, anatomical_side)
+function fig = plot_cop(obj, who_to_plot, opts)
 %PLOT_COP plots the both the shank frame and world frame COP data, ankle and 
 % knee trajectories for each trial in who_to_plot. 
 % Notice: here we can choose the anatomical side to use for the shank frame and 
@@ -23,20 +23,21 @@ function fig = plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type
 % Output :
 %   fig - array of figure handles of all the created plots.
 
+    arguments
+        obj 
+        who_to_plot                {mustBePRSOTDatasetListOrEmpty(who_to_plot)} = []
+        opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
+        opts.show                  {mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type             {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        opts.anatomical_side       {mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
+    end
+
     % Prep Input Arguments
-    if nargin < 6 || isempty(anatomical_side)
-        anatomical_side = "lateral";
-    end
-    if nargin < 5 || isempty(file_type)
-        file_type = "fig";
-    end
-    if nargin < 4 || isempty(show)
-        show = 'on';
-    end
-    if nargin < 3 || isempty(number_of_axes_in_fig)
-        number_of_axes_in_fig = 6;
-    end
-    if nargin < 2 || isempty(who_to_plot)
+    number_of_axes_in_fig = opts.number_of_axes_in_fig;
+    show = opts.show;
+    file_type = opts.file_type;
+    anatomical_side = opts.anatomical_side;
+    if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
         for dataset_id=dataset_ids
@@ -205,4 +206,12 @@ function fig = plot_cop(obj, who_to_plot, number_of_axes_in_fig, show, file_type
     if strcmp(show, 'off')
         fprintf("All figures saved.\n");
     end
+end
+
+% --------- helper functions ------------
+function mustBePRSOTDatasetListOrEmpty(x)
+    if isempty(x)
+        return
+    end
+    mustBeA(x, "PROST.PROSTDatasetList");
 end

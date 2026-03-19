@@ -1,8 +1,11 @@
 function [samples, row_numbers, var_names] = get_samples(obj, var_list, varargin)
-%GET_SAMPLES returns the sample entries and row numbers of all variables
-% in 'var_list' from the samples table given the dataset IDs,
-% participant IDs and sides.
-% Returns empty table and empty array if does not exist.
+%GET_SAMPLES returns a table with the sample entries and row numbers from the 
+% samples table. 
+% Either the specified variables in 'var_list' or specified rows defined
+% by 'dataset_id', 'participant_id', and 'side' or a combination of them.
+% Only returns the variables and rows that exist in the samples table.
+% Returns empty table and empty array if the specified variables or entries
+% don't exist.
 % Input :
 %   var_list - the variable name or list of variable names. Must be a
 %              string array or character cell array.
