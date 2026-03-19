@@ -24,50 +24,47 @@ Dataset_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
 Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
 %% Plot data ROS
-% who_to_plot = PROST.PROSTDatasetList();
+who_to_plot = PROST.PROSTDatasetList();
 % who_to_plot.add_to_list(Dataset_4_ID, 1:12);
-% for dataset_id=dataset_ids
-%     who_to_plot.add_to_list(dataset_id);
-% end
-% PROSTAnalyzer.plot_ros(who_to_plot, 6, 'nadir', 'on', 'pdf');
+for dataset_id=dataset_ids
+    who_to_plot.add_to_list(dataset_id);
+end
+PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=6, plot_type="circle", show="off", file_type="pdf");
 
 %% Analyze Residuals
-PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", ["kernel"], function_type="pdf", show="on", BinMethod='auto');
+PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", ["kernel"], function_type="pdf");
 
 %% Analyze Radius and Center Horizontal
-% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
-% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
-% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
-% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
-% PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
-% PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", BinMethod='auto');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", BinMethod='auto');
+% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", BinMethod='scott');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", BinMethod='scott');
+% PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel"], function_type="pdf", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel"], function_type="pdf", BinMethod='fd');
 % 
-% [~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace" "tLocationScale" "exponential"], function_type="pdf", show="on", BinMethod='fd');
-% [~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel" "normal" "laplace" "tlocationscale" "exponential"], function_type="pdf", show="on", BinMethod='fd');
-% PROSTAnalyzer.plot_stats("Radius", "Height", "Is_shod", ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
-% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", "Is_shod", ["kernel" "normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
+% [~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace" "tLocationScale" "exponential"], function_type="pdf", BinMethod='fd');
+% [~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel" "normal" "laplace" "tlocationscale" "exponential"], function_type="pdf", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Radius", "Height", "Is_shod", ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace"], function_type="pdf", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", "Is_shod", ["kernel" "normal" "laplace"], function_type="pdf", BinMethod='fd');
 % 
 % PROSTAnalyzer.plot_stats("Radius", "Height", [], ["lognormal" "t Location Scale"], function_type="pdf", show="on", BinMethod='fd');
-% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["tlocationscale"], function_type="pdf", BinMethod='fd');
 % 
-% PROSTAnalyzer.plot_stats("Radius", [], [], ["lognormal" "t Location Scale"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Radius", [], [], ["lognormal" "t Location Scale"], function_type="pdf", BinMethod='fd');
 % PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
 
-[~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", "Height", [], ["tLocationScale"], function_type="pdf", show="on", BinMethod='fd');
-[~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
+[~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf");
+[~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tlocationscale", function_type="pdf");
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], [], "Height", 'on', 'fig');
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], norm_var_name="Height");
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
-who_to_plot.add_to_list(Dataset_4_ID, 1, [1 2 3], "Left");
-PROSTAnalyzer.plot_cop(who_to_plot, 3, 'on', 'fig');
-
-%% PLS Regression
-% [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = obj.pls_analysis();
+% who_to_plot.add_to_list(Dataset_4_ID, 1, [1 2 3], "Left");
+PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=3, show="off", file_type="pdf");
 
 %% Save figures
 % PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "pdf")
