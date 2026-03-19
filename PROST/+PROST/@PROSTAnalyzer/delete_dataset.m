@@ -13,12 +13,14 @@ function delete_dataset(obj, dataset_id)
     index = obj.DataRecordsIDLookup(dataset_id);
 
     % Delete from data records
-    obj.delete_from_data_records(dataset_id, index);
+    obj.delete_from_data_records(dataset_id);
 
     % Delete from summary table
-    obj.delete_from_summary_table(index);
+    obj.delete_from_summary_table(dataset_id);
 
     % Delete from samples table
     obj.delete_samples(dataset_id);
+
+    obj.sync_data_records_lookup(dataset_id);
 
 end

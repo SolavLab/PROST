@@ -1,15 +1,8 @@
-function delete_from_data_records(obj, dataset_id, index)
-    obj.DataRecords(index) = [];
-    dataset_index =  obj.DataRecordsIDLookup(dataset_id);
-    obj.DataRecordsIDLookup(dataset_id) = [];
+function delete_from_data_records(obj, dataset_id)
+%DELETE_FROM_DATA_RECORDS deletes the dataset with the given ID from the data records and updates the lookup table.
+% Input :
+%   dataset_id - the ID of the dataset to delete. A positive integer number.
 
-    if numEntries(obj.DataRecordsIDLookup) > 0
-        keys = obj.DataRecordsIDLookup.keys';
-        values = obj.DataRecordsIDLookup.values';
-        idx = values > dataset_index;
-        obj.DataRecordsIDLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
-        obj.FirstUniqueDatasetId = max(obj.DataRecordsIDLookup.keys) + 1; % Update first unique ID NOTE: might not be needed
-    else
-        obj.FirstUniqueDatasetId = 1;
-    end
+    dataset_index = obj.DataRecordsIDLookup(dataset_id);
+    obj.DataRecords(dataset_index) = [];
 end

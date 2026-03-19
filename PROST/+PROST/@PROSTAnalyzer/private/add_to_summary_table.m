@@ -33,13 +33,19 @@ function add_to_summary_table(obj, dataset_id)
     
     % Example participant for existing data to check if participants are
     % shod and medial markers exist
+    
     participant = dataset.Data(1);
     obj.SummaryTable.Is_shod(entry_number) = participant.Anthropometric_data.Is_shod.value;
+
     if ~isempty(participant.Uniform_data.right.step)
         step = participant.Uniform_data.right.step(1);
     elseif ~isempty(participant.Uniform_data.left.step)
         step = participant.Uniform_data.left.step(1);
+    else
+        throw(PROST.PROSTError('SummaryTable', 'NoSteps', ...
+            'Participant %d in dataset %d has no steps.', participant.Participant_id, dataset_id));
     end
+
     obj.SummaryTable.Has_medial(entry_number) = ~isempty(step.Markers.Ankle.medial);
 
     % Count all included participants and steps in dataset

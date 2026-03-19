@@ -29,6 +29,9 @@ function delete_samples(obj, flag, varargin)
         row_numbers = varargin;
     elseif strcmp(flag, 'i')
         [~, row_numbers] = obj.get_sample_entry(varargin{:});
+    else
+        PROST.PROSTError("SamplesTable", "InvalidIdentifierFlag", ...
+            "%s is not a valid flag for identifying sample entries. Must be 'r' or 'i'.", flag)
     end
 
     if isempty(row_numbers)
