@@ -123,7 +123,7 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     analyze_stats_opts.MinExpected  (1, 1) = 5;
     if kde_flag
         analyze_stats_opts.KDEFunction = opts.function_type;
-        analyze_stats_opts.KDENumPoints = 50;
+        analyze_stats_opts.KDENumPoints = 400;
         if strcmpi(value_name, "Radius") || strcmpi(value_type, "feature")
             analyze_stats_opts.KDESupport = "positive";
         else
@@ -133,8 +133,12 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end 
 
     % Normalize distnames
-    if iscell(distnames); distnames = string(distnames); end
-    distnames = lower(strtrim(distnames(:)));
+    if ~isempty(distnames)
+        if iscell(distnames)
+            distnames = string(distnames); 
+        end
+        distnames = erase(lower(distnames), whitespacePattern);
+    end
 
     % Check whether to save or plot
     if strcmp(opts.show, 'off')
@@ -250,12 +254,6 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                     params = strip(splitlines(params));
                     params = join(params(params~="" & ~startsWith(params, "-")), ", ");
 
-                    % param_names = string(fieldnames(stats_i.fits.(key).params));
-                    % n_params = numel(param_names);
-                    % params = strings(n_params, 1);
-                    % for p=1:n_params
-                    %     params(p) = sprintf("%s=%.2f", param_names(p), stats_i.fits.(key).params.(param_names(p)));
-                    % end
                     txt = sprintf("%s Distribution: %s", stats_i.fits.(key).name, params);
                     plot(ax_dist, x, stats_i.fits.(key).(opts.function_type)(x), ...
                                      LineWidth=obj.LINE_WIDTH, ...
@@ -316,8 +314,8 @@ function d = matlabContinuousDistributions()
         pkg = meta.package.fromName('prob');
         cls = pkg.ClassList;
         names = string({cls.Name});
-        names = names(endsWith(names,"Distribution"));
-        names = erase(names,"Distribution");
+        names = names(endsWith(names, "Distribution"));
+        names = erase(names, "Distribution");
         names = erase(names, "prob.");
         names = [names "Laplace"];
         list = sort(names);
@@ -326,7 +324,13 @@ function d = matlabContinuousDistributions()
 end
 
 function mustBeValidDistribution(distnames)
-   allowed = matlabContinuousDistributions();
-    mustBeMemberOrEmpty(lower(distnames), lower(allowed));
+    % Allow empty
+    if isempty(distnames)
+        return
+    end
+
+    allowed = lower(matlabContinuousDistributions());
+    distnames = erase(lower(distnames), whitespacePattern);
+    mustBeMember(distnames, allowed);
 end
 

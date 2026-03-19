@@ -12,8 +12,8 @@ function out = analyze_stats(value, distnames, opts)
 % INPUT:
 %   value     : numeric vector
 %   distnames : string/cellstr of names. Supported (case-insensitive):
-%               "normal","lognormal","gamma","rayleigh","half
-%               normal","laplace","kernel", "exponential"
+%               any distribution names supported by the Statistics and Machine 
+%               Learning Toolbox™, custom distributions: "laplace", "kernel".
 %   opts      : struct with optional fields:
 %               .KDESupport   = "unbounded" or "positive" (default: "unbounded")
 %               .KDEKernel    = "normal" (default)
@@ -79,9 +79,9 @@ function out = analyze_stats(value, distnames, opts)
 
     % Normalize distnames
     if iscell(distnames); distnames = string(distnames); end
-    distnames = lower(strtrim(distnames(:)));
+    distnames = erase(lower(distnames), whitespacePattern);
     allowed_distnames = matlabContinuousDistributions();
-    allowed_distnames = lower(strtrim(allowed_distnames(:)));
+    allowed_distnames_lower = erase(lower(allowed_distnames), whitespacePattern);
 
     % -------- Fit each requested distribution
     fits = struct();
@@ -89,7 +89,8 @@ function out = analyze_stats(value, distnames, opts)
 
     for di = 1:numel(distnames)
         name = distnames(di);
-        name_capitalized = PROST.utils.capitalize(name);
+        name_capitalized = allowed_distnames(strcmp(allowed_distnames_lower, name));
+        name_capitalized = (name_capitalized);
         key  = matlab.lang.makeValidName(char(name));
 
         switch name
@@ -110,7 +111,7 @@ function out = analyze_stats(value, distnames, opts)
                                            'Function', string(opts.KDEFunction));
                 
                 fits.(key) = struct( ...
-                    'name', name_capitalized, 'type', 'kde', 'pd', [], 'params', struct('bw', bw), ...
+                    'name', "Kernel", 'type', 'kde', 'pd', [], 'params', struct('bw', bw), ...
                     'pdf', [], 'cdf', [], 'icdf', [], ...
                     'LL', NaN, 'AIC', NaN, 'BIC', NaN, ...
                     'chi2', struct('stat', NaN, 'df', NaN, 'pvalue', NaN, 'edges', [], 'O', [], 'E', [], 'bins', NaN), ...
@@ -124,12 +125,13 @@ function out = analyze_stats(value, distnames, opts)
                 cdf_f  = @(z) 0.5 + 0.5*sign(z-mu).*(1 - exp(-abs(z-mu)/b));
                 icdf_f = @(p) mu - b*sign(p-0.5).*log(1 - 2*abs(p-0.5));
                 nparams = 2;
+
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
 
                 chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
 
                 fits.(key) = struct( ...
-                    'name', name_capitalized, 'type', 'custom', 'pd', [], ...
+                    'name', "Laplace", 'type', 'custom', 'pd', [], ...
                     'params', struct('mu', mu, 'b', b), ...
                     'pdf', pdf_f, 'cdf', cdf_f, 'icdf', icdf_f, ...
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
@@ -137,41 +139,7 @@ function out = analyze_stats(value, distnames, opts)
                 );
                 rows = [rows; llrow(name_capitalized, LL, AIC, BIC)];
 
-            % case {"half normal",  "halfnormal", "half-normal"}
-            %     name = "Half Normal";
-            %     % Check support
-            %     if any(x < 0)
-            %         PROST.PROSTWarning.warn("AnalyzeStats", "NegativeValuesExist", '%s requires x >= 0. Skipping.', name);
-            %         continue
-            %     end
-            % 
-            %      try
-            %         pd = fitdist(x, char(name)); % toolbox object
-            %     catch ME
-            %         PROST.PROSTWarning.warn("AnalyzeStats", "FitDistributionFailed", 'fitdist failed for %s: %s. Skipping.', name, ME.message);
-            %         continue
-            %     end
-            % 
-            %     pdf_f  = @(z) pdf(pd, z);
-            %     cdf_f  = @(z) cdf(pd, z);
-            %     icdf_f = @(p) icdf(pd, p);
-            %     nparams = numel(pd.ParameterNames);
-            % 
-            %     [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
-            %     chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
-            % 
-            %     fits.(key) = struct( ...
-            %         'name', name_capitalized, 'type', 'toolbox', 'pd', pd, ...
-            %         'params', cell2struct(num2cell(pd.ParameterValues(:)'),  ...
-            %                   cellstr(pd.ParameterNames), 2), ...
-            %         'pdf', pdf_f, 'cdf', cdf_f, 'icdf', icdf_f, ...
-            %         'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
-            %         'chi2', chi2 ...
-            %         );
-            % 
-            %     rows = [rows; llrow(name_capitalized, LL, AIC, BIC)];
-
-            case cellstr(allowed_distnames)
+            case cellstr(allowed_distnames_lower)
                 % Check support
                 if name == "lognormal" || name == "gamma" || name == "rayleigh" || name == "half normal" || name == "halfnormal"
                     if name == "lognormal" && any(x <= 0)
@@ -198,6 +166,9 @@ function out = analyze_stats(value, distnames, opts)
 
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
                 chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
+                
+                name_capitalized = allowed_distnames(strcmp(allowed_distnames_lower, name));
+                name_capitalized = PROST.utils.capitalize(name_capitalized);
 
                 fits.(key) = struct( ...
                     'name', name_capitalized, 'type', 'toolbox', 'pd', pd, ...
@@ -320,8 +291,8 @@ function d = matlabContinuousDistributions
         pkg = meta.package.fromName('prob');
         cls = pkg.ClassList;
         names = string({cls.Name});
-        names = names(endsWith(names,"Distribution"));
-        names = erase(names,"Distribution");
+        names = names(endsWith(names, "Distribution"));
+        names = erase(names, "Distribution");
         names = erase(names, "prob.");
         names = [names "Laplace"];
         list = sort(names);
@@ -329,7 +300,10 @@ function d = matlabContinuousDistributions
     d = list;
 end
 
-function mustBeValidDistribution(distnames)
-    allowed = matlabContinuousDistributions();
-    mustBeMember(lower(distnames), lower(allowed));
+
+    function  mustBeValidDistribution(distnames)
+    allowed = erase(lower(matlabContinuousDistributions()), whitespacePattern);
+    distnames = erase(lower(distnames), whitespacePattern);
+    mustBeMember(distnames, allowed);
 end
+
