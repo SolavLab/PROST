@@ -82,7 +82,12 @@ function fig = plot_ros(obj, who_to_plot, opts)
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig(fig_counter) = figure(Name="ROS Plots: " + dataset_name, Visible=show);
+                if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"]))
+                    fig_name = "ROS Plots: " + dataset_name;
+                else
+                    fig_name = "ROS Plots: Plot " + fig_counter;
+                end
+                fig(fig_counter) = figure(Name=fig_name, Visible=show);
                 if strcmp(show, "off")
                     screen_size = get(0,'ScreenSize');
                     fig(fig_counter).WindowStyle = 'normal';

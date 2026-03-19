@@ -94,7 +94,17 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % Create new figure for new set of axes
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
-                    fig(fig_counter)  = figure(Name="COP Plots: " + "Plot " + fig_counter, Visible=show);
+                    if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"]))
+                        fig_name = "COP Plots: " + dataset_name;
+                    else
+                        fig_name = "COP Plots: Plot " + fig_counter;
+                    end
+                    fig(fig_counter)  = figure(Name=fig_name, Visible=show);
+                    if strcmp(show, "off")
+                        screen_size = get(0,'ScreenSize');
+                        fig(fig_counter).WindowStyle = 'normal';
+                        fig(fig_counter).Position = screen_size;
+                    end
                     n_cols = ceil(sqrt(number_of_axes_in_fig));
                     n_rows = ceil(number_of_axes_in_fig / n_cols);
                     tOuter = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
@@ -105,7 +115,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % World and Shank Frames
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
-                title(tInner, "P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points

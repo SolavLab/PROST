@@ -78,9 +78,19 @@ end
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                fig(fig_counter)  = figure(Name="Features vs Labels: " + x_name + " vs " + strjoin(replace(label_names, "_", " "), ", ") + "_Plot " + fig_counter, Visible=show);
+                if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"]))
+                    fig_name = "Features vs Labels: " + x_name;
+                else
+                    fig_name = "Features vs Labels: " + x_name + " Plot " + fig_counter;
+                end
+                fig(fig_counter)  = figure(Name=fig_name, Visible=show);
+                if strcmp(show, "off")
+                    screen_size = get(0,'ScreenSize');
+                    fig(fig_counter).WindowStyle = 'normal';
+                    fig(fig_counter).Position = screen_size;
+                end
                 tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
-                sgtitle(fig(fig_counter), fig(fig_counter).Name)
+                sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "))
             end
 
             % Initialize axis
