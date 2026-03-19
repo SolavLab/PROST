@@ -7,7 +7,9 @@
 % speed and trial number. For each subplot, the script computes the global min, 
 % max, and mean and annotates the relative range ((max − min) / mean) × 100%.
 % ------------------------------------------------------------------------------
-clc; close all; clearvars -except -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$
+close all
+clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script

@@ -5,7 +5,10 @@
 % (negative direction) are flagged and visualized with GRF, COP, and PSIS 
 % trajectories to support inspection and validation.
 % ------------------------------------------------------------------------------
-clc; close all; clearvars -except -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$
+close all
+clc
+
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script

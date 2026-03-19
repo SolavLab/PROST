@@ -6,7 +6,9 @@
 % allows us to determine which axis corresponds to which direction in space 
 % relative to participant motion.
 % ------------------------------------------------------------------------------
-clc; close all; clearvars -except -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$
+close all
+clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script

@@ -1,4 +1,4 @@
-clearvars -except -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$
 close all
 clc
 

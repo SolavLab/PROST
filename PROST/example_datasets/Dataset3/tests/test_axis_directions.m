@@ -8,7 +8,9 @@
 % subjects and trials to validate walking direction consistency across the 
 % dataset.
 % ------------------------------------------------------------------------------
-clc; close all; clearvars -except -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$
+close all
+clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script

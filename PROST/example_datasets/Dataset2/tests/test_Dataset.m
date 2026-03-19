@@ -1,4 +1,4 @@
-clearvars -except good_trials -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$ good_trials
 close all
 clc
 

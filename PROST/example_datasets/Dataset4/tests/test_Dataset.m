@@ -1,5 +1,5 @@
 %% Initialize script - DO NOT CHANGE
-clearvars -except good_trials raw_data all_metadata -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$ good_trials raw_data all_metadata
 close all
 clc
 

@@ -4,7 +4,7 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clearvars -except good_trials -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$ good_trials
 close all
 clc
 

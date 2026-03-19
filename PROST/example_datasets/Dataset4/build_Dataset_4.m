@@ -3,7 +3,7 @@
 %  Created by Chen Reichsbouscher, 11.12.2025
 % -------------------------------------------------------------------
 %
-clearvars -except good_trials raw_data all_metadata -regexp ^Dataset\w*
+clearvars -except -regexp ^Dataset_\d+$ good_trials raw_data all_metadata
 close all
 clc
 
