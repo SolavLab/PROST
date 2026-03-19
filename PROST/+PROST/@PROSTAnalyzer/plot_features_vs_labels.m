@@ -165,15 +165,17 @@ end
             % Increment counter
             axes_counter = axes_counter + 1;
 
-            % Save figures and reset axes counter
+            % Save figure
             if axes_counter == number_of_axes_in_fig || (feature_index==n_features && label_index==n_labels)
                 lgd = legend(FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="layout");
                 lgd.Layout.Tile = "east";
                 if strcmp(show, 'off')
+                    drawnow
                     file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Features vs Labels");
                     PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type);
                 end
 
+                % Reset axis counter
                 axes_counter = 0;
             end
         end

@@ -131,7 +131,7 @@ classdef PROSTDatasetList < handle
                 for pdx=1:n_participants
                     participant_id = participants_in_list(pdx);
                     participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
-                    ig.List(dataset_index).Participnats(participant_index) = [];
+                    ig.List(dataset_index).Participants(participant_index) = [];
                     ig.List(dataset_index).ParticipantID2IndexLookup(participant_id) = [];
                     if numEntries(ig.List(dataset_index).ParticipantID2IndexLookup) > 0
                         keys = ig.List(dataset_index).ParticipantID2IndexLookup.keys';
@@ -152,10 +152,10 @@ classdef PROSTDatasetList < handle
                 participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
                 for s=side
                     if isempty(trials)
-                        ig.List(dataset_index).Participnats(participant_index).(PROST.utils.capitalize(s)) = [];
+                        ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = [];
                     else
-                        tf = ig.is_in_list_trials(ig, dataset_id, participant_id, trials, s);
-                        ig.List(dataset_index).Participnats(participant_index).(PROST.utils.capitalize(s))(tf) = [];
+                        tf = ig.is_in_list_trials(dataset_id, participant_id, trials, s);
+                        ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))(tf) = [];
                     end
                 end
             end

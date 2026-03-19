@@ -11,7 +11,7 @@ cd(toolbox_root); % Change to folder of current script
 
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
-%% Build data
+%% Load Datasets
 db_list = ["Dataset_1", fullfile(dataset_dir, "Dataset_1.mat"); ...
            "Dataset_2", fullfile(dataset_dir, "Dataset_2.mat"); ...
            "Dataset_3", fullfile(dataset_dir, "Dataset_3.mat"); ...
@@ -24,7 +24,7 @@ for index = 1:length(var_names)
     end
 end
 
-%% Load and ignore lists
+%% Create Load List
 %   load_list - a cell array where each row contains pairs of dataset name and 
 %               path to the dataset. Example:
 %               {"Dataset 1 Name", "path/to/Dataset1.mat"; "Dataset 2 Name", "path/to/Dataset2.mat"}
@@ -49,7 +49,6 @@ ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
 ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
 ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");
 ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left");
-
 PROSTAnalyzer.clean_data(ignore_list);
 
 %% Add to samples table data from datasets

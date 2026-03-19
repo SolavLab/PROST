@@ -179,7 +179,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
             % Update axis counter
             axes_counter = axes_counter + 1;
 
-            % Create legend and save figures
+            % Create legend and save figure
             if axes_counter == number_of_axes_in_fig || participant_id == participants(end)
                 % Dummy plots for legend in last axes
                 n_plots = 3 + strcmp(plot_type, "circle");

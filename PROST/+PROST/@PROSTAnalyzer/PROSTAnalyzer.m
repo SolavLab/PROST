@@ -79,7 +79,7 @@ classdef PROSTAnalyzer < handle
             samples_var_descriptions = {'',           '',               '',            '',                    'feature',   'feature',     'feature',   'feature',   'feature',    'feature',      'feature',      'feature',     'label',     'label',     'label',     'label',     'label',     'label',      ''         };
             samples_numCols = numel(samples_var_names);
     
-            summary_var_types = {'doublenan',  'string',       'string',       'string'   'doublenan',      'string',      'string'       'string'            'doublenan'         'doublenan',       'categorical', 'logical'};
+            summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'string',            'doublenan',         'doublenan',       'categorical', 'logical'};
             summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod',     'Has_medial'};
             summary_numCols = numel(summary_var_names);
             

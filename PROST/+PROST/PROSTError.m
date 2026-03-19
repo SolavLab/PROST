@@ -11,7 +11,7 @@ classdef PROSTError < MException
           function error(property, code, varargin)
               % Construct error ID of the form: PROSTAnalyzer:Property:Code
               fullID = "PROSTAnalyzer:" + property + ":" + code;
-              error(fillID, varargin{:});
+              error(fullID, varargin{:});
           end
 
       end

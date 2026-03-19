@@ -8,7 +8,10 @@ function [good_steps] = get_good_steps(steps, min_speed)
         min_speed = 0; % [km/hr]
     end
 
-    % good_steps = steps(steps(:).speed.km_per_hour.value >= min_speed);
+    if isempty(steps)
+        good_steps = [];
+        return
+    end
 
     % start "good_steps" as having the same length as "steps":
     good_steps = zeros(1, length(steps));

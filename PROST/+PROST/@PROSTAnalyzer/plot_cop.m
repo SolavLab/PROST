@@ -192,12 +192,15 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 cb.Label.String = "IC to OIC";
                 axes_counter = axes_counter + 1;
 
-                % Create Legend
+                % Save figure
                 if axes_counter == number_of_axes_in_fig || (participant_id == participants(end) && s_idx == length(step_numbers))
                     if strcmp(show, 'off')
+                        drawnow
                         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/COP Plots");
                         PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type);
                     end
+                    
+                    % Reset axis counter
                     axes_counter = 0;
                 end
             end

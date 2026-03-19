@@ -1,17 +1,14 @@
 function save_figure(f, file_path, file_type)
 % SAVE_FIGURE saves the figure in the specified format.
-% Inpur :
+% Input :
 %   f - handle of the figure to save.
 %   file_path - path to the figures directory.
-%   file_type - the file type to save. Default: "fig".
+%   file_type - the file type to save. Default: "pdf".
 % Example:
 %   save_figure(f, "C:/path/to/folder", "png")
 %   save_figure(f, [], "png")
 %   save_figure(f)
 
-    if nargin < 4 || isempty(append)
-        append = true;
-    end
     if nargin < 3 || isempty(file_type)
         file_type = "pdf";  % Default file type
     end
@@ -43,7 +40,7 @@ function save_figure(f, file_path, file_type)
                 ex_opts = [ex_opts, 'ContentType', 'vector', 'Append', true];
             case "gif"
                 ex_opts = [ex_opts, 'Append', true];
-            case "svg"
+            case {"emf" "esp"}
                 ex_opts = [ex_opts, 'ContentType', 'vector'];
         end
     end
