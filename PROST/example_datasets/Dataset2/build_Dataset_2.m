@@ -1045,12 +1045,13 @@ function interpolated_COP = interpolate_COP(COP, step_info, walking_direction, n
     % get data (get the COP of the fitting plate:
     interpolated_COP.x = walking_direction*COP.("plate_" + fp_num).x;
     interpolated_COP.y = walking_direction*COP.("plate_" + fp_num).y;
-    interpolated_COP.z = COP.("plate_" + fp_num).z;
+    % interpolated_COP.z = COP.("plate_" + fp_num).z;
 
     % % cut the COP from IC to OIC filter it and temporally align to 101 points
     interpolated_COP.x = interp1(IC_index:OIC_index, interpolated_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_COP.y = interp1(IC_index:OIC_index, interpolated_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
-    interpolated_COP.z = interp1(IC_index:OIC_index, interpolated_COP.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
+    interpolated_COP.z = zeros(size(interpolated_COP.x));
+    % interpolated_COP.z = interp1(IC_index:OIC_index, interpolated_COP.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
 
     interpolated_COP.unit = "mm";
     interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";

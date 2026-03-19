@@ -613,11 +613,12 @@ for participant_number = 1:n_participants
             COP = Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).COP;
             tmp_COP.x = walking_direction*COP.plate_1.x;
             tmp_COP.y = -walking_direction*COP.plate_1.z;
-            tmp_COP.z = COP.plate_1.y;
+            % tmp_COP.z = COP.plate_1.y;
             % % cut the COP from IC to OIC filter it and temporally align to to n_temporal_alignment points
             interpolated_COP.x = interp1(IC_index:OIC_index, tmp_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
             interpolated_COP.y = interp1(IC_index:OIC_index, tmp_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
-            interpolated_COP.z = interp1(IC_index:OIC_index, tmp_COP.z(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
+            interpolated_COP.z = zeros(size(interpolated_COP.x)); 
+            % interpolated_COP.z = interp1(IC_index:OIC_index, tmp_COP.z(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
             interpolated_COP.unit = "mm";
             interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";
 

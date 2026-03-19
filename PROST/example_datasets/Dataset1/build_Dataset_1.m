@@ -459,14 +459,14 @@ for participant_number=participant_numbers
                 % and the original x to be the new -y (so the z direction will still point up)
                 one_step_COP.x = Dataset_1.Data.(participant_name).processed_original_data.(trial_name).COP.FP(step_number).y;
                 one_step_COP.y = -Dataset_1.Data.(participant_name).processed_original_data.(trial_name).COP.FP(step_number).x;
-                one_step_COP.z = Dataset_1.Data.(participant_name).processed_original_data.(trial_name).COP.FP(step_number).z;
+                % one_step_COP.z = Dataset_1.Data.(participant_name).processed_original_data.(trial_name).COP.FP(step_number).z;
 
                 % cut the COP data from IC to OIC (weight accetnace + single support) and interpolate it to 101 points
                 original_indices = 1:length(one_step_COP.x);
                 original_indices = original_indices(~isnan(one_step_COP.x));
                 interpolated_COP.x = interp1(IC_index:OIC_index, one_step_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.y = interp1(IC_index:OIC_index, one_step_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
-                interpolated_COP.z = NaN(size(interpolated_COP.x));
+                interpolated_COP.z = zeros(size(interpolated_COP.x));
                 interpolated_COP.unit = "mm";
                 interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";
 
