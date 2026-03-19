@@ -22,18 +22,18 @@ participant_name = dataset.Data(participant_id).Participant_name;
 
 step = dataset.Data(participant_id).Uniform_data.(side).step(trial_num);
 shank_cop = step.Shank_cop;
-x = shank_cop.x(~isnan(shank_cop.x));
-y = shank_cop.y(~isnan(shank_cop.y));
-z = shank_cop.z(~isnan(shank_cop.z));
-dz_dx = (diff(z)./diff(x));
-dx = (diff(x));
+u = shank_cop.u(~isnan(shank_cop.u));
+v = shank_cop.v(~isnan(shank_cop.v));
+w = shank_cop.w(~isnan(shank_cop.w));
+dz_dx = (diff(w)./diff(u));
+dx = (diff(u));
 
 figure
 tiledlayout
 sgtitle(sprintf("P%d (%s) Step: %d %s", participant_id, participant_name, trial_num, side))
 
 nexttile
-scatter(x, z, 30, 1:length(x), '^', 'filled')
+scatter(u, w, 30, 1:length(u), '^', 'filled')
 hold on
 axis equal
 grid on
@@ -49,7 +49,7 @@ xlabel("index")
 ylabel("dz/dx [mm]")
 
 nexttile
-scatter(1:length(x), x, 30, 1:length(x), '^', 'filled')
+scatter(1:length(u), u, 30, 1:length(u), '^', 'filled')
 hold on
 axis equal
 grid on
@@ -81,14 +81,14 @@ for side = ["right"]
         tiledlayout(2,2)
         sgtitle(sprintf("P%d (%s) %s, T%d (%s)\n", participant_id, participant_name, side, trial_num, replace(trial_name, "_", " ")))
         
-        x = shank_cop.x(~isnan(shank_cop.x));
-        y = shank_cop.y(~isnan(shank_cop.y));
-        z = shank_cop.z(~isnan(shank_cop.z));
-        dz_dx = (diff(z)./diff(x));
-        dx = (diff(x));
+        u = shank_cop.u(~isnan(shank_cop.u));
+        v = shank_cop.v(~isnan(shank_cop.v));
+        w = shank_cop.w(~isnan(shank_cop.w));
+        dz_dx = (diff(w)./diff(u));
+        dx = (diff(u));
 
         nexttile
-        scatter(x, z, 30, 1:length(x), '^', 'filled')
+        scatter(u, w, 30, 1:length(u), '^', 'filled')
         hold on
         axis equal
         grid on
@@ -104,7 +104,7 @@ for side = ["right"]
         ylabel("dz/dx [mm]")
     
         nexttile
-        scatter(1:length(x), x, 30, 1:length(x), '^', 'filled')
+        scatter(1:length(u), u, 30, 1:length(u), '^', 'filled')
         hold on
         axis equal
         grid on
@@ -137,11 +137,11 @@ for participant_id=1:n_participants
             trial_name = step.source.original_trial;
             shank_cop = step.Shank_cop;
 
-            x = shank_cop.x(~isnan(shank_cop.x));
-            y = shank_cop.y(~isnan(shank_cop.y));
-            z = shank_cop.z(~isnan(shank_cop.z));
-            dz_dx = (diff(z)./diff(x));
-            dx = diff(x);
+            u = shank_cop.u(~isnan(shank_cop.u));
+            v = shank_cop.v(~isnan(shank_cop.v));
+            w = shank_cop.w(~isnan(shank_cop.w));
+            dz_dx = (diff(w)./diff(u));
+            dx = diff(u);
             sign_d = sign(dx);
             idx_switch = find(diff(sign_d) ~= 0);
             if isempty(idx_switch) 
@@ -179,14 +179,14 @@ for i=1:length(bad_trials)
     tiledlayout(2,2)
     sgtitle(sprintf("P%d (%s) %s, T%d (%s)\n", participant_id, participant_name, side, trial_num, replace(trial_name, "_", " ")))
 
-    x = shank_cop.x(~isnan(shank_cop.x));
-    y = shank_cop.y(~isnan(shank_cop.y));
-    z = shank_cop.z(~isnan(shank_cop.z));
-    dz_dx = (diff(z)./diff(x));
-    dx = (diff(x));
+    u = shank_cop.u(~isnan(shank_cop.u));
+    v = shank_cop.v(~isnan(shank_cop.v));
+    w = shank_cop.w(~isnan(shank_cop.w));
+    dz_dx = (diff(w)./diff(u));
+    dx = (diff(u));
 
     nexttile
-    scatter(x, z, 30, 1:length(x), '^', 'filled')
+    scatter(u, w, 30, 1:length(u), '^', 'filled')
     hold on
     axis equal
     grid on
@@ -202,7 +202,7 @@ for i=1:length(bad_trials)
     ylabel("dz_dx [mm]")
 
     nexttile
-    scatter(1:length(x), x, 30, 1:length(x), '^', 'filled')
+    scatter(1:length(u), u, 30, 1:length(u), '^', 'filled')
     hold on
     axis equal
     grid on

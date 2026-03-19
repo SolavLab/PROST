@@ -188,12 +188,12 @@ for particpant_num=participants % all participants
             axis(ax_shank, 'equal');
             pbaspect(ax_shank, [1 1 1]);
             h = gobjects(3, 1);
-            X = [shank_ankle.x; shank_knee.x];
-            Y = [shank_ankle.z; shank_knee.z];
+            X = [shank_ankle.u; shank_knee.u];
+            Y = [shank_ankle.w; shank_knee.w];
             plot(ax_shank, X, Y, '-k');
-            h(1) = scatter(ax_shank, shank_ankle.x, shank_ankle.z, 30, time, 'square', 'filled', DisplayName="Ankle");
-            h(2) = scatter(ax_shank, shank_knee.x, shank_knee.z, 30, time, 'o', 'filled', DisplayName="Knee");
-            h(3) = scatter(ax_shank, shank_cop.x, shank_cop.z, 30, time, '^', 'filled', DisplayName="Cop");
+            h(1) = scatter(ax_shank, shank_ankle.u, shank_ankle.w, 30, time, 'square', 'filled', DisplayName="Ankle");
+            h(2) = scatter(ax_shank, shank_knee.u, shank_knee.w, 30, time, 'o', 'filled', DisplayName="Knee");
+            h(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, 30, time, '^', 'filled', DisplayName="Cop");
             % c = colorbar(ax_shank, "eastoutside");
             % c.Label.String = 'WA + SS %';
             title(ax_shank, "Shank Frame");

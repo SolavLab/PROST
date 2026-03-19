@@ -97,7 +97,7 @@ for p=1:n_participants
             % axis square;
             % scatter(ankle.x, ankle.z, 30, time, 'square', 'filled')
             % scatter(knee.x, knee.z, 30, time, 'o', 'filled')
-            scatter(shank_cop.x, shank_cop.z, 30, time, '^', 'filled', DisplayName=side)
+            scatter(shank_cop.u, shank_cop.w, 30, time, '^', 'filled', DisplayName=side)
             hold on
             axis equal
             title(PROST.utils.capitalize(side) + ": P" + p + " Trial " + num2str(t), replace(trial.source.original_trial, "_", " "))

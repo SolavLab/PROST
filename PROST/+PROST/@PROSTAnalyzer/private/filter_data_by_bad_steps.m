@@ -51,7 +51,7 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
     
                     shank_cop = step.Shank_cop.(anatomical_side);
     
-                    x = shank_cop.x(~isnan(shank_cop.x));
+                    x = shank_cop.u(~isnan(shank_cop.u));
                     dx = diff(x);
                     sign_d = sign(dx);
                     idx_switch = find(diff(sign_d) ~= 0);

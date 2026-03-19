@@ -34,21 +34,31 @@ Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 %% Analyze Residuals
 PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", ["kernel"], function_type="pdf", show="on", BinMethod='auto');
 
-%% Analyze Radius and Center x
-PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
-PROSTAnalyzer.plot_stats("Center_x", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
-PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
-PROSTAnalyzer.plot_stats("Center_x", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
-PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
-PROSTAnalyzer.plot_stats("Center_x", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
+%% Analyze Radius and Center Horizontal
+% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='auto');
+% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["kernel"], function_type="pdf", show="on", BinMethod='scott');
+% PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel"], function_type="pdf", show="on", BinMethod='fd');
+% 
+% [~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", [], [], ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace" "tLocationScale" "exponential"], function_type="pdf", show="on", BinMethod='fd');
+% [~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["kernel" "normal" "laplace" "tlocationscale" "exponential"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Radius", "Height", "Is_shod", ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", "Is_shod", ["kernel" "normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
+% 
+% PROSTAnalyzer.plot_stats("Radius", "Height", [], ["lognormal" "t Location Scale"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
+% 
+% PROSTAnalyzer.plot_stats("Radius", [], [], ["lognormal" "t Location Scale"], function_type="pdf", show="on", BinMethod='fd');
+% PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
-[~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace"], function_type="cdf", show="on", BinMethod='fd');
-[~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_x", "Height", [], ["kernel" "normal" "laplace"], function_type="cdf", show="on", BinMethod='fd');
-PROSTAnalyzer.plot_stats("Radius", "Height", "Is_shod", ["kernel" "normal" "lognormal" "gamma" "rayleigh" "half normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
-PROSTAnalyzer.plot_stats("Center_x", "Height", "Is_shod", ["kernel" "normal" "laplace"], function_type="pdf", show="on", BinMethod='fd');
+
+[~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", "Height", [], ["tLocationScale"], function_type="pdf", show="on", BinMethod='fd');
+[~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_x"], [], "Height", 'on', 'fig')
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], [], "Height", 'on', 'fig');
 
 %% Plot COP
 who_to_plot = PROST.PROSTDatasetList();

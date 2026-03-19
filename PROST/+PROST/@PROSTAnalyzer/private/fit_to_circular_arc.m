@@ -13,8 +13,8 @@ function fit_to_circular_arc(obj, entry_number)
 %  Output :
 %   circular arc parameters:
 %       radius [m]
-%       center_x [m]
-%       center_z [m]
+%       center_horizontal [m]
+%       center_vertical [m]
 %       ang_start [deg]
 %       ang_end [deg]
 %       arc_length [deg]
@@ -42,14 +42,14 @@ function fit_to_circular_arc(obj, entry_number)
     B = [[x z]'; ones(1, n_points)]';
     d = x.^2 + z.^2;
     y = (B'*B)\(B'*d); % B is rectangular matrix hence multiplied by B'
-    center_x = y(1)/2;
-    center_y = y(2)/2;
+    center_horizontal = y(1)/2;
+    center_vertical = y(2)/2;
     y(3) = 0; % Actual residual = y(3), but set to zero after first approximation
-    ros_rad = sqrt(y(3) + center_x^2 + center_y^2);
+    ros_rad = sqrt(y(3) + center_horizontal^2 + center_vertical^2);
 
     % 2) Optimize the solution:
     % Initial guess from linear least squares approach
-    initial_guess = [center_x; center_y; ros_rad];
+    initial_guess = [center_horizontal; center_vertical; ros_rad];
     % options = optimoptions(options,'TolFun',1e-10,'TolX',1e-10,'MaxFunEvals',100000,'MaxIter',40000);
     % Ensure initial guess does not contain NaN or Inf values
     if any(isnan(initial_guess)) || any(isinf(initial_guess))
@@ -57,7 +57,7 @@ function fit_to_circular_arc(obj, entry_number)
             "Initial guess contains NaN or Inf values"));
     end
 
-    % Function that calculates non-linear LSQ residual.
+    % Function that calculates non-linear least-squares residual.
     % (this function is also copied from Dana's code)
     % objective_func = @(params)(params(3) - sqrt((point_cloud(:, 1) - params(1)).^2 + (point_cloud(:, 2) - params(2)).^2));
     objective_func = @(params)sum((params(3) - sqrt((x - params(1)).^2 + (z - params(2)).^2)).^2);
@@ -81,9 +81,9 @@ function fit_to_circular_arc(obj, entry_number)
 
     % circle fitting parameters
     radius = params(3);
-    center_x = params(1);
-    center_z = params(2);
-    center = [center_x center_z];
+    center_horizontal = params(1);
+    center_vertical = params(2);
+    center = [center_horizontal center_vertical];
 
     % calculate vectors from center to start and end points
     vec_start = ros_start - center;
@@ -99,8 +99,8 @@ function fit_to_circular_arc(obj, entry_number)
 
     % 4) Fill samples table
     obj.SamplesTable.Radius(entry_number) = radius;
-    obj.SamplesTable.Center_x(entry_number) = center_x;
-    obj.SamplesTable.Center_z(entry_number) = center_z;
+    obj.SamplesTable.Center_horizontal(entry_number) = center_horizontal;
+    obj.SamplesTable.Center_vertical(entry_number) = center_vertical;
     obj.SamplesTable.Ang_start(entry_number) = ang_start;
     obj.SamplesTable.Ang_end(entry_number) = ang_end;
     obj.SamplesTable.Arc_length(entry_number) = arc_length;

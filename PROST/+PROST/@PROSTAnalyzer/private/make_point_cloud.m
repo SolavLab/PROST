@@ -32,8 +32,8 @@ function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums,
         step = dataset.Data(participant_id).Uniform_data.(side).step(step_num);
 
         % add this step to the point cloud.
-        idx = (1+cut_length:numel(step.Shank_cop.(anatomical_side).x)-cut_length);
-        point_cloud((1 + (step_idx - 1)*trial_size):(step_idx*trial_size), :) = [step.Shank_cop.(anatomical_side).x(idx)', step.Shank_cop.(anatomical_side).z(idx)', step.source.original_trial_number_in_database + 0.*idx'];
+        idx = (1+cut_length:numel(step.Shank_cop.(anatomical_side).u)-cut_length);
+        point_cloud((1 + (step_idx - 1)*trial_size):(step_idx*trial_size), :) = [step.Shank_cop.(anatomical_side).u(idx)', step.Shank_cop.(anatomical_side).w(idx)', step.source.original_trial_number_in_database + 0.*idx'];
     end
 
     % Check for NaN or Inf values in the point cloud

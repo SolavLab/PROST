@@ -76,7 +76,7 @@ for particpant_num=participants
             shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(trial, "lateral");
 
             % colormap("autumn");
-            scatter(shank_cop.x, shank_cop.z, 30, cmaps(side), 'o', 'filled', DisplayName=side)
+            scatter(shank_cop.u, shank_cop.w, 30, cmaps(side), 'o', 'filled', DisplayName=side)
             hold on
             axis equal
             title("P" + particpant_num + "T" + num2str(t), replace(trial.source.original_trial, "_", " "))

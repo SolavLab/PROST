@@ -74,7 +74,7 @@ classdef PROSTAnalyzer < handle
 
             % Pre Initialization
             samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
-            samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Gender',      'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_x',  'Center_z',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
+            samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Gender',      'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_horizontal',  'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
             samples_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Yes/No',      'mm',        'mm',        'mm',        'deg',       'deg',       'deg',        'mm'       };
             samples_var_descriptions = {'',           '',               '',            '',                    'feature',   'feature',     'feature',   'feature',   'feature',    'feature',      'feature',      'feature',     'label',     'label',     'label',     'label',     'label',     'label',      ''         };
             samples_numCols = numel(samples_var_names);
@@ -199,13 +199,10 @@ classdef PROSTAnalyzer < handle
     methods(Static)
         [good_steps] = get_good_steps(steps, min_speed);
         shank_cop = cop_to_shank_frame(step, anatomical_side);
+        shank_data = convert_to_shank_frame(data, knee, ankle);
         [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
         save_figure(f, file_path, file_type);
         out = analyze_stats(value, distnames, opts)
-    end
-
-    methods(Static, Access=private)
-        shank_data = convert_to_shank_frame(data, knee, ankle);
     end
 end
 

@@ -41,8 +41,8 @@ function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show
     % Set plot parameters
     color_arc = dictionary(["right" "left"], {obj.COLOR_RIGHT_DARK obj.COLOR_LEFT_DARK});
     color_scatter = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
-    x_label = "x [mm]";
-    y_label = "z [mm]";
+    x_label = "u [mm]";
+    y_label = "w [mm]";
 
     % Start plotting
     fig = gobjects(0);
@@ -115,29 +115,29 @@ function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show
                 point_cloud = obj.PointClouds{entry_number};
 
                 % Assuming point_cloud is an Nx3 matrix with columns: x, z, num_trial
-                x = point_cloud(:, 1);
-                z = point_cloud(:, 2);
+                u = point_cloud(:, 1);
+                w = point_cloud(:, 2);
                 trial_nums = point_cloud(:, 3);
                 unique_trial_nums = unique(trial_nums);
 
                 % Get arc parameters
-                [radius, center_x, center_z, ang_start, ang_end, residual] = ...
-                    deal(sample.Radius, sample.Center_x, sample.Center_z, sample.Ang_start, sample.Ang_end, sample.Residual);
+                [radius, center_horizontal, center_vertical, ang_start, ang_end, residual] = ...
+                    deal(sample.Radius, sample.Center_horizontal, sample.Center_vertical, sample.Ang_start, sample.Ang_end, sample.Residual);
                 
                 % Get side
                 side = sample.Side;
 
                 % Calculate arc values
-                ang_vec = linspace(ang_start, ang_end, length(x));
-                z_sign = sign(z - center_z);
-                arc_points = [center_x + radius*sind(ang_vec); center_z + radius.*z_sign.*cosd(ang_vec)];
-                circle_vec = linspace(0, 360, length(x));
-                circle_points = [center_x + radius*sind(circle_vec); center_z - radius*cosd(circle_vec)];
+                ang_vec = linspace(ang_start, ang_end, length(u));
+                z_sign = sign(w - center_vertical);
+                arc_points = [center_horizontal + radius*sind(ang_vec); center_vertical + radius.*z_sign.*cosd(ang_vec)];
+                circle_vec = linspace(0, 360, length(u));
+                circle_points = [center_horizontal + radius*sind(circle_vec); center_vertical - radius*cosd(circle_vec)];
 
                 % Plot point cloud
                 for k = unique_trial_nums(:)'
                     idx = trial_nums == k;
-                    h_scat = scatter(ax, x(idx), z(idx), obj.MARKER_SIZE_SCATTER, color_scatter{side}, obj.MARKER_DOT, MarkerEdgeAlpha=obj.MARKER_FACE_ALPHA, MarkerFaceAlpha=obj.MARKER_FACE_ALPHA); % point cloud
+                    h_scat = scatter(ax, u(idx), w(idx), obj.MARKER_SIZE_SCATTER, color_scatter{side}, obj.MARKER_DOT, MarkerEdgeAlpha=obj.MARKER_FACE_ALPHA, MarkerFaceAlpha=obj.MARKER_FACE_ALPHA); % point cloud
 
                     % Optional: custom datatip text field
                     trialVals = repmat(k, sum(idx), 1);
@@ -148,16 +148,16 @@ function fig = plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show
                 plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
                 if strcmp(plot_type, "circle")
                     plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
-                    scatter(ax, center_x, center_z, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
+                    scatter(ax, center_horizontal, center_vertical, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
                 elseif strcmp(plot_type, "nadir")
-                    scatter(ax, center_x, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
+                    scatter(ax, center_horizontal, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
                 else
                     throw(PROST.PROSTError("PlotROS", "WrongPlotType", ...
                         "plot_type should be either 'circle' or 'nadir'."))
                 end
 
                 % Print Text on axis
-                txt = sprintf("(%.2f, %.2f), R: %.2f [mm],\nresidual: %.2f [mm]", center_x, center_z, radius, residual);
+                txt = sprintf("(%.2f, %.2f), R: %.2f [mm],\nresidual: %.2f [mm]", center_horizontal, center_vertical, radius, residual);
                 txt_handle = text(ax, ...
                                   0, 1 - offset, txt, ...
                                   Units="normalized", ...
