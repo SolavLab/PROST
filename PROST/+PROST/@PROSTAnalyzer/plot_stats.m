@@ -45,14 +45,13 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         var_name                {mustBeTextScalar}
         normalizer_name         {mustBeTextScalarOrEmpty} = []
         categorizer_name        {mustBeTextScalarOrEmpty} = []
-        distnames               {mustBeValidDistribution(distnames)} = []
-        opts.function_type      {mustBeMemberOrEmpty(opts.function_type, ["pdf" "cdf" "icdf" "survivor" "cumhazard" "count" "probability" "countdensity" "cumcount" "percentage"])} = "count"
-        opts.show               {mustBeMember(opts.show, ["on" "off"])} = "on"
-        opts.file_type          {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        distnames               (1, :) {mustBeValidDistributionOrEmpty(distnames)} = []
+        opts.function_type      {mustBeTextScalar, mustBeMember(opts.function_type, ["pdf" "cdf" "icdf" "survivor" "cumhazard" "count" "probability" "countdensity" "cumcount" "percentage"])} = "count"
+        opts.show               {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type          {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.qq_plot            (1,1) logical = false
         hist_opts.?matlab.graphics.chart.primitive.Histogram
         hist_opts.DisplayName   {mustBeTextScalar} = "Histogram"
-        % hist_opts.LineWidth   {mustBeNumeric} = 0.5*obj.LINE_WIDTH
     end
 
     fig_qq = gobjects(0);
@@ -289,26 +288,18 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 end
 
 % ------------ Helper functions for validation
-function mustBeTextScalarOrEmpty(x)
-        % Allow empty
-    if isempty(x)
+function mustBeTextScalarOrEmpty(value)
+%MUSTBETEXTSCALAROREMPTY Validate that value is single piece of text or an empty
+% array.
+    if isempty(value)
         return
     end   
-    mustBeTextScalar(x);
-    % if ~(isempty(x) || isStringScalar(x) || (ischar(x) && isrow(x)))
-    %     error("Value must be a character vector or string scalar if provided.")
-    % end
-end
-
-function mustBeMemberOrEmpty(x, allowed)
-    % Allow empty
-    if isempty(x)
-        return
-    end
-    mustBeMember(x, allowed);
+    mustBeTextScalar(value);
 end
 
 function d = matlabContinuousDistributions()
+%MATLABCONTINUOUSDISTRIBUTIONS returns the list of supported distribution names
+% in the Statistics and Machine Learning Toolbox™.
     persistent list
     if isempty(list)
         pkg = meta.package.fromName('prob');
@@ -323,8 +314,10 @@ function d = matlabContinuousDistributions()
     d = list;
 end
 
-function mustBeValidDistribution(distnames)
-    % Allow empty
+function mustBeValidDistributionOrEmpty(distnames)
+%MUSTBEVALIDDISTRIBUTIONOREMPTY Validate that distnames are all members of the 
+% specified set of distribution names from the Statistics and Machine Learning 
+% Toolbox™ or an empty array.
     if isempty(distnames)
         return
     end

@@ -12,24 +12,29 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                 Default: all trials of all participants and all datasets are 
 %                 plotted for both left and right sides (not recommended unless 
 %                 there are a small number of trials overall).
-%   number_of_axes_in_fig - number of axes per figure to plot. Default: 6.
-%   show - whether to show the figures or save them. Either "on" for showing the 
-%          figures or "off" for saving them. Default: "on".
-%   file_type - the type to save the figure if saved. Default: fig.
-%   anatomical_side - which anatomical side to use for the knee and ankle
-%                     trajectories and calculation of the shank frame. Choose 
-%                     between: "lateral", "medial" and "mean". 
-%                     Default: "lateral".
+%   opts - Name-Value pairs of options for plotting.
+%       opts.number_of_axes_in_fig - number of axes per figure to plot. 
+%                                    Default: 6.
+%       opts.show - whether to show the figures or save them. Either "on" for 
+%                   showing the figures or "off" for saving them. 
+%                   Default: "on".
+%       opts.file_type - the type to save the figure if saved. 
+%                        Default: fig.
+%       opts.anatomical_side - which anatomical side to use for the knee and 
+%                              ankle trajectories and calculation of the shank 
+%                              frame. Choose between: "lateral", "medial" and 
+%                              "mean". 
+%                              Default: "lateral".
 % Output :
 %   fig - array of figure handles of all the created plots.
 
     arguments
         obj 
-        who_to_plot                {mustBePRSOTDatasetListOrEmpty(who_to_plot)} = []
-        opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
-        opts.show                  {mustBeMember(opts.show, ["on" "off"])} = "on"
-        opts.file_type             {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.anatomical_side       {mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
+        who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
+        opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
+        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        opts.anatomical_side       {mustBeTextScalar, mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
     end
 
     % Prep Input Arguments
@@ -199,7 +204,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 ylabel(ax2, "w [mm]")
                 legend(ax2, h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="best");
                 cb = colorbar(ax2, 'eastoutside', FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
-                cb.Label.String = "IC to OIC";
+                cb.Label.String = "% IC to OIC";
                 axes_counter = axes_counter + 1;
 
                 % Save figure
@@ -222,9 +227,11 @@ function fig = plot_cop(obj, who_to_plot, opts)
 end
 
 % --------- helper functions ------------
-function mustBePRSOTDatasetListOrEmpty(x)
-    if isempty(x)
+function mustBeAOrEmpty(value, classname)
+%MUSTBEAOREMPTY Validate that value comes from one of specified classes or is an
+% empty array.
+    if isempty(value)
         return
     end
-    mustBeA(x, "PROST.PROSTDatasetList");
+    mustBeA(value, classname);
 end

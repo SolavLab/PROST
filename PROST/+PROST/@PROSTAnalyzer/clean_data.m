@@ -13,7 +13,7 @@ function clean_data(obj, ignore_list, opts)
 
     arguments
         obj
-        ignore_list    {mustBePRSOTDatasetListOrEmpty} = []
+        ignore_list    {mustBeScalarOrEmpty, mustBeAOrEmpty(ignore_list, "PROST.PROSTDataList")} = []
         opts.BadSteps  (1, 1) logical = true
     end
     
@@ -32,10 +32,11 @@ function clean_data(obj, ignore_list, opts)
 end
 
 % --------- helper functions ------------
-function mustBePRSOTDatasetListOrEmpty(x)
-    if isempty(x)
+function mustBeAOrEmpty(value, classname)
+%MUSTBEAOREMPTY Validate that value comes from one of specified classes or is an
+% empty array.
+    if isempty(value)
         return
     end
-    mustBeA(x, "PROST.PROSTDatasetList");
-    mustBeScalarOrEmpty(x);
+    mustBeA(value, classname);
 end

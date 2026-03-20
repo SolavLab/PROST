@@ -4,27 +4,30 @@ function fig = plot_features_vs_labels(obj, features_list, labels_list, opts)
 % Input :
 %   features_list - list of anthropometric parameters to plot.
 %   labels_list - list of ROS parameters to plot.
-%   number_of_axes_in_fig - number of axes per figure to plot.
-%   norm_var_name - variable name by which we normalize the labels.
-%   show - whether to show the figures or save them. Either "on"
-%          (default) for showing the figures or "off" for saving them.
-%   file_type - the type to save the figure if saved.
+%   opts - Name-Value pairs of options for plotting.
+%       opts.number_of_axes_in_fig - number of axes per figure to plot.
+%       opts.norm_var_name - variable name by which we normalize the labels.
+%       opts.show - whether to show the figures or save them. Either "on"
+%                   (default) for showing the figures or "off" for saving them.
+%       opts.file_type - the type to save the figure if saved.
 % Output :
 %   fig - array of figure handles of all the created plots.
+    
+    arguments
+        obj
+        features_list              {mustBeTextOrEmpty} = []
+        labels_list                {mustBeTextOrEmpty} = []
+        opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
+        opts.norm_var_name         {mustBeTextScalarOrEmpty} = []
+        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+    end
 
-arguments
-    obj
-    features_list           {mustBeFeatureOrEmpty(features_list, obj)} = []
-    labels_list             {mustBeLabelOrEmpty(labels_list, obj)} = []
-    opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
-    opts.norm_var_name      {mustBeTextScalarOrEmpty} = []
-    opts.show               {mustBeMember(opts.show, ["on" "off"])} = "on"
-    opts.file_type          {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-end
     % Prep Input Arguments
     number_of_axes_in_fig = opts.number_of_axes_in_fig;
     show = opts.show;
     file_type = opts.file_type;
+    norm_var_name = opts.norm_var_name;
 
     % Get Data
     [features, feature_names, feature_units, feature_types] = obj.get_features(features_list);
@@ -196,29 +199,20 @@ end
 end
 
 % --------- helper functions ------------
-function mustBeFeatureOrEmpty(x, obj)
-    if isempty(x)
-        return
-    end
-
-    features_i = strcmp(obj.SamplesTable.Properties.VariableTypes, "feature");
-    features = string(obj.SamplesTable.Properties.VariableNames{features_i});
-    ismember(x, features);
-end
-
-function mustBeLabelOrEmpty(x, obj)
-    if isempty(x)
-        return
-    end
-
-    labels_i = strcmp(obj.SamplesTable.Properties.VariableTypes, "label");
-    labels = string(obj.SamplesTable.Properties.VariableNames{labels_i});
-    ismember(x, labels);
-end
-
-function mustBeTextScalarOrEmpty(x)
-    if isempty(x)
+function mustBeTextScalarOrEmpty(value)
+%MUSTBETEXTSCALAROREMPTY Validate that value is single piece of text or an empty
+% array.
+    if isempty(value)
        return
     end
-    mustBeTextScalar(x);
+    mustBeTextScalar(value);    
+end
+
+function mustBeTextOrEmpty(value)
+%MUSTBETEXTOREMPTY Validate that value is string array, character vector, or
+% cell array of character vectors or an empty array.
+    if isempty(value)
+       return
+    end
+    mustBeText(value);
 end

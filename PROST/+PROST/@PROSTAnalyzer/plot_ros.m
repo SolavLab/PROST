@@ -19,12 +19,11 @@ function fig = plot_ros(obj, who_to_plot, opts)
 
     arguments
         obj 
-        who_to_plot                {mustBePRSOTDatasetListOrEmpty(who_to_plot)} = []
-        opts.plot_type             {mustBeMember(opts.plot_type, ["circle" "nadir"])}
-        opts.number_of_axes_in_fig {mustBeInteger, mustBeScalarOrEmpty} = 6
-        opts.show                  {mustBeMember(opts.show, ["on" "off"])} = "on"
-        opts.file_type             {mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-
+        who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
+        opts.plot_type             {mustBeTextScalar, mustBeMember(opts.plot_type, ["circle" "nadir"])} = "circle"
+        opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
+        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
     end
 
     % Prep Input Arguments
@@ -228,9 +227,11 @@ function fig = plot_ros(obj, who_to_plot, opts)
 end
 
 % --------- helper functions ------------
-function mustBePRSOTDatasetListOrEmpty(x)
-    if isempty(x)
+function mustBeAOrEmpty(value, classname)
+%MUSTBEAOREMPTY Validate that value comes from one of specified classes or is an
+% empty array.
+    if isempty(value)
         return
     end
-    mustBeA(x, "PROST.PROSTDatasetList");
+    mustBeA(value, classname);
 end
