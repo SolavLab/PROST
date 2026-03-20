@@ -23,16 +23,21 @@ Dataset_2_ID = dataset_ids(matches(dataset_names, "Dataset 2"));
 Dataset_3_ID = dataset_ids(matches(dataset_names, "Dataset 3"));
 Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
-%% Plot data ROS
+%% Plot All ROSs
+% who_to_plot = PROST.PROSTDatasetList();
+% % who_to_plot.add_to_list(Dataset_4_ID, 1:12);
+% for dataset_id=dataset_ids
+%     who_to_plot.add_to_list(dataset_id);
+% end
+% PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=6, plot_type="nadir");
+
+%% Plot Example ROS
 who_to_plot = PROST.PROSTDatasetList();
-% who_to_plot.add_to_list(Dataset_4_ID, 1:12);
-for dataset_id=dataset_ids
-    who_to_plot.add_to_list(dataset_id);
-end
-PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=6, plot_type="circle", show="off", file_type="pdf");
+who_to_plot.add_to_list(Dataset_2_ID, 12);
+PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle");
 
 %% Analyze Residuals
-PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", ["kernel"], function_type="pdf");
+PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf");
 
 %% Analyze Radius and Center Horizontal
 % PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", BinMethod='auto');
@@ -54,17 +59,21 @@ PROSTAnalyzer.plot_stats("Residual", [], "Is_shod", ["kernel"], function_type="p
 % PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
 
-[~, ~, stats_R] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf");
-[~, ~, stats_X] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tlocationscale", function_type="pdf");
+[~, ~, stats_r] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf");
+[~, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tlocationscale", function_type="pdf");
+
+disp("Radius:")
+fprintf(PROST.utils.pretty_print(stats_r))
+disp("Center Horizontal:")
+fprintf(PROST.utils.pretty_print(stats_horizontal))
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], norm_var_name="Height");
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], norm_var_name="Height", file_type="pdf", show="off");
 
-%% Plot COP
+%% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
-% who_to_plot.add_to_list(Dataset_4_ID, 1, [1 2 3], "Left");
-PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=3, show="off", file_type="pdf");
+PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=1, show="on", file_type="jpg");
 
 %% Save figures
 % PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "pdf")
