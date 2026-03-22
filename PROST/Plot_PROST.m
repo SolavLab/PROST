@@ -37,7 +37,7 @@ who_to_plot.add_to_list(Dataset_2_ID, 12);
 PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle");
 
 %% Analyze Residuals
-PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf");
+PROSTAnalyzer.plot_stats("Residual", [], [], "normal", function_type="pdf", qq_plot=true);
 
 %% Analyze Radius and Center Horizontal
 % PROSTAnalyzer.plot_stats("Radius", "Height", [], ["kernel"], function_type="pdf", BinMethod='auto');
@@ -59,8 +59,8 @@ PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf");
 % PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
 
-[~, ~, stats_r] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf");
-[~, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tlocationscale", function_type="pdf");
+[~, ~, stats_r] = PROSTAnalyzer.plot_stats("Radius", "Leg_length", [], "tLocationScale", function_type="pdf", BinMethod="fd");
+[~, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Leg_length", [], "tlocationscale", function_type="pdf", BinMethod="fd");
 
 disp("Radius:")
 fprintf(PROST.utils.pretty_print(stats_r))
@@ -68,7 +68,7 @@ disp("Center Horizontal:")
 fprintf(PROST.utils.pretty_print(stats_horizontal))
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], norm_var_name="Height", file_type="pdf", show="off");
+PROSTAnalyzer.plot_features_vs_labels([], ["Radius" "Center_horizontal"], norm_var_name="Height");
 
 %% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();
@@ -76,5 +76,5 @@ who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
 PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=1, show="on", file_type="jpg");
 
 %% Save figures
-% PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "pdf")
+% PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "jpg")
 % close all

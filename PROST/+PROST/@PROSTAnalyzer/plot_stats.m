@@ -1,4 +1,4 @@
-function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, categorizer_name, distnames, opts, hist_opts)
+function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, categorizer_name, distnames, opts, hist_opts)
 %PLOT_STATS analyzes the statistics of the given variable from the sample data, 
 % estimating its distribution and plotting it compared to a histogram, the KDE 
 % and a set of predetermined distributions. Also can create a QQ-plot compared 
@@ -55,7 +55,7 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end
 
     fig_qq = gobjects(0);
-    fig_dist = gobjects(0);
+    fig_data = gobjects(0);
 
     % Get variable
     var = obj.get_samples(var_name);
@@ -109,7 +109,7 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     hist_flag = ismember(opts.function_type, histogram_types);
     kde_flag = ismember(opts.function_type, kde_types) && ~isempty(distnames) && ismember("kernel", distnames);
     dist_flag = ismember(opts.function_type, dist_types) && ~isempty(distnames);
-    distplot_flag = hist_flag || kde_flag || dist_flag;
+    dataplot_flag = hist_flag || kde_flag || dist_flag;
     qqplot_flag = opts.qq_plot && dist_flag;
 
     % Override Histogram Normalization with Function Type
@@ -158,11 +158,11 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                              "survivor", "Survivor Function", ...
                              "cumhazard", "Cumulative Hazard Function");
     
-    if distplot_flag
-        fig_dist = figure(Name="Statistics: " + value_name + " Distribution Estimation", Visible=opts.show);
-        tl_hist = tiledlayout(TileSpacing="compact", Padding="compact");
-        sgtitle(fig_dist, replace(fig_dist.Name, "_", " "))
-        colororder(fig_dist, "gem12");
+    if dataplot_flag
+        fig_data = figure(Name="Statistics: " + value_name + " Distribution Estimation", Visible=opts.show);
+        tl_data = tiledlayout(TileSpacing="compact", Padding="compact");
+        sgtitle(fig_data, replace(fig_data.Name, "_", " "))
+        colororder(fig_data, "gem12");
     end
     if qqplot_flag
         fig_qq = figure(Name="Statistics: " + value_name + " QQ Plot", Visible=opts.show);
@@ -172,22 +172,23 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end
 
     % Plot for each category
-    stats(n_categories) = struct("summary", [], "rankingAIC", [], "rankingBIC", [], "fits", []);
+    stats = [];
+    % stats(n_categories) = struct("summary", [], "rankingAIC", [], "rankingBIC", [], "fits", []);
     for cat_idx=1:n_categories
         value_i = value(categorizer == cat_options{cat_idx});
         x = linspace(min(value_i), max(value_i), 1000);
         
-        if distplot_flag
-            ax_dist = nexttile(tl_hist);
-            title(ax_dist, cat_names(cat_idx))
-            hold(ax_dist, "on");
+        if dataplot_flag
+            ax_data = nexttile(tl_data);
+            title(ax_data, cat_names(cat_idx))
+            hold(ax_data, "on");
             if opts.function_type == "icdf"
-                xlabel(ax_dist, "probability")
+                xlabel(ax_data, "probability")
             else
-                xlabel(ax_dist, value_name + " [" + value_units + "]")
+                xlabel(ax_data, value_name + " [" + value_units + "]")
             end
-            ylabel(ax_dist, function_type_map(opts.function_type))
-            legend(ax_dist, FontSize=obj.FONT_SIZE, FontWeight="bold");
+            ylabel(ax_data, function_type_map(opts.function_type))
+            legend(ax_data, FontSize=obj.FONT_SIZE, FontWeight="bold");
         end
 
         if qqplot_flag
@@ -204,28 +205,29 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 
         if hist_flag
             hist_property_cell = namedargs2cell(hist_opts);
-            h = histogram(ax_dist, value_i, hist_property_cell{:});
+            h = histogram(ax_data, value_i, hist_property_cell{:});
             x_limits = h.BinLimits;
             x = linspace(x_limits(1), x_limits(2), 1000);
             h.DisplayName = h.DisplayName + " Bin Method: " + h.BinMethod;
         end
         
-        if dist_flag || kde_flag
-            property_cell = namedargs2cell(analyze_stats_opts);
-            stats_i = PROST.PROSTAnalyzer.analyze_stats(value_i, distnames, property_cell{:});
-            stats(cat_idx) = stats_i;
-            txt = sprintf(PROST.utils.pretty_print(stats_i.summary));
-            % clean summary text
-            txt = strip(splitlines(txt));
-            txt = join(txt(txt~="" & ~startsWith(txt, "-")), newline);
-            text(ax_dist, 0, 1, txt, ...
-                 Units="normalized", ...
-                 FontSize=obj.FONT_SIZE, ...
-                 FontName="FixedWidth", ...
-                 FontWeight="bold", ...
-                 HorizontalAlignment="left", ...
-                 VerticalAlignment="top");
-            
+        property_cell = namedargs2cell(analyze_stats_opts);
+        stats_i = PROST.PROSTAnalyzer.analyze_stats(value_i, distnames, property_cell{:});
+        % stats(cat_idx) = stats_i;
+        stats = [stats; stats_i];
+        txt = sprintf(PROST.utils.pretty_print(stats_i.summary));
+        % clean summary text
+        txt = strip(splitlines(txt));
+        txt = join(txt(txt~="" & ~startsWith(txt, "-")), newline);
+        text(ax_data, 0, 1, txt, ...
+            Units="normalized", ...
+            FontSize=obj.FONT_SIZE, ...
+            FontName="FixedWidth", ...
+            FontWeight="bold", ...
+            HorizontalAlignment="left", ...
+            VerticalAlignment="top");
+
+
             for dist_idx=1:numel(distnames)
                 distname = distnames(dist_idx);
                 key = matlab.lang.makeValidName(distname);
@@ -235,15 +237,15 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                 end
                 if distname == "kernel" && kde_flag
                     kde = stats_i.fits.kernel.kde;
-                    plot(ax_dist, kde.xi, kde.f, ...
+                    plot(ax_data, kde.xi, kde.f, ...
                                       LineStyle=obj.LINE_STYLE_SOLID, ...
                                       LineWidth=obj.LINE_WIDTH, ...
                                       DisplayName=sprintf("KDE bw=%.2f", kde.bw));
-                    plot(ax_dist, kde.xi, kde.f_alt{1}, ...
+                    plot(ax_data, kde.xi, kde.f_alt{1}, ...
                                       LineStyle=obj.LINE_STYLE_SOLID, ...
                                       LineWidth=obj.LINE_WIDTH, ...
                                       DisplayName=sprintf("KDE bw=%.2f", kde.bw_alt(1)));
-                    plot(ax_dist, kde.xi, kde.f_alt{2}, ...
+                    plot(ax_data, kde.xi, kde.f_alt{2}, ...
                                       LineStyle=obj.LINE_STYLE_SOLID, ...
                                       LineWidth=obj.LINE_WIDTH, ...
                                       DisplayName=sprintf("KDE bw=%.2f", kde.bw_alt(2)));
@@ -254,7 +256,7 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                     params = join(params(params~="" & ~startsWith(params, "-")), ", ");
 
                     txt = sprintf("%s Distribution: %s", stats_i.fits.(key).name, params);
-                    plot(ax_dist, x, stats_i.fits.(key).(opts.function_type)(x), ...
+                    plot(ax_data, x, stats_i.fits.(key).(opts.function_type)(x), ...
                                      LineWidth=obj.LINE_WIDTH, ...
                                      LineStyle=obj.LINE_STYLE_SOLID, ...
                                      DisplayName=txt);
@@ -275,13 +277,12 @@ function [fig_dist, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                     end % if qq_flag
                 end % if name == "kernel" && kde_flag
             end % for distname=distnames
-        end % if dist_flag || kde_flag
     end % for cat_idx=1:n_categories
 
     % Save figures
     if strcmp(opts.show, 'off')
         figure_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.PROSTAnalyzer.save_figure(fig_dist, figure_path, opts.file_type);
+        PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, opts.file_type);
         PROST.PROSTAnalyzer.save_figure(fig_qq, figure_path, opts.file_type);
         fprintf("All figures saved.\n");
     end

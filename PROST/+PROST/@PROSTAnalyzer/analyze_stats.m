@@ -46,7 +46,7 @@ function out = analyze_stats(value, distnames, opts)
 
     arguments
         value (:,1) double
-        distnames         %{mustBeValidDistribution(distnames)}
+        distnames         (1, :) {mustBeValidDistributionOrEmpty(distnames)} = []
         opts.KDESupport   {mustBeMember(opts.KDESupport, ["unbounded" "positive" "nonnegative" "negative"])} = "unbounded"
         opts.KDEKernel    {mustBeMember(opts.KDEKernel, ["normal" "box" "triangle" "epanechnikov"])} = "normal"
         opts.KDEFunction  {mustBeMember(opts.KDEFunction, ["pdf" "cdf" "icdf" "survivor" "cumhazard"])} = "pdf"
@@ -71,11 +71,16 @@ function out = analyze_stats(value, distnames, opts)
         'mean', mean(x), ...
         'median', median(x), ...
         'std', std(x), ...
+        'variance', var(x), ...
         'skewness', skewness(x), ...
         'kurtosis', kurtosis(x), ...
         'min', min(x), ...
         'max', max(x) ...
     );
+
+    if isempty(distnames)
+        return
+    end
 
     % Normalize distnames
     if iscell(distnames); distnames = string(distnames); end
@@ -201,10 +206,13 @@ end
 % ===================== local helpers =====================
 
 function row = llrow(name, LL, AIC, BIC)
+%LLROW builds row for ranking tables
     row = struct('Distribution', string(name), 'LogLik', LL, 'AIC', AIC, 'BIC', BIC);
 end
 
 function [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, kparams)
+%AICBIC_FROM_PDF computes AIC, BIC and Log Likelihood from probability
+% distribution function.
     px = pdf_f(x);
     px(~isfinite(px) | px<=0) = realmin;
     LL = sum(log(px));
@@ -214,8 +222,8 @@ function [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, kparams)
 end
 
 function chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, targetExp, minExp)
-% Equal‑probability bins constructed from the model icdf, then merge
-% until all expected counts >= minExp. Returns stats & bin diagnostics.
+%CHI2_EQUALPROB Equal‑probability bins constructed from the model icdf, then 
+% merge until all expected counts >= minExp. Returns stats & bin diagnostics.
     n = numel(x);
     k0 = max(3, floor(n/targetExp));
     probability_grid = linspace(0, 1, k0 + 1)';
@@ -271,7 +279,7 @@ function chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, targetExp, minExp)
 end
 
 function q = icdf_numeric(F, p, xref)
-% Simple bisection inverse for safety
+%ICDF_NUMERIC Simple bisection inverse for safety
     lo = min(xref) - 5*std(xref);
     hi = max(xref) + 5*std(xref);
     q = zeros(size(p));
@@ -285,7 +293,9 @@ function q = icdf_numeric(F, p, xref)
     end
 end
 
-function d = matlabContinuousDistributions
+function d = matlabContinuousDistributions()
+%MATLABCONTINUOUSDISTRIBUTIONS returns the list of supported distribution names
+% in the Statistics and Machine Learning Toolbox™.
     persistent list
     if isempty(list)
         pkg = meta.package.fromName('prob');
@@ -300,10 +310,17 @@ function d = matlabContinuousDistributions
     d = list;
 end
 
+function mustBeValidDistributionOrEmpty(distnames)
+%MUSTBEVALIDDISTRIBUTIONOREMPTY Validate that distnames are all members of the 
+% specified set of distribution names from the Statistics and Machine Learning 
+% Toolbox™ or an empty array.
+    if isempty(distnames)
+        return
+    end
 
-    function  mustBeValidDistribution(distnames)
-    allowed = erase(lower(matlabContinuousDistributions()), whitespacePattern);
+    allowed = lower(matlabContinuousDistributions());
     distnames = erase(lower(distnames), whitespacePattern);
     mustBeMember(distnames, allowed);
 end
+
 
