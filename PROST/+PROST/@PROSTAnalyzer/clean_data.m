@@ -17,10 +17,8 @@ function clean_data(obj, ignore_list, opts)
         opts.BadSteps  (1, 1) logical = true
     end
     
-    if isempty(ignore_list)
-        obj.IgnoreObject = PROST.PROSTDatasetList();
-    else
-        obj.IgnoreObject = ignore_list;
+    if ~isempty(ignore_list)
+        obj.IgnoreObject.merge_lists(ignore_list);
     end
     fprintf("Filtering data...\n");
     obj.filter_data_by_ignore();
