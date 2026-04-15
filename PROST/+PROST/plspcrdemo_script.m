@@ -35,7 +35,7 @@ end
 load_list = {DB_1, "DB_1"; DB_2, "DB_2"; DB_3, "DB_3"};
 ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16]; "DB_2", [31], []; "DB_3", [43, 47], []};
 obj = PROST.PROSTAnalyzer(load_list);
-[features, feature_names, feature_units, feature_types] = obj.get_features(["Age" "Height" "Mass" "Leg_length" "Thigh_length" "Shank_length" "Gender"]);
+[features, feature_names, feature_units, feature_types] = obj.get_features(["Age" "Height" "Mass" "Leg_length" "Thigh_length" "Shank_length" "Sex"]);
 % features.Is_shod = categorical(features.Is_shod);
 [labels, label_names, label_units, label_types] = obj.get_labels(["Radius"]);
 sides = obj.get_sample_var("Side");
@@ -96,7 +96,7 @@ for idx=1:numel(feature_names)
     h2 = histogram(features.(feature_name)(sides == "right"), 'FaceAlpha', 0.5);
     h1.Normalization = "probability";
     h2.Normalization = "probability";
-    if ~strcmp(feature_name, "Gender") && ~strcmp(feature_name, "Is_shod")
+    if ~strcmp(feature_name, "Sex") && ~strcmp(feature_name, "Is_shod")
         h1.NumBins = 10;
         h2.BinWidth = h1.BinWidth;
     end
@@ -125,7 +125,7 @@ end
 %%
 for kdx=1:numel(label_names)  
     nexttile
-    c = features.Gender; 
+    c = features.Sex; 
     y = labels.(label_names{kdx});
     h1 = histogram(y(c == "Male"), "FaceAlpha", 0.5);
     hold on
@@ -143,9 +143,9 @@ end
 % and one response.
 
 X = features{:, features.Properties.VariableTypes == 'double'};
-if ismember("Gender", feature_names)
-    gender_var = dummyvar(features.Gender);
-    X = [X gender_var(:, 1)];
+if ismember("Sex", feature_names)
+    sex_var = dummyvar(features.Sex);
+    X = [X sex_var(:, 1)];
 end
 % if ismember("Is_shod", feature_names)
 %     X = [X dummyvar(features.Is_shod)];
@@ -366,7 +366,7 @@ title("MSE after Cross-Validation")
 figure
 plot(1:p,stats.W,'-*', LineWidth=2, MarkerSize=5);
 xlabel('Variable');
-xticklabels(["Age" "Height" "Mass" "Leg Length" "Thigh Length" "Shank Length" "Gender (Male)"])
+xticklabels(["Age" "Height" "Mass" "Leg Length" "Thigh Length" "Shank Length" "Sex (Male)"])
 ylabel('PLS Weight');
 legend({'1st Component' '2nd Component' '3rd Component' '4th Component' ...
         '5th Component'},  'location','NW');
@@ -379,7 +379,7 @@ grid on
 figure
 plot(1:p,PCALoadings(:,1:7),'-*', LineWidth=2, MarkerSize=5);
 xlabel('Variable');
-xticklabels(["Age" "Height" "Mass" "Leg Length" "Thigh Length" "Shank Length" "Gender (Male)"])
+xticklabels(["Age" "Height" "Mass" "Leg Length" "Thigh Length" "Shank Length" "Sex (Male)"])
 ylabel('PCA Loading');
 legend({'1st Component' '2nd Component' '3rd Component'  ...
 	    '4th Component' '5th Component' '6th Component' '7th Component'}, ...

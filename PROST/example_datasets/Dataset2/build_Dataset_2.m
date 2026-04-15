@@ -321,6 +321,7 @@ for participant_number=1:n_participants
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.\n" + ...
         "Converted from [m/sec] to [km/hr]";
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = original_category_number;
 
         %                              ---------------
         % Dataset_2 / Data / participant_# / uniform_data
@@ -471,34 +472,34 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "age");
     metadata.Age.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
     metadata.Age.unit = "years";
-    metadata.Age.method = "given";
+    metadata.Age.method = "provided";
     
-    % gender
+    % Sex
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "gender");
     if trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx)
-        metadata.Gender.value = "Male";
+        metadata.Sex.value = "Male";
     else
-        metadata.Gender.value = "Female";
+        metadata.Sex.value = "Female";
     end
-    metadata.Gender.unit = "Male/Female";
-    metadata.Gender.method = "given";
+    metadata.Sex.unit = "Male/Female";
+    metadata.Sex.method = "provided";
     
     % height
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "height");
     metadata.Height.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
     metadata.Height.unit = "m";
-    metadata.Height.method = "given";
+    metadata.Height.method = "provided";
     
     % mass
     idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "weight");
     metadata.Mass.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
     metadata.Mass.unit = "kg";
-    metadata.Mass.method = "given";
+    metadata.Mass.method = "provided";
     
     % Is_shod
     metadata.Is_shod.value = "No";
     metadata.Is_shod.unit = "Yes/No";
-    metadata.Is_shod.method = "given";
+    metadata.Is_shod.method = "provided";
     
     % Calculate missing metadata from standing trial
     % Marker names:
@@ -1237,6 +1238,7 @@ function good_trials = get_good_trials(data_path, reference_guide)
                     if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
                         if n_markers ~= 52
                             if ~all(ismember(important_markers, marker_names))
+                                disp("P" + participant_number + " " + condition_num + "_" + trial_num)
                                 continue
                             end
                         end

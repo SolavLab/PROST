@@ -61,14 +61,14 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
             end
 
             % Get anthropometric data
-            [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = PROST.PROSTAnalyzer.get_metadata(anthropometric_data, side); % get anthropometric data
+            [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = PROST.PROSTAnalyzer.get_metadata(anthropometric_data, side); % get anthropometric data
 
             % Add trial parameters to data entry
             obj.SamplesTable(row_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
 
             % Add features to data entry
-            new_row_features = {age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod};
-            obj.SamplesTable(row_num, {'Age', 'Gender', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
+            new_row_features = {age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod};
+            obj.SamplesTable(row_num, {'Age', 'Sex', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_features;
 
             % Make all the "good steps" into a 2D point cloud in the XZ plane (the sagital plane)
             obj.make_point_cloud(dataset_id, participant_id, side, good_steps, row_num, anatomical_side);

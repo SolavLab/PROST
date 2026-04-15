@@ -148,31 +148,31 @@ for participant_number = 1:n_participants
     % age
     metadata.Age.value = s.Age;
     metadata.Age.unit = "years";
-    metadata.Age.method = "given";
+    metadata.Age.method = "provided";
     
-    % gender
+    % sex
     if contains(s.Gender,'M')
-        metadata.Gender.value = "Male";
+        metadata.Sex.value = "Male";
     elseif contains(s.Gender, 'F')
-        metadata.Gender.value = "Female";
+        metadata.Sex.value = "Female";
     end
-    metadata.Gender.unit = "Male/Female";
-    metadata.Gender.method = "given";
+    metadata.Sex.unit = "Male/Female";
+    metadata.Sex.method = "provided";
 
     % height
     metadata.Height.value = s.BH/100;
     metadata.Height.unit = "m";
-    metadata.Height.method = "given";
+    metadata.Height.method = "provided";
 
     % mass
     metadata.Mass.value = s.BM;
     metadata.Mass.unit = "kg";
-    metadata.Mass.method = "given";
+    metadata.Mass.method = "provided";
     
     % Is_shod
     metadata.Is_shod.value = "No";
     metadata.Is_shod.unit = "Yes/No";
-    metadata.Is_shod.method = "given";
+    metadata.Is_shod.method = "provided";
 
     % standing trial
     ST_data = s.StandingData.Marker;

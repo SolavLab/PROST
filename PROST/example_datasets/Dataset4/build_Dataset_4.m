@@ -429,31 +429,31 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     % age
     metadata.Age.value = participant_metadata.Age.value;
     metadata.Age.unit = "years";
-    metadata.Age.method = "given";
+    metadata.Age.method = "provided";
     
-    % gender
-    if strcmp(participant_metadata.Gender.value, 'M')
-        metadata.Gender.value = "Male";
+    % Sex
+    if strcmp(participant_metadata.Sex.value, 'M')
+        metadata.Sex.value = "Male";
     else
-        metadata.Gender.value = "Female";
+        metadata.Sex.value = "Female";
     end
-    metadata.Gender.unit = "Male/Female";
-    metadata.Gender.method = "given";
+    metadata.Sex.unit = "Male/Female";
+    metadata.Sex.method = "provided";
     
     % height
     metadata.Height.value = PROST.utils.convert_units(participant_metadata.Height.value, participant_metadata.Height.unit, "m");
     metadata.Height.unit = "m";
-    metadata.Height.method = "given";
+    metadata.Height.method = "provided";
     
     % mass
     metadata.Mass.value = PROST.utils.convert_units(participant_metadata.Mass.value, participant_metadata.Mass.unit, "kg");
     metadata.Mass.unit = "kg";
-    metadata.Mass.method = "given";
+    metadata.Mass.method = "provided";
     
     % Is_shod
     metadata.Is_shod.value = "No";
     metadata.Is_shod.unit = "Yes/No";
-    metadata.Is_shod.method = "given";
+    metadata.Is_shod.method = "provided";
     
     % Calculate missing metadata from standing trial
     % Marker names:
@@ -1339,7 +1339,7 @@ function metadata = read_metadata_table(data_path)
     % Column definitions
     subjCols = [1 7];
     ageCols = [2 8];
-    genderCols = [3 9];
+    sexCols = [3 9];
     massCols = [4 10];
     heightCols = [5 11];
 
@@ -1357,8 +1357,8 @@ function metadata = read_metadata_table(data_path)
             unsorted_metadata(subjCounter).SubjID = sprintf("SUBJ%02d", numID);
             unsorted_metadata(subjCounter).Age.value = Tmetadata{r, ageCols(s)};
             unsorted_metadata(subjCounter).Age.unit = "year";
-            unsorted_metadata(subjCounter).Gender.value = Tmetadata{r, genderCols(s)};
-            unsorted_metadata(subjCounter).Gender.unit = "M\F";
+            unsorted_metadata(subjCounter).Sex.value = Tmetadata{r, sexCols(s)};
+            unsorted_metadata(subjCounter).Sex.unit = "M\F";
             unsorted_metadata(subjCounter).Mass.value = Tmetadata{r, massCols(s)};
             unsorted_metadata(subjCounter).Mass.unit = "kg";
             unsorted_metadata(subjCounter).Height.value = Tmetadata{r, heightCols(s)};

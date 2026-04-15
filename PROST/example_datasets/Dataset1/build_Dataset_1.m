@@ -144,27 +144,27 @@ for participant_number=participant_numbers
     % Age
     Dataset_1.Data.(participant_name).metadata.Age.value = double(metadata_array(4));
     Dataset_1.Data.(participant_name).metadata.Age.unit = "years";
-    Dataset_1.Data.(participant_name).metadata.Age.method = "given";
+    Dataset_1.Data.(participant_name).metadata.Age.method = "provided";
 
-    % Gender
-    Dataset_1.Data.(participant_name).metadata.Gender.value = metadata_array(6);
-    Dataset_1.Data.(participant_name).metadata.Gender.unit = "Male/Female";
-    Dataset_1.Data.(participant_name).metadata.Gender.method = "given";
+    % Sex
+    Dataset_1.Data.(participant_name).metadata.Sex.value = metadata_array(6);
+    Dataset_1.Data.(participant_name).metadata.Sex.unit = "Male/Female";
+    Dataset_1.Data.(participant_name).metadata.Sex.method = "provided";
 
     % Height
     Dataset_1.Data.(participant_name).metadata.Height.value = double(metadata_array(9));
     Dataset_1.Data.(participant_name).metadata.Height.unit = "m";
-    Dataset_1.Data.(participant_name).metadata.Height.method = "given";
+    Dataset_1.Data.(participant_name).metadata.Height.method = "provided";
 
     % Mass
     Dataset_1.Data.(participant_name).metadata.Mass.value = double(metadata_array(13));
     Dataset_1.Data.(participant_name).metadata.Mass.unit = "kg";
-    Dataset_1.Data.(participant_name).metadata.Mass.method = "given";
+    Dataset_1.Data.(participant_name).metadata.Mass.method = "provided";
 
     % Is_shod
     Dataset_1.Data.(participant_name).metadata.Is_shod.value = "Yes";
     Dataset_1.Data.(participant_name).metadata.Is_shod.unit = "Yes/No";
-    Dataset_1.Data.(participant_name).metadata.Is_shod.method = "given";
+    Dataset_1.Data.(participant_name).metadata.Is_shod.method = "provided";
 
     % Calculate leg length, thigh length and shank length
     [right_leg_length, left_leg_length, right_thigh_length, left_thigh_length, right_shank_length, left_shank_length] = get_lengths(participant_number, participant_raw_data, Dataset_1.Markers_guide); % [m]

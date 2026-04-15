@@ -298,7 +298,7 @@ subjCounter = 0;
 % Column definitions
 subjCols = [1 7];
 ageCols = [2 8];
-genderCols = [3 9];
+sexCols = [3 9];
 massCols = [4 10];
 heightCols = [5 11];
 
@@ -316,7 +316,7 @@ for r = 1:height(Tmetadata)
         unsorted_metadata(subjCounter).folder = sprintf("SUBJ%02d", numID);
         unsorted_metadata(subjCounter).Age.value = Tmetadata{r, ageCols(s)};
         unsorted_metadata(subjCounter).Age.unit = "year";
-        unsorted_metadata(subjCounter).Gender.value = Tmetadata{r, genderCols(s)};
+        unsorted_metadata(subjCounter).Gender.value = Tmetadata{r, sexCols(s)};
         unsorted_metadata(subjCounter).Gender.unit = "M\F";
         unsorted_metadata(subjCounter).Mass.value = Tmetadata{r, massCols(s)};
         unsorted_metadata(subjCounter).Mass.unit = "kg";
