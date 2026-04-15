@@ -165,7 +165,7 @@ classdef PROSTAnalyzer < handle
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
         % tf = is_in_samples_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
-        % plot_features_vs_labels(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
+        % plot_predictors_vs_responses(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
@@ -201,7 +201,7 @@ classdef PROSTAnalyzer < handle
         shank_cop = cop_to_shank_frame(step, anatomical_side);
         shank_data = convert_to_shank_frame(data, knee, ankle);
         [age, gender, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
-        save_figure(f, file_path, file_type);
+        save_figure(f, file_path, file_type, append);
         out = analyze_stats(value, distnames, opts)
     end
 end

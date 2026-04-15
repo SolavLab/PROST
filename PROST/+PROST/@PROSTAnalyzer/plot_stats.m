@@ -3,7 +3,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 % estimating its distribution and plotting it compared to a histogram, the KDE 
 % and a set of predetermined distributions. Also can create a QQ-plot compared 
 % to each given distribution. The variable can be normalized relative to another
-% variable and divided into subgroups based on categorizaion of a matching
+% variable and divided into subgroups based on categorization of a matching
 % categorical variable.
 % Note: Requires the Statistics and Machine Learning Toolbox™.
 % Input :
@@ -17,26 +17,40 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               "rayleigh", "exponential", "laplace". This uses the Statistics 
 %               and Machine Learning Toolbox™.
 %   opts - Name-Value pairs of options for statistical analysis and plotting.
-%       function_type - the type of function to use for the histogram, KDE and 
-%                       distribution plots. Not all function types apply to all 
-%                       plots. This overrides the histogram Normalization 
-%                       setting when applicable.
-%                       For histogram: "pdf", "cdf", "count", "probability", 
-%                                      "countdensity", "cumcount", "percentage".
-%                       For KDEs: "pdf", "cdf", "icdf", "survivor", "cumhazard".
-%                       For distribution functions: "pdf", "cdf", "icdf".                   
-%                       Default: "count" (only plots histogram with bin counts).
-%       qq_plot - whether to plot QQ-plots compared to each distribution. Either 
-%                 logical 1 (true) to plot the QQ or logical 0 (false) otherwise.
-%                 Default: false.
-%       show - whether to show the figures or save them. Either "on" 
-%                   (default) for showing the figures or "off" for saving them.
-%       file_type - the type to save the figure if saved. Default: "fig".
+%       opts.function_type - the type of function to use for the histogram, KDE 
+%                            and distribution plots. Not all function types 
+%                            apply to all plots. This overrides the histogram 
+%                            "Normalization" setting when applicable.
+%                            For histogram: "pdf", "cdf", "count", 
+%                                           "probability", "countdensity", 
+%                                           "cumcount", "percentage".
+%                            For KDEs: "pdf", "cdf", "icdf", "survivor", 
+%                                      "cumhazard".
+%                            For distribution functions: "pdf", "cdf", "icdf".                   
+%                            Default: "count" (only plots histogram with bin counts).
+%       opts.qq_plot - whether to plot QQ-plots compared to each distribution. 
+%                      Either logical 1 (true) to plot the QQ or logical 0 
+%                      (false) otherwise.
+%                      Default: false.
+%       opts.show - whether to show the figures or save them. Either "on" for 
+%                   showing the figures or "off" for saving them. 
+%                   Default: "on".
+%       opts.file_type - the type to save the figure if saved. 
+%                        Default: fig.
+%       opts.append - Logical 1 (true) to append this figure to "COP Plots".
+%                     Logical 0 (false) otherwise.
+%                     Appending only works for "pdf" and "gif" file types.
+%                     Default: false.
 %   hist_opts - histogram parameters as Name-Value pairs. Equivalent to options
 %               in the Matlab histogram function.
 % Output :
-%   fig_dist figure handle for the plot of the distribution estimations. 
-%   fig_qq - the figure handle for the QQ-plots.
+%   fig_data - figure handle for the plot of the histogram and distribution 
+%              estimations.
+%              When figures are saved instead of shown the figure is 
+%              automatically closed.
+%   fig_qq - the figure handle for the QQ-plots (if exist).
+%            When figures are saved instead of shown the figure is automatically
+%            closed.
 %   stats - the results of the statistical analysis including Chi2 stats and
 %           AIC and BIC rankings.
 
@@ -49,11 +63,20 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         opts.function_type      {mustBeTextScalar, mustBeMember(opts.function_type, ["pdf" "cdf" "icdf" "survivor" "cumhazard" "count" "probability" "countdensity" "cumcount" "percentage"])} = "count"
         opts.show               {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
         opts.file_type          {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.qq_plot            (1,1) logical = false
+        opts.append             (1, 1) logical = false
+        opts.qq_plot            (1, 1) logical = false
         hist_opts.?matlab.graphics.chart.primitive.Histogram
         hist_opts.DisplayName   {mustBeTextScalar} = "Histogram"
     end
 
+    % Prep Input Arguments
+    function_type = opts.function_type;
+    show = opts.show;
+    file_type = opts.file_type;
+    append = opts.append;
+    qq_plot = opts.qq_plot;
+
+    % Prep Output Arguments
     fig_qq = gobjects(0);
     fig_data = gobjects(0);
 
@@ -106,22 +129,22 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     histogram_types = ["count" "probability" "percentage" "countdensity" "cumcount" "pdf" "cdf"];
     kde_types = ["pdf" "cdf" "icdf" "survivor" "cumhazard"];
     dist_types = ["pdf" "cdf" "icdf"];
-    hist_flag = ismember(opts.function_type, histogram_types);
-    kde_flag = ismember(opts.function_type, kde_types) && ~isempty(distnames) && ismember("kernel", distnames);
-    dist_flag = ismember(opts.function_type, dist_types) && ~isempty(distnames);
+    hist_flag = ismember(function_type, histogram_types);
+    kde_flag = ismember(function_type, kde_types) && ~isempty(distnames) && ismember("kernel", distnames);
+    dist_flag = ismember(function_type, dist_types) && ~isempty(distnames);
     dataplot_flag = hist_flag || kde_flag || dist_flag;
-    qqplot_flag = opts.qq_plot && dist_flag;
+    qqplot_flag = qq_plot && dist_flag;
 
     % Override Histogram Normalization with Function Type
     if hist_flag
-        hist_opts.Normalization = opts.function_type;
+        hist_opts.Normalization = function_type;
     end
 
     % Define Statistics options
     analyze_stats_opts.TargetExp = 10;
     analyze_stats_opts.MinExpected  (1, 1) = 5;
     if kde_flag
-        analyze_stats_opts.KDEFunction = opts.function_type;
+        analyze_stats_opts.KDEFunction = function_type;
         analyze_stats_opts.KDENumPoints = 400;
         if strcmpi(value_name, "Radius") || strcmpi(value_type, "feature")
             analyze_stats_opts.KDESupport = "positive";
@@ -140,7 +163,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end
 
     % Check whether to save or plot
-    if strcmp(opts.show, 'off')
+    if strcmp(show, 'off')
         fprintf("Saving Statistics...\n");
     else
         fprintf("Plotting Statistics...\n");
@@ -159,21 +182,32 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                              "cumhazard", "Cumulative Hazard Function");
     
     if dataplot_flag
-        fig_data = figure(Name="Statistics: " + value_name + " Distribution Estimation", Visible=opts.show);
+        fig_data = figure(Name="Statistics: " + value_name + " Distribution Estimation", Visible=show);
         tl_data = tiledlayout(TileSpacing="compact", Padding="compact");
-        sgtitle(fig_data, replace(fig_data.Name, "_", " "))
+        if strcmp(show, "off")
+            screen_size = get(0, 'ScreenSize');
+            fig_data.WindowStyle = 'normal';
+            fig_data.Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
+        else
+            sgtitle(fig_data, replace(fig_data.Name, "_", " "), FontUnits="points", FontSize=obj.FONT_SIZE)
+        end
         colororder(fig_data, "gem12");
     end
     if qqplot_flag
-        fig_qq = figure(Name="Statistics: " + value_name + " QQ Plot", Visible=opts.show);
+        fig_qq = figure(Name="Statistics: " + value_name + " QQ Plot", Visible=show);
         tl_qq = tiledlayout(TileSpacing="compact", Padding="compact");
-        sgtitle(fig_qq, replace(fig_qq.Name, "_", " "))
+        if strcmp(show, "off")
+            screen_size = get(0, 'ScreenSize');
+            fig_qq.WindowStyle = 'normal';
+            fig_qq.Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
+        else
+            sgtitle(fig_qq, replace(fig_qq.Name, "_", " "), FontUnits="points", FontSize=obj.FONT_SIZE)
+        end
         colororder(fig_qq, "gem12");
     end
 
     % Plot for each category
     stats = [];
-    % stats(n_categories) = struct("summary", [], "rankingAIC", [], "rankingBIC", [], "fits", []);
     for cat_idx=1:n_categories
         value_i = value(categorizer == cat_options{cat_idx});
         x = linspace(min(value_i), max(value_i), 1000);
@@ -187,7 +221,6 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             else
                 xlabel(ax_data, value_name + " [" + value_units + "]")
             end
-            ylabel(ax_data, function_type_map(opts.function_type))
             legend(ax_data, FontSize=obj.FONT_SIZE, FontWeight="bold");
         end
 
@@ -213,7 +246,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         
         property_cell = namedargs2cell(analyze_stats_opts);
         stats_i = PROST.PROSTAnalyzer.analyze_stats(value_i, distnames, property_cell{:});
-        % stats(cat_idx) = stats_i;
+        stats_i.category = cat_options{cat_idx};
         stats = [stats; stats_i];
         txt = sprintf(PROST.utils.pretty_print(stats_i.summary));
         % clean summary text
@@ -256,7 +289,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                     params = join(params(params~="" & ~startsWith(params, "-")), ", ");
 
                     txt = sprintf("%s Distribution: %s", stats_i.fits.(key).name, params);
-                    plot(ax_data, x, stats_i.fits.(key).(opts.function_type)(x), ...
+                    plot(ax_data, x, stats_i.fits.(key).(function_type)(x), ...
                                      LineWidth=obj.LINE_WIDTH, ...
                                      LineStyle=obj.LINE_STYLE_SOLID, ...
                                      DisplayName=txt);
@@ -280,10 +313,14 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end % for cat_idx=1:n_categories
 
     % Save figures
-    if strcmp(opts.show, 'off')
+    if strcmp(show, 'off')
         figure_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, opts.file_type);
-        PROST.PROSTAnalyzer.save_figure(fig_qq, figure_path, opts.file_type);
+        PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, file_type, append);
+        close(fig_data)
+        if qqplot_flag
+            PROST.PROSTAnalyzer.save_figure(fig_qq, figure_path, file_type, append);
+            close(fig_qq)
+        end
         fprintf("All figures saved.\n");
     end
 end

@@ -25,16 +25,15 @@ Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 
 %% Plot All ROSs
 % who_to_plot = PROST.PROSTDatasetList();
-% % who_to_plot.add_to_list(Dataset_4_ID, 1:12);
 % for dataset_id=dataset_ids
 %     who_to_plot.add_to_list(dataset_id);
 % end
-% PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=6, plot_type="nadir");
+% PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=6, plot_type="nadir", show="off", file_type="pdf", append=true);
 
 %% Plot Example ROS
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 12);
-PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle");
+PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="on", file_type="pdf");
 
 %% Analyze Residuals
 PROSTAnalyzer.plot_stats("Residual", [], [], "normal", function_type="pdf", qq_plot=true);

@@ -20,6 +20,10 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                   Default: "on".
 %       opts.file_type - the type to save the figure if saved. 
 %                        Default: fig.
+%       opts.append - Logical 1 (true) to append this figure to "COP Plots".
+%                     Logical 0 (false) otherwise.
+%                     Appending only works for "pdf" and "gif" file types.
+%                     Default: false.
 %       opts.anatomical_side - which anatomical side to use for the knee and 
 %                              ankle trajectories and calculation of the shank 
 %                              frame. Choose between: "lateral", "medial" and 
@@ -27,6 +31,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                              Default: "lateral".
 % Output :
 %   fig - array of figure handles of all the created plots.
+%         closed.
 
     arguments
         obj 
@@ -34,6 +39,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
         opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        opts.append                (1, 1) logical = false
         opts.anatomical_side       {mustBeTextScalar, mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
     end
 
@@ -41,6 +47,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
     number_of_axes_in_fig = opts.number_of_axes_in_fig;
     show = opts.show;
     file_type = opts.file_type;
+    append = opts.append;
     anatomical_side = opts.anatomical_side;
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
@@ -49,10 +56,12 @@ function fig = plot_cop(obj, who_to_plot, opts)
             who_to_plot.add_to_list(dataset_id);
         end
     end
+
+    % Prep Output Arguments
+    fig = gobjects(0);
    
     % Start plotting
     fig_counter = 0;
-    fig = gobjects(0);
     if strcmp(show, 'off')
         fprintf("Saving COP...\n");
     else
@@ -99,28 +108,31 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % Create new figure for new set of axes
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
-                    if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"]))
-                        fig_name = "COP Plots: " + dataset_name;
+                    if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"])) && append
+                        fig_name = "COP Plots";
                     else
                         fig_name = "COP Plots: Plot " + fig_counter;
                     end
                     fig(fig_counter)  = figure(Name=fig_name, Visible=show);
-                    if strcmp(show, "off")
-                        screen_size = get(0,'ScreenSize');
-                        fig(fig_counter).WindowStyle = 'normal';
-                        fig(fig_counter).Position = screen_size;
-                    end
                     n_cols = ceil(sqrt(number_of_axes_in_fig));
                     n_rows = ceil(number_of_axes_in_fig / n_cols);
                     tOuter = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
-                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "))
+                    if strcmp(show, "off")
+                        screen_size = get(0, 'ScreenSize');
+                        fig(fig_counter).WindowStyle = 'normal';
+                        fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.6*screen_size(3) 0.5*screen_size(4)];
+                    else
+                        sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontUnits="points", FontSize=obj.FONT_SIZE)
+                    end
                 end
 
                 % Inner tile for pair of Ankle-Knee Trajectories and COPs in
                 % World and Shank Frames
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
-                title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                if strcmp(show, "on")
+                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontUnits="points", FontSize=obj.FONT_SIZE)
+                end
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
@@ -212,7 +224,8 @@ function fig = plot_cop(obj, who_to_plot, opts)
                     if strcmp(show, 'off')
                         drawnow
                         file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/COP Plots");
-                        PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type);
+                        PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
+                        close(fig(fig_counter))
                     end
                     
                     % Reset axis counter

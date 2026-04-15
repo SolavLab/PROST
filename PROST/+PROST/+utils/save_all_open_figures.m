@@ -1,4 +1,4 @@
-function save_all_open_figures(figures_path, sub_folders, file_type)
+function save_all_open_figures(figures_path, sub_folders, file_type, append)
 % SAVE_ALL_OPEN_FIGURES saves all open figures in the specified format.
 %   figures_path - path to the figures directory.
 %   sub_folders - list of sub-folder names to save each figure inside the file 
@@ -12,11 +12,18 @@ function save_all_open_figures(figures_path, sub_folders, file_type)
 %                 sub-folders, set to ".".
 %                 
 %   file_type - the file type to save. Default: "fig".
+%   append - Logical 1 (true) to append this figure to an existing file with the same 
+%            name in the file path. Logical 0 (false) otherwise. Default: false.
+%            Appending only works for "pdf" and "gif" file types.
 % Example:
+%   save_all_open_figures("C:/path/to/folder", "pdf", true)
 %   save_all_open_figures("C:/path/to/folder", "png")
 %   save_all_open_figures("C:/path/to/folder", "fig")
 
-    if nargin < 2 || isempty(file_type)
+    if nargin < 4 || isempty(append)
+        append = false;  % Default append
+    end
+    if nargin < 3 || isempty(file_type)
         file_type = "fig";  % Default file type
     end
     if nargin < 1 || isempty(figures_path)
@@ -69,8 +76,17 @@ function save_all_open_figures(figures_path, sub_folders, file_type)
         % Save based on file type
         if strcmpi(file_type, "fig")
                 savefig(f, file_path);
-            otherwise
-                exportgraphics(f, file_path, 'Resolution', 300);
+        else
+            ex_opts = {'Resolution', 300};
+            switch file_type
+                case "pdf"
+                    ex_opts = [ex_opts, 'ContentType', 'vector', 'Append', append];
+                case "gif"
+                    ex_opts = [ex_opts, 'Append', append];
+                case {"emf" "esp"}
+                    ex_opts = [ex_opts, 'ContentType', 'vector'];
+            end
+            exportgraphics(f, file_path, ex_opts{:});
         end
     end
 
