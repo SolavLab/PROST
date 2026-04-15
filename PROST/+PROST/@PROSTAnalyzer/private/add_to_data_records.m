@@ -36,8 +36,14 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
         obj.DataRecords(index).Data(participant_num).Participant_name = original_participant_name;
         obj.DataRecords(index).Data(participant_num).Anthropometric_data = metadata;
         obj.DataRecords(index).Data(participant_num).Uniform_data = uniform_data;
+        obj.DataRecords(index).Data(participant_num).Is_included = true;
 
         for side=["left" "right"]
+            if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
+                obj.DataRecords(index).Data(participant_num).Uniform_data.(side).Is_included = true;
+            else
+                obj.DataRecords(index).Data(participant_num).Uniform_data.(side).Is_included = false;
+            end
             if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
                 n_steps = length(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step);
                 for step_num=1:n_steps

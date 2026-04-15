@@ -32,7 +32,9 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
         dataset_name = obj.DataRecords(dataset_index).Dataset_name;
         n_participants = length(obj.DataRecords(dataset_index).Data);
         for participant_num=1:n_participants
-            participant_name = obj.DataRecords(dataset_index).Data(participant_num).Participant_name;
+            % participant_name = obj.DataRecords(dataset_index).Data(participant_num).Participant_name;
+            participant_id = obj.DataRecords(dataset_index).Data(participant_num).Participant_id;
+            num_excluded_sides = 0;
             for side=["left" "right"]
                 trials = obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step;
                 n_trials = length(trials);
@@ -44,10 +46,10 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
                         continue
                     end
 
-                    trial_name = step.source.original_trial;
-                    step_number = step.source.step_number;
-                    plate_number = step.source.plate_number;
-                    s = sprintf("%s P%d (%s), %s step %d (%s)", dataset_name, participant_num, participant_name, side, trial_num, replace(trial_name, "_", " "));
+                    % trial_name = step.source.original_trial;
+                    % step_number = step.source.step_number;
+                    % plate_number = step.source.plate_number;
+                    % s = sprintf("%s P%d (%s), %s step %d (%s)", dataset_name, participant_num, participant_name, side, trial_num, replace(trial_name, "_", " "));
     
                     shank_cop = step.Shank_cop.(anatomical_side);
     
@@ -58,6 +60,7 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
                     if isempty(idx_switch)
                         if sign_d(1) < 0
                             obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step(trial_num).Is_included = false;
+                            obj.IgnoreObject.add_to_list(dataset_id, participant_id, trial_num, side);
                             % fprintf("%s : -1\n", s);
                         end
                         continue
@@ -66,11 +69,22 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
                         idx_switch = [idx_switch length(sign_d)];
                         if any(sign_d(idx_switch(1:end-1) + 1) < 0 & diff(idx_switch) > bad_step_min_duration)
                             obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step(trial_num).Is_included = false;
+                            obj.IgnoreObject.add_to_list(dataset_id, participant_id, trial_num, side);
                             % fprintf("%s\n", s);
                         end
-                    end
+                    end % isempty(idx_switch)
+                end % trial_num
+                % If all trials of "side" are not included, exclude side
+                if obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).Is_included && ...
+                   all(~[obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).step.Is_included])
+                    obj.DataRecords(dataset_index).Data(participant_num).Uniform_data.(side).Is_included = false;
+                    num_excluded_sides = num_excluded_sides + 1;
                 end
+            end % side
+            % If all sides of participant are not included, exclude participant
+            if num_excluded_sides == 2
+                obj.DataRecords(dataset_index).Data(participant_num).Is_included = false;
             end
-        end
-    end
+        end % participant_num
+    end % dataset_id
 end
