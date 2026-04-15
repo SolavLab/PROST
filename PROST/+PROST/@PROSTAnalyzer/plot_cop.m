@@ -31,6 +31,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                              Default: "lateral".
 % Output :
 %   fig - array of figure handles of all the created plots.
+%         When figures are saved instead of shown the figures is automatically
 %         closed.
 
     arguments
@@ -162,18 +163,23 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 %     :-+@#:
                 %     .-+*.
                 ax1 = nexttile(tInner, 1);
-                
-                X = [ankle.x; knee.x];
-                Y = [ankle.z; knee.z];
-                plot(ax1, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=obj.LINE_WIDTH, Color=obj.LINE_COLOR)
+
+                % Set axis parameters
+                ax1.FontUnits = "points";
+                ax1.FontSize = obj.FONT_SIZE;
                 hold(ax1, 'on');
                 grid(ax1, "on");
                 axis(ax1, 'equal');
-                pbaspect(ax1, [1 1 1])
-                s = scatter(ax1, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
-                s = scatter(ax1, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
-                s = scatter(ax1, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
-                title(ax1, "World Frame", FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                pbaspect(ax1, [1 1 1]);
+
+                X = [ankle.x; knee.x];
+                Y = [ankle.z; knee.z];
+                h = gobjects(3, 1);
+                plot(ax1, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=0.5, Color=obj.LINE_COLOR)
+                h(1) = scatter(ax1, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
+                h(2) = scatter(ax1, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
+                h(3) = scatter(ax1, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
+                title(ax1, "Laboratory CS")
                 xlabel(ax1, "x [mm]")
                 ylabel(ax1, "z [mm]")
 
@@ -200,23 +206,28 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 %  ....     .:--+++=-..
                 % .-++++++++++-:..
                 ax2 = nexttile(tInner, 2);
-                X = [shank_ankle.u; shank_knee.u];
-                Y = [shank_ankle.w; shank_knee.w];
-                plot(ax2, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=obj.LINE_WIDTH, Color=obj.LINE_COLOR)
+                ax2.FontUnits = "points";
+                ax2.FontSize = obj.FONT_SIZE;
                 hold(ax2, 'on');
                 grid(ax2, "on");
                 axis(ax2, 'equal');
-                pbaspect([1 1 1])
+                pbaspect(ax2, [1 1 1]);
+
+                X = [shank_ankle.u; shank_knee.u];
+                Y = [shank_ankle.w; shank_knee.w];
+                plot(ax2, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=0.5, Color=obj.LINE_COLOR)
                 h = gobjects(3, 1);
                 h(1) = scatter(ax2, shank_ankle.u, shank_ankle.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
                 h(2) = scatter(ax2, shank_knee.u, shank_knee.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
                 h(3) = scatter(ax2, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
-                title(ax2, "Shank Frame", FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT)
+                title(ax2, "Shank CS")
                 xlabel(ax2, "u [mm]")
                 ylabel(ax2, "w [mm]")
-                legend(ax2, h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="best");
-                cb = colorbar(ax2, 'eastoutside', FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT);
+                legend(ax2, h, Location="best");
+                cb = colorbar(ax2, 'eastoutside');
                 cb.Label.String = "% IC to OIC";
+
+                % Update axis counter
                 axes_counter = axes_counter + 1;
 
                 % Save figure

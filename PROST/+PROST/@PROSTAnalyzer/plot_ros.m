@@ -119,6 +119,8 @@ function fig = plot_ros(obj, who_to_plot, opts)
             ax = nexttile(tl);
 
             % Set axis parameters
+            ax.FontUnits = "points";
+            ax.FontSize = obj.FONT_SIZE;
             hold(ax, "on")
             grid(ax, "on")
             axis(ax, "equal");
@@ -128,7 +130,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
             end
 
             % Plot 0 point
-            scatter(ax, 0, 0, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled");
+            plot(ax, 0, 0, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black");
             
             % Plot trials of participant
             offset = 0;
@@ -173,30 +175,32 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
                 if strcmp(plot_type, "circle")
                     plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
-                    scatter(ax, center_horizontal, center_vertical, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
+                    plot(ax, center_horizontal, center_vertical, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side});
+                    % scatter(ax, center_horizontal, center_vertical, obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % center
                 elseif strcmp(plot_type, "nadir")
-                    scatter(ax, center_horizontal, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
+                    % scatter(ax, center_horizontal, min(circle_points(2, :)), obj.MARKER_SIZE_SCATTER, color_arc{side}, obj.MARKER_CIRCLE, "filled"); % ndir
+                    plot(ax, center_horizontal, min(circle_points(2, :)), Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side});
                 else
                     throw(PROST.PROSTError("PlotROS", "WrongPlotType", ...
                         "plot_type should be either 'circle' or 'nadir'."))
                 end
 
                 % Print Text on axis
-                txt = sprintf("(%.2f, %.2f), R: %.2f [mm],\nresidual: %.2f [mm]", center_horizontal, center_vertical, radius, residual);
+                txt = sprintf(" C: (%.2f, %.2f), R: %.2f [mm],\n residual: %.2f [mm]", center_horizontal, center_vertical, radius, residual);
                 txt_handle = text(ax, ...
                                   0, 1 - offset, txt, ...
                                   Units="normalized", ...
                                   Color=color_arc{side}, ...
                                   FontSize=obj.FONT_SIZE, ...
                                   FontName="FixedWidth", ...
-                                  FontWeight="bold", ...
+                                  FontWeight=obj.FONT_WEIGHT, ...
                                   HorizontalAlignment="left", ...
                                   VerticalAlignment="top");
                 drawnow 
                 offset = offset + txt_handle.Extent(4);
     
-                xlabel(ax, x_label);
-                ylabel(ax, y_label);
+                xlabel(ax, x_label, FontSize=obj.FONT_SIZE);
+                ylabel(ax, y_label, FontSize=obj.FONT_SIZE);
             end
 
             % Update axis counter
@@ -207,25 +211,30 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 % Dummy plots for legend in last axes
                 n_plots = 3 + strcmp(plot_type, "circle");
                 h = gobjects(2*n_plots + 1, 1);
-                h(1) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled", DisplayName="ankle point");
-                h(2) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"left"}(1, :), obj.MARKER_DOT, DisplayName="left");
-                h(3) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"right"}(1, :), obj.MARKER_DOT, DisplayName="right");
+                h(1) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black");
+                % h(1) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_CIRCLE, "filled", DisplayName="ankle point");
+                h(2) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"left"}(1, :), obj.MARKER_DOT, DisplayName="left CoP");
+                h(3) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"right"}(1, :), obj.MARKER_DOT, DisplayName="right CoP");
                 h(4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted arc");
                 h(5) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted arc");
                 
                 if strcmp(plot_type, "circle")
                     h(6) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted circle");
                     h(7) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted circle");
-                    h(8) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left center");
-                    h(9) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right center");
+                    h(8) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, DisplayName="right center");
+                    h(9) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, DisplayName="left center");
+                    % h(8) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left center");
+                    % h(9) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right center");
 
                 else
-                    h(6) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left nadir");
-                    h(7) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right nadir");
+                    % h(6) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"left"}, obj.MARKER_CIRCLE, "filled", DisplayName="left nadir");
+                    % h(7) = scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, color_arc{"right"}, obj.MARKER_CIRCLE, "filled", DisplayName="right nadir");
+                    h(6) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, DisplayName="right nadir");
+                    h(7) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, DisplayName="left nadir");
                 end
                 
                 % Legend
-                lgd = legend(h, FontSize=obj.FONT_SIZE, FontWeight=obj.FONT_WEIGHT, Location="layout");
+                lgd = legend(h, Location="layout", FontSize=obj.FONT_SIZE);
                 lgd.Layout.Tile = "east";
 
                 % Save figures

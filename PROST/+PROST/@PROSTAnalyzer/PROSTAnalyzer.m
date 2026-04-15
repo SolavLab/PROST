@@ -42,8 +42,8 @@ classdef PROSTAnalyzer < handle
         LINE_STYLE_DASHED_DOTTED = "-.";
         LINE_STYLES = ["-" "--" ":" "-."];
         LINE_COLOR = "black";
-        FONT_SIZE = 10;
-        FONT_WEIGHT = "normal";
+        FONT_SIZE = 14;
+        FONT_WEIGHT = "bold";
     end
     properties(Access=public)
         DataRecords = struct([]); % Data records

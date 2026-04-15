@@ -91,24 +91,21 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     value_units = var.Properties.VariableUnits;
     value_type = var.Properties.VariableDescriptions;
 
-    % Get category variable
+    % Get categorizing variable
     if isempty(categorizer_name)
-        cat_options = {true};
-        categorizer = true(size(value));
+        categorizer = categorical(repmat("All", size(value)));
+        cat_options = categories(categorizer);
         cat_names = "";
     else
         cat_var = obj.get_samples(categorizer_name);
-        if ~strcmp(cat_var.Properties.VariableTypes, "categorical")
-            throw(PROST.PROSTError("VariableType", "WrongVariableType", ...
-                "The chosen category variable must be of categorical type but is of type %s", cat_var.Properties.VariableTypes));
-        end
-        categorizer = cat_var.(categorizer_name);
+
+        categorizer = categorical(cat_var.(categorizer_name));
         cat_options = categories(categorizer);
         cat_names = " " + replace(categorizer_name + " = " + string(cat_options), "_", " ");
     end
     n_categories = numel(cat_options);
 
-    % Get normalizer
+    % Normalize variable
     if ~isempty(normalizer_name)
         normalizer = obj.get_samples(normalizer_name);
         if ~strcmp(normalizer.Properties.VariableTypes, "double")
@@ -214,14 +211,18 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         
         if dataplot_flag
             ax_data = nexttile(tl_data);
+            ax_data.FontUnits = "points";
+            ax_data.FontSize = obj.FONT_SIZE;
             title(ax_data, cat_names(cat_idx))
             hold(ax_data, "on");
-            if opts.function_type == "icdf"
+            grid(ax_data, "on");
+            if function_type == "icdf"
                 xlabel(ax_data, "probability")
             else
                 xlabel(ax_data, value_name + " [" + value_units + "]")
             end
-            legend(ax_data, FontSize=obj.FONT_SIZE, FontWeight="bold");
+            ylabel(ax_data, function_type_map(function_type))
+            legend(ax_data);
         end
 
         if qqplot_flag
@@ -233,7 +234,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             n_rows = ceil(num_axes / n_cols);
             tl_qq_inner = tiledlayout(tl_qq, n_rows, n_cols, 'Padding', 'tight', 'TileSpacing','tight');
             tl_qq_inner.Layout.Tile = cat_idx;
-            title(tl_qq_inner, cat_names(cat_idx))
+            title(tl_qq_inner, cat_names(cat_idx), FontUnits="points", FontSize=obj.FONT_SIZE)
         end
 
         if hist_flag
@@ -256,10 +257,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             Units="normalized", ...
             FontSize=obj.FONT_SIZE, ...
             FontName="FixedWidth", ...
-            FontWeight="bold", ...
+            FontWeight=obj.FONT_WEIGHT, ...
             HorizontalAlignment="left", ...
             VerticalAlignment="top");
-
 
             for dist_idx=1:numel(distnames)
                 distname = distnames(dist_idx);
@@ -296,7 +296,10 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                 
                     if qqplot_flag
                         ax_qq = nexttile(tl_qq_inner, dist_idx);
+                        ax_qq.FontUnits = "points";
+                        ax_qq.FontSize = obj.FONT_SIZE;
                         hold(ax_qq, "on");
+                        grid(ax_qq, "on");
                         if stats_i.fits.(key).type == "toolbox"
                             qqplot(ax_qq, value_i, stats_i.fits.(key).pd)
                         else
