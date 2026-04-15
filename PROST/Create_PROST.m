@@ -60,3 +60,4 @@ end
 %% Save PROST Object
 fprintf("Saving PROSTAnalyzer object...\n");
 save("PROSTAnalyzer.mat","PROSTAnalyzer")
+fprintf("PROSTAnalyzer object saved.\n");

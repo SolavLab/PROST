@@ -1485,23 +1485,3 @@ function [clean_forceplate_data, clean_marker_data] = clean_data(forceplate_data
     % end
 end
 
-% TODO: Check up on bad trials
-% participant_95, 3 (SUBJ95 (3)): :Event side and segment side do not match!
-% participant_108, 2 (SUBJ108 (2)): :Event side and segment side do not match!
-% participant_119, 1 (SUBJ119 (1)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_119, 3 (SUBJ119 (3)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_123, 2 (SUBJ123 (2)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 4.
-% participant_123, 3 (SUBJ123 (3)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 4.
-% participant_124, 1 (SUBJ124 (1)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 4.
-% participant_124, 2 (SUBJ124 (3)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 2.
-% participant_124, 4 (SUBJ124 (5)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 2.
-% participant_125, 1 (SUBJ125 (1)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_125, 3 (SUBJ125 (3)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 4.
-% participant_127, 2 (SUBJ127 (2)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 2.
-% participant_131, 1 (SUBJ131 (1)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_133, 2 (SUBJ133 (2)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_133, 4 (SUBJ133 (4)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 4.
-% participant_136, 1 (SUBJ136 (2)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 2.
-% participant_136, 4 (SUBJ136 (5)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_137, 1 (SUBJ137 (1)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.
-% participant_137, 3 (SUBJ137 (4)): MATLAB:badsubscript:Index exceeds the number of array elements. Index must not exceed 3.

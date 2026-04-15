@@ -67,8 +67,7 @@ function save_all_open_figures(figures_path, sub_folders, file_type)
         file_path = fullfile(output_folder, clean_name + "." + file_type);
 
         % Save based on file type
-        switch lower(file_type)
-            case "fig"
+        if strcmpi(file_type, "fig")
                 savefig(f, file_path);
             otherwise
                 exportgraphics(f, file_path, 'Resolution', 300);

@@ -27,6 +27,9 @@ i_end = find(matches(toolbox_root, "PROST"), 1, "last");
 toolbox_root = fullfile(toolbox_root{1:i_end});
 addpath(toolbox_root); % Add PROST package to path
 
+% Add path to get_OIC_thresholds function
+addpath("../");
+
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %%

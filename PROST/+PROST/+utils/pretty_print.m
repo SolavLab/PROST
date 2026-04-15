@@ -96,14 +96,14 @@ function s_out = print_dictionary(d)
         s_out = newline;
         return
     end
-    k = keys(d);
-    v = values(d);
+    k = string(keys(d));
+    v = values(d, "cell");
 
     % Find max key length for alignment
     maxKeyLen = max(strlength(k));
     
     for i = 1:numel(k)
-        keyStr = string(k(i));
+        keyStr = k(i);
         
         % Format key with padding
         keyStr = pad(keyStr, maxKeyLen);

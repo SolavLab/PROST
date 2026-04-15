@@ -13,7 +13,7 @@ function clean_data(obj, ignore_list, opts)
 
     arguments
         obj
-        ignore_list    {mustBeScalarOrEmpty, mustBeAOrEmpty(ignore_list, "PROST.PROSTDataList")} = []
+        ignore_list    {mustBeScalarOrEmpty, mustBeAOrEmpty(ignore_list, "PROST.PROSTDatasetList")} = []
         opts.BadSteps  (1, 1) logical = true
     end
     

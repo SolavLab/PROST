@@ -9,7 +9,7 @@ classdef PROSTDatasetList < handle
         end
 
         function add_to_list(ig, dataset_id, participants, trials, side)
-        %ADD_TO_LIST adds either a specific the dataset, a specific participant
+        %ADD_TO_LIST adds either a specific dataset, a specific participant
         % or list of participants, or a specific list of trials (of either
         % 'Left' or 'Right' or both) to the list.
         % Input :
@@ -56,7 +56,8 @@ classdef PROSTDatasetList < handle
                ~all(strcmpi(side, "Left") | strcmpi(side, "Right"))
                 error("PROSTDatasetList:Side:WrongFormat", "'side' should be either 'Left' or 'Right' or both.")
             end
-            
+
+
             n_participants = length(participants);
             for pdx=1:n_participants
                 participant_id = participants(pdx);
@@ -76,6 +77,9 @@ classdef PROSTDatasetList < handle
                          ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
                     else
                         ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = unique([ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) trials]);
+                        if any(isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))))
+                            ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
+                        end
                     end
                 end
             end
@@ -120,7 +124,13 @@ classdef PROSTDatasetList < handle
                 return
             end
 
-            tf = ig.is_in_list_participants(dataset_id, participants);
+            [tf, all_participants] = ig.is_in_list_participants(dataset_id, participants);
+            if all_participants
+                error("PROSTDatasetList:Participant:DeletionError", ...
+                      "Can't delete participants.\n" + ...
+                      "All possible participants in dataset %d are in the list.\n" + ...
+                      "Delete entire dataset and re-add participants manually.", dataset_id)
+            end
             participants_in_list = participants(tf);
             if isempty(participants_in_list)
                 return
@@ -154,9 +164,43 @@ classdef PROSTDatasetList < handle
                     if isempty(trials)
                         ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = [];
                     else
-                        tf = ig.is_in_list_trials(dataset_id, participant_id, trials, s);
+                        [tf, all_trials] = ig.is_in_list_trials(dataset_id, participant_id, trials, s);
+                        if all_trials
+                            error("PROSTDatasetList:Trial:DeletionError", ...
+                                  "Can't delete trials.\n" + ...
+                                  "All possible trials of side %s of participant %d in dataset %d are in the list.\n" + ...
+                                  "Delete entire side and re-add trials manually.", s, participant_id, dataset_id)
+                        end
                         ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))(tf) = [];
                     end
+                end
+            end
+        end
+
+        function merge_lists(ig, other_list)
+        %MERGE_LISTS merges the current list with the other list as a single
+        % dataset list in the current object.
+        % Input :
+        %   other_list - the PROST.PROSTDatasetList object to merge with.
+
+            if ~isa(other_list, "PROST.PROSTDatasetList")
+                error("PROSTDatasetList:WrongFormat", "Argument is an invalid type.\n" + ...
+                      "Should be of type PROST.PROSTDatasetList.\n" + ...
+                      "Instead is of type %s.", class(other_list))
+            end
+            for d=1:numel(other_list.List)
+              dataset_id = other_list.List(d).Dataset_id;
+              for p=1:numel(other_list.List(d).Participants)
+                  participant_id = other_list.List(d).Participants(p).Participant_id;
+                  for side=["Left" "Right"]
+                      trials = other_list.List(d).Participants(p).(side);
+                      if isnan(trials)
+                          trials = [];
+                      elseif isempty(trials)
+                          continue;
+                      end
+                      ig.add_to_list(dataset_id, participant_id, trials, side);
+                  end
                 end
             end
         end
@@ -199,9 +243,9 @@ classdef PROSTDatasetList < handle
         %   tf - a logical array of the same size as 'participants' containing 
         %        logical 1 (true) wherever the values in 'participants' are in
         %        the list. Elsewhere, it contains logical 0 (false).
-        %   all_flag - flag that is logical 1 (true) if every participant in
-        %              'dataset_id' is in the list, and logical 0 (false)
-        %              otherwise.
+        %   all_flag - flag that is logical 1 (true) if every possible 
+        %              participant in 'dataset_id' is in the list, and logical 
+        %              0 (false) otherwise.
         % Usage :
         %   ig.is_in_list_participants(dataset_id, participants)
 
@@ -237,9 +281,9 @@ classdef PROSTDatasetList < handle
         %   tf - a logical array of the same size as 'trials' containing 
         %        logical 1 (true) wherever the values in 'trials' are in the 
         %        list. Elsewhere, it contains logical 0 (false).
-        %   all_flag - flag that is logical 1 (true) if every trial os 'side' in
-        %              'participant_id' is in the list, and logical 0 (false)
-        %              otherwise.
+        %   all_flag - flag that is logical 1 (true) if every possible trial of 
+        %              'side' in 'participant_id' is in the list, and logical 0 
+        %             (false) otherwise.
         % Usage :
         %   ig.is_in_list_participants(dataset_id, participant_id, trials, side)
 
@@ -272,7 +316,7 @@ classdef PROSTDatasetList < handle
 
             dataset_index = ig.DatasetID2IndexLookup(dataset_id);
             participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
-            if isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side)))
+            if any(isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side))))
                 tf = true(size(trials));
                 all_flag = true;
             else
