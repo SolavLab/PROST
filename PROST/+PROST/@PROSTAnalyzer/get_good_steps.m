@@ -1,11 +1,11 @@
 function [good_steps] = get_good_steps(steps, min_speed)
 %GET_GOOD_STEPS receives all the steps of the participant from a
 % single side, and saves and returns only the steps with a speed
-% higher than min_speed in [km/h]. By default min_speed = 0 [km/h]
+% higher than min_speed in [km/hour]. By default min_speed = 0 [km/hour]
 
     % Set default value for min_speed
     if nargin == 1
-        min_speed = 0; % [km/hr]
+        min_speed = 0; % [km/hour]
     end
 
     if isempty(steps)
@@ -18,7 +18,7 @@ function [good_steps] = get_good_steps(steps, min_speed)
     counter = 1;
     for step_num=1:length(steps)
         step = steps(step_num);
-        step_speed = step.speed.km_per_hour.value;
+        step_speed = step.speed.value;
         is_included = step.Is_included;
         if is_included && step_speed >= min_speed
             % add this step:

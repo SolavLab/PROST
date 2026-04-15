@@ -253,20 +253,16 @@ for participant_number=1:n_participants
         % Dataset_4 / Data / participant_# / processed_original_data / trial(#) / speed
         %                                                            ------
         % get the data from steps files:
-        speed = calculate_speed(trajectories, event_data, markers_guide.reference_guide{"Walking Direction Marker"}{1});  
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.value = speed;
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.method = ...
-        "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
-        "Then calculated the mean speed of both feet.";
-        
+        speed = calculate_speed(trajectories, event_data, markers_guide.reference_guide{"Walking Direction Marker"}{1});          
         speed_km_per_hr = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.value = speed_km_per_hr;
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.method = ...
+        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.value = speed_km_per_hr;
+        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.unit = "km/hour";
+        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.method = ...
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.\n" + ...
-        "Converted from [m/sec] to [km/hr]";
+        "Converted from [m/second] to [km/hour]";
+        Dataset_4.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = "Self selected speed";
+
 
         %                              ---------------
         % Dataset_4 / Data / participant_# / uniform_data

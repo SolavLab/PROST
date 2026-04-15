@@ -40,7 +40,7 @@ for dataset_id=dataset_ids
             trials = data.(p_name).uniform_data.(side).step;
             n_trials = length(trials);
             for trial_number=1:n_trials
-                speed = trials(trial_number).speed.km_per_hour.value; % [km/h]
+                speed = trials(trial_number).speed.value; % [km/hour]
                 speeds(end + 1, :) = speed;
                 participants(end + 1, :) = participant_counter;
                 datasets(end + 1, :) = dataset_id;
@@ -51,7 +51,7 @@ for dataset_id=dataset_ids
     h = gscatter(participants, speeds, datasets, "rgb", "o", 5, "off", "filled");
 end
 xlabel("participant #")
-ylabel("speed [km/h]")
+ylabel("speed [km/hour]")
 title("Speeds by Participant");
 legend(h, "DB" + dataset_ids)
 
@@ -87,7 +87,7 @@ gscatter(participants_for_kmeans, speeds_for_kmeans, kmeans_idx, colors, "o", 5,
 legend
 title('Cluster Assignments', "Datasets: " + join(string(dataset_ids), ", "));
 xlabel("participant #")
-ylabel("speed [km/h]")
+ylabel("speed [km/hour]")
 hold off
 
 %% Save figures

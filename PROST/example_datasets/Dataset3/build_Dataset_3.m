@@ -499,13 +499,12 @@ for participant_number = 1:n_participants
         %                                                            ------
         % get the speed from the data:
         speed = walking_data(trial_number).speed;
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.value = speed;
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.unit = "m/sec";
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.m_per_sec.method = "given";
-
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.unit = "km/hour";
-        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.km_per_hour.method = "Converted from [m/sec] to [km/hour].";
+        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.value = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
+        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.unit = "km/hour";
+        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.method = ...
+            "Provided.\n" + ...
+            "Converted from [m/second] to [km/hour].";
+        Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = "Self selected speed";
 
         %                              ---------------
         % Dataset_3 / Data / participant_# / uniform_data

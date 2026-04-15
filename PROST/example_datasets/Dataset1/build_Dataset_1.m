@@ -104,13 +104,13 @@ Experiment_protocol.explanation_txt = ...
     "During a single trial, the right and left leg performed two and one strides, respectively, since the participants step the first force platform with the right foot.\n" + ...
     "Overall, 1120 trials were collected, containing 1120 and 2240 strides for the left and right leg, respectively.\n\n" + ...
     "Note: this dataset only uses the raw data that was aquired.";
-Experiment_protocol.speed_categories = "V1 is a speed of 1.0 km/h.\n" + ...
-                                       "V15 is a speed of 1.5 km/h.\n" + ...
-                                       "V2 is a speed of 2.0 km/h.\n" + ...
-                                       "V25 is a speed of 2.5 km/h.\n" + ...
-                                       "V3 is a speed of 3.0 km/h.\n" + ...
-                                       "V35 is a speed of 3.5 km/h.\n" + ...
-                                       "V4 is a speed of 4.0 km/h.\n";
+Experiment_protocol.speed_categories = "V1 is a speed of 1.0 km/hour.\n" + ...
+                                       "V15 is a speed of 1.5 km/hour.\n" + ...
+                                       "V2 is a speed of 2.0 km/hour.\n" + ...
+                                       "V25 is a speed of 2.5 km/hour.\n" + ...
+                                       "V3 is a speed of 3.0 km/hour.\n" + ...
+                                       "V35 is a speed of 3.5 km/hour.\n" + ...
+                                       "V4 is a speed of 4.0 km/hour.\n";
 Experiment_protocol.num_participants = 16;
 
 Dataset_1.Experiment_protocol = Experiment_protocol;
@@ -336,21 +336,13 @@ for participant_number=participant_numbers
             speed = distance ./ [(IC3_time - IC1_time); (IC4_time - IC2_time)];
             mean_speed = mean(speed); % [m/s]
 
-            speed_structure.m_per_sec.value = mean_speed;
-            speed_structure.m_per_sec.unit = "m/sec";
-            speed_structure.m_per_sec.method = ...
-                "For each foot, calculated the distance traveled of the mean PSIS marker divided by the time between two consecutive foot strikes of that foot.\n" + ...
-                "Then calculated the mean speed of both feet.";
-
-            speed_structure.km_per_hour.value = PROST.utils.convert_units(PROST.utils.convert_units(speed_structure.m_per_sec.value, "m", "km"), "hour", "second");
-            speed_structure.km_per_hour.unit="km/hour";
-            speed_structure.km_per_hour.method="calculated by" + ...
-                "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
-                "Then calculated the mean speed of both feet.\n" + ...
-                "Converted from [m/sec] to [km/hr]";
-
-            speed_structure.given_speed.value = (speed_category >= 10)*(speed_category/10) + (speed_category < 10)*speed_category;
-            speed_structure.given_speed.unit = "km/h";
+            speed_structure.value = PROST.utils.convert_units(PROST.utils.convert_units(mean_speed, "m", "km"), "hour", "second");
+            speed_structure.unit="km/hour";
+            speed_structure.method= ...
+            "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
+            "Then calculated the mean speed of both feet.\n" + ...
+            "Converted from [m/sec] to [km/hour]";
+            speed_structure.speed_category = "V" + speed_category;
 
             Dataset_1.Data.(participant_name).processed_original_data.(trial_name).speed = speed_structure;
 
@@ -562,8 +554,8 @@ for participant_number=participant_numbers
                 %                                                                       ------
                 % Dataset_1 / Data / participant_# / uniform_data / Right,Left / step(#) / speed
                 %                                                                       ------
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).speed.m_per_sec = speed_structure.m_per_sec;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).speed.km_per_hour = speed_structure.km_per_hour;
+                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).speed = ...
+                    Dataset_1.Data.(participant_name).processed_original_data.(trial_name).speed;
             end
         end
     end
@@ -584,10 +576,10 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
     % get available speeds
     available_speeds = zeros(1, 7);
     counter = 0;
-    for speed=[1 15 2 25 3 35 4]
-        if length(fieldnames(participant_data.("V" + speed))) > 1
+    for speed_category=[1 15 2 25 3 35 4]
+        if length(fieldnames(participant_data.("V" + speed_category))) > 1
             counter = counter + 1;
-            available_speeds(counter) = speed;
+            available_speeds(counter) = speed_category;
         end
     end
     available_speeds = available_speeds(1:counter);
@@ -600,11 +592,11 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
     left_thigh_lengths_vector = zeros(1, length(available_speeds)*10);
     right_shank_lengths_vector = zeros(1, length(available_speeds)*10);
     left_shank_lengths_vector = zeros(1, length(available_speeds)*10);
-    for speed=available_speeds
-        trajectories_data = participant_data.("V" + speed).Trajectories;
+    for speed_category=available_speeds
+        trajectories_data = participant_data.("V" + speed_category).Trajectories;
         available_num_trials = length(trajectories_data);
         for num_trial=1:available_num_trials
-            if participant_number == 16 && speed == 25 && (num_trial == 5 || num_trial == 6 || num_trial == 7 || num_trial == 8 || num_trial == 9)
+            if participant_number == 16 && speed_category == 25 && (num_trial == 5 || num_trial == 6 || num_trial == 7 || num_trial == 8 || num_trial == 9)
                 continue
             end
             trials_counter = trials_counter + 1;
