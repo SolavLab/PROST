@@ -14,10 +14,27 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 %                     Logical 0 (false) otherwise.
 %                     Appending only works for "pdf" and "gif" file types.
 %                     Default: false.
+%   filt_opts - options for filtering the response data
+%       filt_opts.filter - which filter to use for the response data. Either
+%                          "outlier" to filter outlier points, "winsor" for 
+%                          Winsorizing the data or "none".
+%                          Default: "none".
+%       filt_opts.options - a struct containing filter-dependent options. 
+%                           When filtering outliers, these are the options for 
+%                           the isoutlier function. The Name-Value pairs for the 
+%                           function need to be defined under the field 
+%                           "NameValues" in the form: NameValues.name = value.
+%                           When Winsorizing, this must contain the percentile
+%                           threshold "p" as a two-element row vector with
+%                           elements in the range [0-100].
 % Output :
 %   fig - array of figure handles of all the created plots.
 %         When figures are saved instead of shown the figures is automatically
 %         closed.
+%   correlations - the correlation calculation information for each response and
+%                  predictor. Includes Rsquared, Pearson and Spearman
+%                  coefficients for numeric data and Wilcoxon test result for
+%                  categorical data.
     
     arguments
         obj
@@ -29,7 +46,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append                (1, 1) logical = false
         filt_opts.filter           {mustBeMember(filt_opts.filter, ["winsor" "outlier" "none"])} = "none"
-        filt_opts.filter_opts =    []
+        filt_opts.options =        []
     end
 
     % Prep Input Arguments
@@ -101,13 +118,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 % ignore filter_opts entirely
             case "winsor"
                 % validate Winsor-specific options
-                f = opts.filter_opts;
+                f = filt_opts.options;
                 if ~isfield(f, "p")
                     PROST.PROSTError("Winsor", "WrongFilterOptions", "winsor requires 'p' field in filter_opts")
                 end
                 y = PROST.utils.winsorize(y, f.p);
             case "outlier"
-                f = opts.filter_opts;
+                f = filt_opts.options;
 
                 % Convert name-values
                 name_value = {};
