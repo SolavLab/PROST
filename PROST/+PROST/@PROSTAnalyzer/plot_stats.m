@@ -317,7 +317,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 
     % Save figures
     if strcmp(show, 'off')
-        figure_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Stat Plots");
+        figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
         PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, file_type, append);
         close(fig_data)
         if qqplot_flag

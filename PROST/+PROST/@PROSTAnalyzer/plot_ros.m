@@ -240,7 +240,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 % Save figures
                 if strcmp(show, 'off')
                     drawnow
-                    figure_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/ROS Plots");
+                    figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/ROS Plots");
                     PROST.PROSTAnalyzer.save_figure(fig(fig_counter), figure_path, file_type, append);
                     close(fig(fig_counter))
                 end

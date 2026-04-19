@@ -49,17 +49,19 @@ classdef PROSTAnalyzer < handle
         DataRecords = struct([]); % Data records
         SamplesTable = table; % Unified table of all participant data
         SummaryTable = table; % Summary information of the datasets
-        DataRecordsIDLookup = configureDictionary("double", "double"); % Lookup for data records dataset_id -> index
         SamplesTableSize = 0; % Size of the populated part of the samples table
         SummaryTableSize = 0; % Size of the populated part of the summary table
-        PointClouds = {}; % Cell array of all point clouds.
         IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
-        FirstUniqueDatasetId = 1; % Counter for generating unique dataset IDs.
     end
     properties(Access=private)
-        toolbox_root = '';
+        DataRecordsIDLookup = configureDictionary("double", "double"); % Lookup for data records dataset_id -> index
+        PointClouds = {}; % Cell array of all point clouds.
+        Toolbox_root = '';
+        FirstUniqueDatasetId = 1; % Counter for generating unique dataset IDs.
     end
-
+    properties(Constant, Access=private)
+        DEBUG = true;
+    end
     %% PUBLIC METHODS
     methods
         function [obj, dataset_ids] = PROSTAnalyzer(load_list, toolbox_root)
@@ -78,9 +80,9 @@ classdef PROSTAnalyzer < handle
             summary_numCols = numel(summary_var_names);
             
             if nargin < 2 || isempty(toolbox_root)
-                obj.toolbox_root = uigetdir([], "Where is the toolbox saved?");
+                obj.Toolbox_root = uigetdir([], "Where is the toolbox saved?");
             else
-                obj.toolbox_root = toolbox_root;
+                obj.Toolbox_root = toolbox_root;
             end
             if nargin == 0 || isempty(load_list)
                 fprintf("Creating empty PROSTAnalyzer object...\n");
@@ -142,19 +144,32 @@ classdef PROSTAnalyzer < handle
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
         % tf = is_in_samples_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
+        % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % plot_predictors_vs_responses(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
-        % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);
         % set_dataset_name(obj, dataset_id, dataset_name);
-        % tf = is_in_summary(obj, dataset_id);
+    end
+
+    methods(Access=public, Hidden, Sealed)
+         function val = debug(obj, name)
+            arguments
+                obj
+                name    {mustBeMember(name, ["DataRecordsIDLookup", "PointClouds", "Toolbox_root" "FirstUniqueDatasetId"])}
+            end
+            if ~obj.DEBUG
+                error("Debugging disabled");
+            end
+            val = obj.(name);
+        end
     end
 
     %% PRIVATE METHODS
     methods (Access = private)
-        % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side)  
+        % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side);
+        % add_to_samples_table(obj, dataset_id);
         % add_to_summary_table(obj, dataset_id);
         % delete_from_data_records(obj, dataset_id, index);
         % delete_from_summary_table(obj, index);
@@ -169,17 +184,18 @@ classdef PROSTAnalyzer < handle
         % tf = is_in_summary_table(obj, dataset_id)
         % make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums, row_number, anatomical_side);
         % populate_table(obj, dataset_id, start_row, anatomical_side);
+        % sync_data_records_lookup(obj, dataset_id);
         % update_num_included_summary(obj, dataset_ids);
     end
     
     %% STATIC METHODS
     methods(Static)
-        [good_steps] = get_good_steps(steps, min_speed);
-        shank_cop = cop_to_shank_frame(step, anatomical_side);
+        out = analyze_stats(value, distnames, opts);
         shank_data = convert_to_shank_frame(data, knee, ankle);
+        shank_cop = cop_to_shank_frame(step, anatomical_side);
+        [good_steps] = get_good_steps(steps, min_speed);
         [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
         save_figure(f, file_path, file_type, append);
-        out = analyze_stats(value, distnames, opts)
     end
 end
 

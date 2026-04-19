@@ -301,7 +301,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             if axes_counter == number_of_axes_in_fig || (predictor_index==n_predictors)
                 if strcmp(show, 'off')
                     drawnow
-                    file_path = fullfile(obj.toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
+                    file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
                     PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
                     close(fig(fig_counter))
                 end
