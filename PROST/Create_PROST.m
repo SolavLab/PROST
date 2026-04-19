@@ -52,10 +52,11 @@ ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left");
 PROSTAnalyzer.clean_data(ignore_list);
 
 %% Add to samples table data from datasets
-for index=1:n_datasets
-    dataset_name = PROSTAnalyzer.get_dataset_name(dataset_ids(index));
-    PROSTAnalyzer.add_samples(dataset_ids(index));
-end
+% for index=1:n_datasets
+%     dataset_name = PROSTAnalyzer.get_dataset_name(dataset_ids(index));
+%     PROSTAnalyzer.add_samples(dataset_ids(index));
+% end
+PROSTAnalyzer.create_samples_table();
 
 %% Save PROST Object
 fprintf("Saving PROSTAnalyzer object...\n");

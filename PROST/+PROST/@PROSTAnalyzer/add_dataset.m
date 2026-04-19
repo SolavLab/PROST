@@ -1,6 +1,6 @@
 function dataset_id = add_dataset(obj, dataset_name, dataset)
 %ADD_DATASET Adds a new dataset to this object by adding it to the data records,
-% updating the summary table, and populating the samples table.
+% updating the summary table.
 % Input :
 %   dataset_name - the name of the dataset to add.
 %   dataset - struct containing dataset data in a uniform internal format.
@@ -9,13 +9,11 @@ function dataset_id = add_dataset(obj, dataset_name, dataset)
 %                number.
 % NOTE:
 % Internal dataset indices are assigned in add_to_data_records and are
-% shared across data records and summary tables. DataRecordsIDLookup
-% provides the authoritative mapping from public dataset_id to internal
-% index.
+% shared across data records and summary tables. To access dataset info use get
+% functions with the dataset/participant IDs.
 
     fprintf("Adding dataset %s...\n", dataset_name);
     
     dataset_id = obj.add_to_data_records(dataset_name, dataset);
     obj.add_to_summary_table(dataset_id);
-    obj.add_samples(dataset_id);
 end

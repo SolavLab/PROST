@@ -73,12 +73,6 @@ classdef PROSTAnalyzer < handle
         %   toolbox_root - the root path where the toolbox is saved.
 
             % Pre Initialization
-            samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan', 'doublenan',  'doublenan'};
-            samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Sex',      'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_horizontal',  'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
-            samples_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Yes/No',      'mm',        'mm',        'mm',        'deg',       'deg',       'deg',        'mm'       };
-            samples_var_descriptions = {'',           '',               '',            '',                    'feature',   'feature',     'feature',   'feature',   'feature',    'feature',      'feature',      'feature',     'label',     'label',     'label',     'label',     'label',     'label',      ''         };
-            samples_numCols = numel(samples_var_names);
-    
             summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'string',            'doublenan',         'doublenan',       'categorical', 'logical'};
             summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod',     'Has_medial'};
             summary_numCols = numel(summary_var_names);
@@ -92,9 +86,6 @@ classdef PROSTAnalyzer < handle
                 fprintf("Creating empty PROSTAnalyzer object...\n");
                 obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
                 obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
-                obj.SamplesTable = table('Size', [0 samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
-                obj.SamplesTable.Properties.VariableUnits = samples_var_units;
-                obj.SamplesTable.Properties.VariableDescriptions = samples_var_descriptions;
                 dataset_ids = [];
                 return
             end
@@ -126,32 +117,18 @@ classdef PROSTAnalyzer < handle
             obj.SummaryTable = summary_table;
             obj.SummaryTableSize = 0;
 
-            % Add to samples table data from datasets
+            % Add to summary table data from the datasets
             for dataset_idx=1:n_datasets
                 dataset_name = obj.get_dataset_name(dataset_ids(dataset_idx));
                 fprintf("Adding dataset %s to summary table...\n", dataset_name);
                 obj.add_to_summary_table(dataset_ids(dataset_idx));
             end
-    
-            % Create samples table
-            % Count the number of rows needed in samples table
-            numRows = 0;
-            for dataset_idx=1:n_datasets
-                numRows = numRows + obj.NUM_SIDES*length(obj.DataRecords(dataset_idx).Data);
-            end
-
-            % Create an empty table for the data with the desired variable names:
-            samples_table = table('Size', [numRows samples_numCols], 'VariableTypes', samples_var_types, 'VariableNames', samples_var_names);
-            samples_table.Properties.VariableUnits = samples_var_units;
-            samples_table.Properties.VariableDescriptions = samples_var_descriptions;
-            obj.SamplesTable = samples_table;
-            obj.SamplesTableSize = 0;
         end
         
         % dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right);
-        % add_samples(obj, dataset_id);
         % add_to_ignore(obj, dataset_id, participants, trials, side);
         % clean_data(obj, ignore_list);
+        % create_samples_table(obj);
         % tf = dataset_exists(obj, dataset_id);
         % delete_dataset(obj, dataset_id);
         % delete_from_ignore(obj, dataset_id, participants, trials, side);

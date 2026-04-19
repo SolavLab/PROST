@@ -1,5 +1,5 @@
-function add_samples(obj, dataset_id)
-%ADD_SAMPLES processes the dataset and adds to samples table.
+function add_to_samples_table(obj, dataset_id)
+%ADD_TO_SAMPLES_TABLE processes the dataset and adds to samples table.
 % Input :
 %   dataset_id - the ID of the dataset to add to the samples
 %                table. A positive integer number.
