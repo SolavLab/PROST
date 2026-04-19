@@ -46,8 +46,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     correlations = struct;
     
     % Get Data
-    [predictors, predictor_names, predictor_units, predictor_types] = obj.get_features(predictors_list);
-    [responses, response_names, response_units, ~] = obj.get_labels(responses_list);
+    [predictors, predictor_names, predictor_units, predictor_types] = obj.get_predictors(predictors_list);
+    [responses, response_names, response_units, ~] = obj.get_responses(responses_list);
     n_predictors = numel(predictor_names);
     n_responses = numel(response_names);
 

@@ -137,15 +137,15 @@ classdef PROSTAnalyzer < handle
         % delete_samples(obj, flag, varargin);
         % dataset = get_dataset(obj, dataset_id);
         % dataset_name = get_dataset_name(obj, dataset_id);
-        % [features, names, units, types] = get_features(obj, list);
-        % [labels, names, units, types] = get_labels(obj, list);
+        % [predictors, names, units, types] = get_predictors(obj, list);
+        % [responses, names, units, types] = get_responses(obj, list);
         % [samples, row_numbers, var_names] = get_samples(obj, var_list, varargin);
         % tf = has_medial(obj, dataset_id);
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
         % tf = is_in_samples_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
-        % plot_predictors_vs_responses(obj, features_list, labels_list, number_of_axes_in_fig, show, file_type);
+        % plot_predictors_vs_responses(obj, predictors_list, responses_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
         % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);

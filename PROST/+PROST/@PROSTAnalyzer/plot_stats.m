@@ -150,7 +150,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         distributions_no_kde(kde_idx) = [];
         analyze_stats_opts.KDEFunction = function_type;
         analyze_stats_opts.KDENumPoints = 400;
-        if strcmpi(value_name, "Radius") || strcmpi(value_type, "feature")
+        if strcmpi(value_name, "Radius") || strcmpi(value_type, "predictor")
             analyze_stats_opts.KDESupport = "positive";
         else
             analyze_stats_opts.KDESupport = "unbounded";
