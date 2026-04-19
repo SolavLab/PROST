@@ -121,9 +121,10 @@ function fig = plot_cop(obj, who_to_plot, opts)
                     if strcmp(show, "off")
                         screen_size = get(0, 'ScreenSize');
                         fig(fig_counter).WindowStyle = 'normal';
-                        fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.6*screen_size(3) 0.5*screen_size(4)];
+                        fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.3*screen_size(3) 0.25*screen_size(4)];
                     else
-                        sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontUnits="points", FontSize=obj.FONT_SIZE)
+                        sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE)
+
                     end
                 end
 
@@ -132,7 +133,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
                 if strcmp(show, "on")
-                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontUnits="points", FontSize=obj.FONT_SIZE)
+                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE)
                 end
 
                 % Time vector
@@ -167,6 +168,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % Set axis parameters
                 ax1.FontUnits = "points";
                 ax1.FontSize = obj.FONT_SIZE;
+                ax1.TitleFontWeight = "normal";
                 hold(ax1, 'on');
                 grid(ax1, "on");
                 axis(ax1, 'equal');
@@ -208,6 +210,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 ax2 = nexttile(tInner, 2);
                 ax2.FontUnits = "points";
                 ax2.FontSize = obj.FONT_SIZE;
+                ax2.TitleFontWeight = "normal";
                 hold(ax2, 'on');
                 grid(ax2, "on");
                 axis(ax2, 'equal');

@@ -53,13 +53,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
     % Get Sides
     sides = table2array(obj.get_sample_var("Side"));
-    unique_sides = unique(sides);
-    n_sides = length(unique_sides);
+    unique_sides = categories(sides);
+    n_sides = numel(unique_sides);
 
     % Get Dataset IDs
     dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
     unique_dataset_ids = unique(dataset_ids)';
-    n_dataset_ids = length(unique_dataset_ids);
+    n_dataset_ids = numel(unique_dataset_ids);
 
     % Define colors for sides
     color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
@@ -79,6 +79,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         response_name = response_names{response_index};
         % response_type = response_types{response_index};
         % response_numeric = (strcmp(response_type, "double") || strcmp(response_type, "doublenan"));
+        y = response(~isoutlier(response, "percentiles", [5 95]));
+        % y = winsorize(response, [5 95]);
         y_name = replace(response_name, "_", " ");
         y_unit = replace(response_unit, "_", " ");
         
@@ -87,9 +89,16 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             norm_entry = obj.get_samples(norm_var_name);
             norm_var = PROST.utils.convert_units(table2array(norm_entry), norm_entry.Properties.VariableUnits{:}, response_unit);
             response = response ./ norm_var; % normalized response
+            y = response(~isoutlier(response, "percentiles", [5 95]));
+            % y = winsorize(response, [5 95]);
             y_name = response_name + " / " + norm_var_name;
             y_unit = "-";
         end
+        
+        sides_trimmed = sides;
+        dataset_ids_trimmed = dataset_ids;
+        sides_trimmed = sides_trimmed(~isoutlier(response, "percentiles", [5 95]));
+        dataset_ids_trimmed = dataset_ids_trimmed(~isoutlier(response, "percentiles", [5 95]));
 
         correlations.(response_name) = struct;   
         for predictor_index=1:n_predictors
@@ -99,6 +108,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             predictor_name = predictor_names{predictor_index};
             predictor_type = predictor_types{predictor_index};
             predictor_numeric = (strcmp(predictor_type, "double") || strcmp(predictor_type, "doublenan"));
+            x = predictor;
+            x = x(~isoutlier(response, "percentiles", [5 95]));
             x_name = replace(predictor_name, "_", " ");
             x_unit = replace(predictor_unit, "_", " ");
 
@@ -118,7 +129,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                     fig(fig_counter).Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
                     
                 else
-                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontUnits="points", FontSize=obj.FONT_SIZE)
+                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE)
                 end
             end
 
@@ -136,163 +147,109 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end            
 
             % Test Predictor-Response Correlations
-            correlation_struct = struct([]);
-            for i_side=1:n_sides
-                i = length(correlation_struct) + 1;
-                side = unique_sides(i_side);
-                x = predictor(sides == unique_sides(i_side));
-                y = response(sides == unique_sides(i_side));
-                correlation_struct(i).Side = side;
+            correlation_struct = struct;
+            % correlation_struct(i).Side = side;
 
-                if predictor_numeric % Regression and Spearman rank coefficients
-                    % Create linear model
-                    X = [ones(size(x)), x]; % intercept + predictor
-                    b = X \ y; % regression coefficients
-                    y_pred = X * b;
-                    SSres = sum((y - y_pred).^2);
-                    SStot = sum((y - mean(y)).^2);
-                    correlation_struct(i).Rsquared = 1 - SSres/SStot;
-                    % Spearman rank coefficient
-                    [rho, pvalue] = corr(x, y, "Type", "Spearman");
-                    correlation_struct(i).Spearman.rho = rho;
-                    correlation_struct(i).Spearman.pvalue = pvalue;
-                    % Pearson coefficient
-                    [rho, pvalue] = corr(x, y, "Type", "Pearson");
-                    correlation_struct(i).Pearson.rho = rho;
-                    correlation_struct(i).Pearson.pvalue = pvalue;
-                else % Wilcoxon rank sum test (equivalent to the Mann-Whitney U-test)
-                    x = categorical(x);
-                    x_cateogries = categories(x);
-                    y1 = y(x == x_cateogries(1));
-                    y2 = y(x == x_cateogries(2));
-                    [pvalue, h] = ranksum(y1, y2);
-                    correlation_struct(i).Wilcoxon.h = h;
-                    correlation_struct(i).Wilcoxon.pvalue = pvalue;
-                end % predictor_numeric
-            end % i_side
-            correlations.(response_name).(predictor_name) = correlation_struct;
+            if predictor_numeric % Regression and Spearman rank coefficients
+                % Create linear model
+                X = [ones(size(x)), x]; % intercept + predictor
+                b = X \ y; % regression coefficients
+                y_pred = X * b;
+                SSres = sum((y - y_pred).^2);
+                SStot = sum((y - mean(y)).^2);
+                correlation_struct.Rsquared = 1 - SSres/SStot;
+
+                % Spearman rank coefficient
+                [rho, pvalue] = corr(x, y, "Type", "Spearman");
+                correlation_struct.Spearman.rho = rho;
+                correlation_struct.Spearman.pvalue = pvalue;
+
+                % Pearson coefficient
+                [rho, pvalue] = corr(x, y, "Type", "Pearson");
+                correlation_struct.Pearson.rho = rho;
+                correlation_struct.Pearson.pvalue = pvalue;
+            else % Wilcoxon rank sum test (equivalent to the Mann-Whitney U-test)
+                x = categorical(x);
+                x_cateogries = categories(x);
+                y1 = y(x == x_cateogries(1));
+                y2 = y(x == x_cateogries(2));
+                [pvalue, h] = ranksum(y1, y2);
+                correlation_struct.Wilcoxon.h = h;
+                correlation_struct.Wilcoxon.pvalue = pvalue;
+            end % predictor_numeric
+
+        correlations.(response_name).(predictor_name) = correlation_struct;
 
             % Plot predictors vs responses for both sides
-            directions = ["positive" "negative"];
-            offset = 0;
-            for i_side=1:n_sides
-                side = unique_sides(i_side);
-                x = predictor(sides == unique_sides(i_side));
-                y = response(sides == unique_sides(i_side));
-                datasets_per_side = dataset_ids(sides == unique_sides(i_side));
-
-                if predictor_numeric
-                    plot_h = gscatter(ax, x, y, datasets_per_side, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+            directions = dictionary(["right" "left"], ["positive" "negative"]);
+            if predictor_numeric
+                plot_h = gscatter(ax, x, y, {sides_trimmed, dataset_ids_trimmed}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+                for i_side=1:n_sides
                     for i_dataset=1:n_dataset_ids
-                        side = unique_sides(i_side);
-                        dataset_id = unique_dataset_ids(i_dataset);
-                        dataset_name = obj.get_dataset_name(dataset_id);
-                        plot_h(i_dataset).DisplayName = sprintf('%s %s', dataset_name, side);
-                        plot_h(i_dataset).Color = color{side};
-                        plot_h(i_dataset).MarkerFaceColor = color{side};
-                        plot_h(i_dataset).MarkerEdgeColor = color{side};
-                    end % i_dataset
-
-                    % Regression and Spearman rank coefficients
-                    if correlations.(response_name).(predictor_name)(i_side).Rsquared > 0.5
-                        plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
+                        i = (i_side - 1).*n_dataset_ids + i_dataset;
+                        side = unique_sides{i_side};
+                        dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
+                        try
+                        plot_h(i).DisplayName = sprintf('%s %s', dataset_name, side);
+                        catch
+                            disp("!!!")
+                        end
+                        plot_h(i).Color = color{side};
+                        plot_h(i).MarkerFaceColor = color{side};
+                        plot_h(i).MarkerEdgeColor = color{side};
                     end
-                    txt = sprintf(" Rsquared = %.2g\n" + ...
-                                  " Spearman: rho = %.2g, p-value = %.2g", ...
-                        correlations.(response_name).(predictor_name)(i_side).Rsquared, ...
-                        correlations.(response_name).(predictor_name)(i_side).Spearman.rho, ...
-                        correlations.(response_name).(predictor_name)(i_side).Spearman.pvalue);
-                else
-                    x = categorical(x);
-                    plot_h = violinplot(ax, x, y, DensityDirection=directions(i_side));
-                    plot_h.DisplayName = sprintf('%s', unique_sides(i_side));
-                    plot_h.FaceColor = color{side};
-                    plot_h.EdgeColor = color{side};
+                end
 
-                    % Wilcoxon \ Mann-Whitney U-test
-                    txt = sprintf(" Wilcoxon: h = %d, p-value = %.2g", ...
-                        correlations.(response_name).(predictor_name)(i_side).Wilcoxon.h, ...
-                        correlations.(response_name).(predictor_name)(i_side).Wilcoxon.pvalue);
-                end % predictor_numeric
+                % Regression and Spearman rank coefficients
+                if correlations.(response_name).(predictor_name).Rsquared > 0.5
+                    plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
+                end
+                txt = sprintf(" Rsquared = %.2g\n" + ...
+                    " Spearman: rho = %.2g, p-value = %.2g", ...
+                    correlations.(response_name).(predictor_name).Rsquared, ...
+                    correlations.(response_name).(predictor_name).Spearman.rho, ...
+                    correlations.(response_name).(predictor_name).Spearman.pvalue);
+                % end % i_side
+            else
+                x = categorical(x);
+                plot_h = violinplot(ax, x, y, GroupByColor=sides_trimmed);
+  
+                for i_side=1:n_sides
+                    side = unique_sides{i_side};
+                    plot_h(i_side).DisplayName = sprintf('%s', side);
+                    plot_h(i_side).DensityDirection = directions(side);
+                    plot_h(i_side).FaceColor = color{side};
+                    plot_h(i_side).EdgeColor = color{side};
+                end
 
-                txt_handle = text(ax, 0, 1 - offset, txt, ...
-                                  Units="normalized", ...
-                                  Color=color{side}, ...
-                                  FontSize=obj.FONT_SIZE, ...
-                                  FontName="FixedWidth", ...
-                                  FontWeight=obj.FONT_WEIGHT, ...
-                                  HorizontalAlignment="left", ...
-                                  VerticalAlignment="top");
-                drawnow
-                offset = offset + txt_handle.Extent(4);
-            end % i_side
+                % Wilcoxon \ Mann-Whitney U-test
+                txt = sprintf(" Wilcoxon: h = %d, p-value = %.2g", ...
+                    correlations.(response_name).(predictor_name).Wilcoxon.h, ...
+                    correlations.(response_name).(predictor_name).Wilcoxon.pvalue);
+            end % predictor_numeric
 
+            text(ax, 0.01, 1, txt, ...
+                Units="normalized", ...
+                FontSize=obj.FONT_SIZE, ...
+                FontName="FixedWidth", ...
+                FontWeight=obj.FONT_WEIGHT, ...
+                HorizontalAlignment="left", ...
+                VerticalAlignment="top", ...
+                BackgroundColor="white");
+            drawnow
 
             % Set axis labels
             x_label = x_name;
             x_label = x_label + " [" + x_unit + "]";
             y_label = y_name;
             y_label = y_label +  " [" + y_unit + "]";
+            xlabel(ax, x_label);
+            ylabel(ax, y_label);
 
             % Set axis params
             xlim(ax, 'padded');
             ylim(ax, 'padded');
-            xlabel(ax, x_label);
-            ylabel(ax, y_label);
-            if strcmp(predictor_unit, response_unit)
-                axis(ax, 'equal');
-            end
             legend(ax, Location="northeast");
-
-            % if predictor_numeric
-            %     plot_h = gscatter(ax, predictor, response, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
-            %
-            %     % Regression and Spearman rank coefficients
-            %     if Rsquared > 0.5
-            %         plot(ax, predictor, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
-            %     end
-            %     txt = sprintf("Rsquared = %.2g\nSpearman: rho = %.2g, p-value = %.2g", ...
-            %                   correlations.(response_name).(predictor_name).Rsquared, ...
-            %                   correlations.(response_name).(predictor_name).Spearman.rho, ...
-            %                   correlations.(response_name).(predictor_name).Spearman.pvalue);
-            %     text(ax, ...
-            %          0, 1, txt, ...
-            %          Units="normalized", ...
-            %          Color=obj.LINE_COLOR, ...
-            %          FontSize=obj.FONT_SIZE, ...
-            %          FontName="FixedWidth", ...
-            %          FontWeight=obj.FONT_WEIGHT, ...
-            %          HorizontalAlignment="left", ...
-            %          VerticalAlignment="top");
-            % else
-            %     predictor = categorical(predictor);
-            %     plot_h = violinplot(predictor, response, GroupByColor=sides);
-            % 
-            %     % Wilcoxon \ Mann-Whitney U-test
-            %     txt = sprintf("Wilcoxon: h = %d, p-value = %.2g", ...
-            %                   correlations.(response_name).(predictor_name).Wilcoxon.h, ...
-            %                   correlations.(response_name).(predictor_name).Wilcoxon.pvalue);
-            %     text(ax, ...
-            %          0, 1, txt, ...
-            %          Units="normalized", ...
-            %          Color=obj.LINE_COLOR, ...
-            %          FontSize=obj.FONT_SIZE, ...
-            %          FontName="FixedWidth", ...
-            %          FontWeight=obj.FONT_WEIGHT, ...
-            %          HorizontalAlignment="left", ...
-            %          VerticalAlignment="top");
-            % end
-            % 
-            % for i_side=1:n_sides
-            %     for i_dataset=1:n_dataset_ids
-            %         i = (i_side - 1).*n_dataset_ids + i_dataset;
-            %         dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
-            %         plot_h(i).DisplayName = sprintf('%s %s', dataset_name, unique_sides(i_side));
-            %         plot_h(i).Color = color{unique_sides(i_side)};
-            %         plot_h(i).MarkerFaceColor = color{unique_sides(i_side)};
-            %         plot_h(i).MarkerEdgeColor = color{unique_sides(i_side)};
-            %     end
-            % end
 
             % Increment counter
             axes_counter = axes_counter + 1;
@@ -333,4 +290,15 @@ function mustBeTextOrEmpty(value)
        return
     end
     mustBeText(value);
+end
+
+function data_new = winsorize(data, p)
+    % Calculate bounds
+    low = prctile(data, p(1));
+    high = prctile(data, p(2));
+
+    % Winsorize
+    data_new = data;
+    data_new(data_new < low) = low;
+    data_new(data_new > high) = high;
 end

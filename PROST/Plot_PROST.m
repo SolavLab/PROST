@@ -33,10 +33,10 @@ Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 %% Plot Example ROS
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 12);
-PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="on", file_type="pdf");
+PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="pdf");
 
 %% Analyze Residuals
-[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], [], ["normal" "lognormal" "gamma" "tLocationScale"], function_type="pdf", qq_plot=true);
+[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", qq_plot=true, show="off", file_type="pdf");
 % Residual analysis results
 disp("-------- Residuals Statistical Analysis --------")
 for i=1:numel(stats_res)
@@ -91,7 +91,7 @@ end
 disp(s)
 
 %% Analyze Residuals per Dataset
-[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], "Dataset_id", ["normal"], function_type="pdf", qq_plot=true);
+[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], "Dataset_id", ["normal" "kernel" "tlocationscale"], function_type="pdf", qq_plot=true);
 disp("-------- Residuals Statistical Analysis --------")
 for i=1:numel(stats_res)
     stats_i = stats_res(i);
