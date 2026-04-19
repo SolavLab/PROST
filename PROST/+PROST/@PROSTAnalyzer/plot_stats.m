@@ -75,18 +75,18 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     file_type = opts.file_type;
     append = opts.append;
     qq_plot = opts.qq_plot;
-    distributions_no_kde = distnames;
-
-    % Prep Output Arguments
-    fig_qq = gobjects(0);
-    fig_data = gobjects(0);
-
 
     % Normalize distribution names
     if ~isempty(distnames)
         distnames = convertCharsToStrings(distnames); 
         distnames = erase(lower(distnames), whitespacePattern);
     end
+    distributions_no_kde = distnames;
+
+    % Prep Output Arguments
+    fig_qq = gobjects(0);
+    fig_data = gobjects(0);
+
 
     % Get variable
     var = obj.get_samples(var_name);
@@ -131,9 +131,14 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     histogram_types = ["count" "probability" "percentage" "countdensity" "cumcount" "pdf" "cdf"];
     kde_types = ["pdf" "cdf" "icdf" "survivor" "cumhazard"];
     dist_types = ["pdf" "cdf" "icdf"];
+    
     hist_flag = ismember(function_type, histogram_types);
     kde_flag = ismember(function_type, kde_types) && ~isempty(distnames) && ismember("kernel", distnames);
-    dist_flag = ismember(function_type, dist_types) && ~isempty(distnames);
+    if kde_flag
+        kde_idx = strcmp("kernel", distributions_no_kde);
+        distributions_no_kde(kde_idx) = [];
+    end
+    dist_flag = ismember(function_type, dist_types) && ~isempty(distributions_no_kde);
     dataplot_flag = hist_flag || kde_flag || dist_flag;
     qqplot_flag = qq_plot && dist_flag;
 
@@ -146,8 +151,6 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     analyze_stats_opts.TargetExp = 10;
     analyze_stats_opts.MinExpected  (1, 1) = 5;
     if kde_flag
-        kde_idx = strcmp("kernel", distributions_no_kde);
-        distributions_no_kde(kde_idx) = [];
         analyze_stats_opts.KDEFunction = function_type;
         analyze_stats_opts.KDENumPoints = 400;
         if strcmpi(value_name, "Radius") || strcmpi(value_type, "predictor")

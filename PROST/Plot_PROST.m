@@ -141,7 +141,7 @@ PROSTAnalyzer.plot_stats("Center_horizontal", [], [], [], function_type="pdf", s
 
 
 [f_r, ~, stats_r] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
-[f_x, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tlocationscale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
+[f_x, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 
 disp("Radius:")
 fprintf(PROST.utils.pretty_print(stats_r))
@@ -152,7 +152,8 @@ fprintf(PROST.utils.pretty_print(stats_horizontal))
 PROSTAnalyzer.plot_stats("Radius", "Height", "Side", "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 
 %% Plot Features vs Labels
-PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="on", file_type="pdf");
+[~, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="on", file_type="pdf");
+[~, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], norm_var_name="Height", show="on", file_type="pdf");
 
 %% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();

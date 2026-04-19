@@ -1,4 +1,4 @@
-function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts)
+function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts, filt_opts)
 %PLOT_PREDICTORS_VS_RESPONSES plots the predictors (anthropometric parameters)
 % v.s. the responses (ROS parameters).
 % Input :
@@ -28,6 +28,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append                (1, 1) logical = false
+        filt_opts.filter           {mustBeMember(filt_opts.filter, ["winsor" "outlier" "none"])} = "none"
+        filt_opts.filter_opts =    []
     end
 
     % Prep Input Arguments
@@ -40,6 +42,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     file_type = opts.file_type;
     norm_var_name = opts.norm_var_name;
     append = opts.append;
+    filter = filt_opts.filter;
 
     % Prep Output Arguments
     fig = gobjects(0);
@@ -77,28 +80,60 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         response = responses{:, response_index};
         response_unit = response_units{response_index};
         response_name = response_names{response_index};
-        % response_type = response_types{response_index};
-        % response_numeric = (strcmp(response_type, "double") || strcmp(response_type, "doublenan"));
-        y = response(~isoutlier(response, "percentiles", [5 95]));
-        % y = winsorize(response, [5 95]);
+        y = response;
         y_name = replace(response_name, "_", " ");
         y_unit = replace(response_unit, "_", " ");
         
-        % Normalize response values
+        % Normalize response
         if ~isempty(norm_var_name)
             norm_entry = obj.get_samples(norm_var_name);
             norm_var = PROST.utils.convert_units(table2array(norm_entry), norm_entry.Properties.VariableUnits{:}, response_unit);
             response = response ./ norm_var; % normalized response
-            y = response(~isoutlier(response, "percentiles", [5 95]));
-            % y = winsorize(response, [5 95]);
+            y = response;
             y_name = response_name + " / " + norm_var_name;
             y_unit = "-";
         end
+
         
-        sides_trimmed = sides;
-        dataset_ids_trimmed = dataset_ids;
-        sides_trimmed = sides_trimmed(~isoutlier(response, "percentiles", [5 95]));
-        dataset_ids_trimmed = dataset_ids_trimmed(~isoutlier(response, "percentiles", [5 95]));
+        % Filter response outliers / Winsorize
+        switch filter
+            case "none"
+                % ignore filter_opts entirely
+            case "winsor"
+                % validate Winsor-specific options
+                f = opts.filter_opts;
+                if ~isfield(f, "p")
+                    PROST.PROSTError("Winsor", "WrongFilterOptions", "winsor requires 'p' field in filter_opts")
+                end
+                y = PROST.utils.winsorize(y, f.p);
+            case "outlier"
+                f = opts.filter_opts;
+
+                % Convert name-values
+                name_value = {};
+                if isfield(f, "NameValues")
+                    name_value= namedargs2cell(f.NameValues);
+                end
+
+                % validate fields relevant to isoutlier
+                if isfield(f, "movmethod") && strlength(f.movmethod) > 0 % Moving method
+                    mustBeMember("window", fields(f));
+                    mustBeNonempty(f.window);
+                    mask = isoutlier(y, f.movmethod, f.window, name_value{:});
+                elseif isfield(f, "method") && strlength(f.method) > 0 % Outlier method
+                    switch f.method
+                        case "percentiles"
+                            mustBeMember("threshold", fields(f));
+                            mustBeNonempty(f.threshold);
+                            mask = isoutlier(y, "percentiles", f.threshold, name_value{:});
+                        otherwise
+                            mask = isoutlier(x, f.method, name_value{:});
+                    end
+                else
+                    PROST.PROSTError("Outlier", "WrongFilterOptions", "Invalid outlier configuration");
+                end
+                y(mask) = NaN;
+        end
 
         correlations.(response_name) = struct;   
         for predictor_index=1:n_predictors
@@ -109,9 +144,12 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             predictor_type = predictor_types{predictor_index};
             predictor_numeric = (strcmp(predictor_type, "double") || strcmp(predictor_type, "doublenan"));
             x = predictor;
-            x = x(~isoutlier(response, "percentiles", [5 95]));
             x_name = replace(predictor_name, "_", " ");
             x_unit = replace(predictor_unit, "_", " ");
+            if ~predictor_numeric
+                x = categorical(x);
+                x_cateogries = categories(x);
+            end
 
             % Create new figure for new set of axes
             if axes_counter == 0
@@ -148,29 +186,28 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
             % Test Predictor-Response Correlations
             correlation_struct = struct;
-            % correlation_struct(i).Side = side;
-
             if predictor_numeric % Regression and Spearman rank coefficients
                 % Create linear model
-                X = [ones(size(x)), x]; % intercept + predictor
-                b = X \ y; % regression coefficients
-                y_pred = X * b;
-                SSres = sum((y - y_pred).^2);
-                SStot = sum((y - mean(y)).^2);
-                correlation_struct.Rsquared = 1 - SSres/SStot;
+                % X = [ones(size(x)), x]; % intercept + predictor
+                % b = X \ y; % regression coefficients
+                % y_pred = X * b;
+                % SSres = sum((y - y_pred).^2);
+                % SStot = sum((y - mean(y)).^2);
+                % correlation_struct.Rsquared = 1 - SSres/SStot;
 
                 % Spearman rank coefficient
-                [rho, pvalue] = corr(x, y, "Type", "Spearman");
+                [rho, pvalue] = corr(x, y, "Type", "Spearman", Rows="complete");
                 correlation_struct.Spearman.rho = rho;
                 correlation_struct.Spearman.pvalue = pvalue;
 
                 % Pearson coefficient
-                [rho, pvalue] = corr(x, y, "Type", "Pearson");
+                [rho, pvalue] = corr(x, y, "Type", "Pearson", Rows="complete");
                 correlation_struct.Pearson.rho = rho;
                 correlation_struct.Pearson.pvalue = pvalue;
+                
+                % Rsquared (coefficient of determination)
+                correlation_struct.Rsquared = correlation_struct.Pearson.rho.^2;
             else % Wilcoxon rank sum test (equivalent to the Mann-Whitney U-test)
-                x = categorical(x);
-                x_cateogries = categories(x);
                 y1 = y(x == x_cateogries(1));
                 y2 = y(x == x_cateogries(2));
                 [pvalue, h] = ranksum(y1, y2);
@@ -178,12 +215,12 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 correlation_struct.Wilcoxon.pvalue = pvalue;
             end % predictor_numeric
 
-        correlations.(response_name).(predictor_name) = correlation_struct;
+            correlations.(response_name).(predictor_name) = correlation_struct;
 
             % Plot predictors vs responses for both sides
             directions = dictionary(["right" "left"], ["positive" "negative"]);
             if predictor_numeric
-                plot_h = gscatter(ax, x, y, {sides_trimmed, dataset_ids_trimmed}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+                plot_h = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
                 for i_side=1:n_sides
                     for i_dataset=1:n_dataset_ids
                         i = (i_side - 1).*n_dataset_ids + i_dataset;
@@ -209,15 +246,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                     correlations.(response_name).(predictor_name).Rsquared, ...
                     correlations.(response_name).(predictor_name).Spearman.rho, ...
                     correlations.(response_name).(predictor_name).Spearman.pvalue);
-                % end % i_side
             else
-                x = categorical(x);
-                plot_h = violinplot(ax, x, y, GroupByColor=sides_trimmed);
-  
+                
+                plot_h = violinplot(ax, x, y, GroupByColor=sides);
                 for i_side=1:n_sides
                     side = unique_sides{i_side};
                     plot_h(i_side).DisplayName = sprintf('%s', side);
-                    plot_h(i_side).DensityDirection = directions(side);
+                    % plot_h(i_side).DensityDirection = directions(side);
                     plot_h(i_side).FaceColor = color{side};
                     plot_h(i_side).EdgeColor = color{side};
                 end
@@ -290,15 +325,4 @@ function mustBeTextOrEmpty(value)
        return
     end
     mustBeText(value);
-end
-
-function data_new = winsorize(data, p)
-    % Calculate bounds
-    low = prctile(data, p(1));
-    high = prctile(data, p(2));
-
-    % Winsorize
-    data_new = data;
-    data_new(data_new < low) = low;
-    data_new(data_new > high) = high;
 end
