@@ -10,29 +10,26 @@ function update_num_included_summary(obj, dataset_ids)
         dataset = obj.get_dataset(dataset_id);
         entry_number = obj.DataRecordsIDLookup(dataset_id);
 
-        included_steps = 0;
-        included_participants = 0;
-        for pdx=1:numel([dataset.Data])
-            participant = dataset.Data(pdx);
-            right_steps = [participant.Uniform_data.right.step];
-            left_steps = [participant.Uniform_data.left.step];
+        % Count number of included participants
+        included_participants = [dataset.Data.Is_included];
+        num_included_participants = sum(included_participants);
+        obj.SummaryTable.Num_included_participants(entry_number) = num_included_participants;
 
-            if ~isempty(right_steps)
-                included_right_steps = sum([right_steps.Is_included]);
-            else
-                included_right_steps = 0;
+        num_included_steps = 0;
+        for participant=[dataset.Data(included_participants)]
+            num_included_right_steps = 0;
+            num_included_left_steps = 0;
+
+            if participant.Uniform_data.right.Is_included
+                num_included_right_steps = sum([participant.Uniform_data.right.step.Is_included]);
             end
-            if ~isempty(left_steps)
-                included_left_steps = sum([left_steps.Is_included]);
-            else
-                included_left_steps = 0;
+            if participant.Uniform_data.left.Is_included
+                num_included_left_steps = sum([participant.Uniform_data.left.step.Is_included]);
             end
 
-            included_participants = included_participants + (included_right_steps > 0 || included_left_steps > 0);
-            included_steps = included_steps + included_right_steps + included_left_steps;
+            num_included_steps = num_included_steps + num_included_right_steps + num_included_left_steps;
         end
-        obj.SummaryTable.Num_included_participants(entry_number) = included_participants;
-        obj.SummaryTable.Num_included_steps(entry_number) = included_steps;
+        obj.SummaryTable.Num_included_steps(entry_number) = num_included_steps;
     end
 end
 
