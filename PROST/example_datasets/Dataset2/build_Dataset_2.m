@@ -4,7 +4,7 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clearvars -except -regexp ^Dataset_\d+$ good_trials
+clearvars -except -regexp ^Dataset_\d+$ raw_data
 close all
 clc
 
@@ -21,7 +21,8 @@ toolbox_root = fullfile(toolbox_root{1:end-2});
 addpath(toolbox_root); % Add PROST package to path
 
 % Add ezc3d package
-addpath(fullfile(toolbox_root, "lib-ext", "ezc3d_matlab"));
+% addpath(fullfile(toolbox_root, "lib-ext", "ezc3d_matlab"));
+warning('off','backtrace')
 
 %% -----------------------------
 %  General Database info:
@@ -143,70 +144,43 @@ Experiment_protocol.num_participants = 50;
 
 Dataset_2.Experiment_protocol = Experiment_protocol;
 
-%% Create List of Trials to Keep
-% Bad trials are missing crucial info so we only keep those that aren't.
-% ignore_trials = ["2015002_C5_02";
-%                  "2015002_C5_03";
-%                  "2015002_C5_04";
-%                  "2015026_C1_01";
-%                  "2015026_C1_02";
-%                  "2015026_C1_03";
-%                  "2015026_C1_04";
-%                  "2015026_C2_01";
-%                  "2015026_C2_02";
-%                  "2015026_C2_03";
-%                  "2015026_C2_04";
-%                  "2015026_C2_05";
-%                  "2015026_C3_01";
-%                  "2015026_C3_02";
-%                  "2015026_C3_03";
-%                  "2015026_C3_04";
-%                  "2015026_C4_01";
-%                  "2015026_C4_02";
-%                  "2015026_C4_03";
-%                  "2015026_C4_04";
-%                  "2015026_C5_01";
-%                  "2015026_C5_02";
-%                  "2015026_C5_03";
-%                  "2015030_C5_01";
-%                  "2015030_C5_02";
-%                  "2015030_C5_03";
-%                  "2015032_C3_01";
-%                  "2015032_C3_02";
-%                  "2015032_C3_03";
-%                  "2015032_C3_04";
-%                  "2015032_C4_01";
-%                  "2015032_C4_02";
-%                  "2015032_C4_03";
-%                  "2015032_C5_01";
-%                  "2015032_C5_02";
-%                  "2015032_C5_03";
-%                  "2015032_C5_04";
-%                  "2015032_C5_05"];
-% [ignore_trials, ignore_participants] = make_ignore_list(data_path, Dataset_2.Markers_guide.reference_guide);
-if ~exist("good_trials")
-    good_trials = get_good_trials(data_path, Dataset_2.Markers_guide.reference_guide);
+%% Load Data Files
+% load raw data
+if ~exist("raw_data", "var")
+    load(fullfile(data_path, "raw_data.mat"));
 end
+
+% load metadata
+if ~exist("all_metadata", "var")
+    all_metadata = read_metadata_table(data_path);
+end
+assert(numel(all_metadata) == numel(raw_data))
+
+%% Create List of Good Trials to Keep
+% Bad trials are missing crucial info so we only keep those that aren't.
+if ~exist("good_trials", "var")
+    good_trials = get_good_trials(raw_data, Dataset_2.Markers_guide.reference_guide);
+end
+assert(numel(good_trials) == numel(raw_data))
 
 %% -----------------------------
 %  participant specific info:
 % ------------------------------
 % Number of participants
-good_participants = unique(good_trials(:, 1));
-n_participants = length(good_participants);
+n_participants = length(good_trials);
 
 % Get relevant marker names in original dataset
 markers_guide = Dataset_2.Markers_guide;
 
 for participant_number=1:n_participants
     % Get participant name and original ID from number
-    participant_ID = string(good_participants(participant_number));
+    participant_ID = string(good_trials(participant_number).Participant_id);
     participant_name = "participant_" + string(participant_number);
     
-    good_trials_indices = find(good_trials(:, 1) == participant_ID);
-    good_trials_file_name = join(good_trials(good_trials_indices, :), "_") + ".c3d";
-    good_trials_condition_number = good_trials(good_trials_indices, 2);
-    good_trials_trial_number = good_trials(good_trials_indices, 3);
+    % good_trials_indices = [good_trials(participant_number).trial.index];
+    % good_trials_file_name = join(good_trials(good_trials_indices, :), "_") + ".c3d";
+    % good_trials_condition_number = [good_trials(participant_number).trial.condition_num];
+    % good_trials_trial_number = [good_trials(participant_number).trial.trial_num];
 
     % Initializing counters for right and left steps of all trials
     right_steps_counter = 0; left_steps_counter = 0;
@@ -221,15 +195,13 @@ for participant_number=1:n_participants
     % Dataset_2 / Data / participant_# / metadata :
     %                              ---------
 
-    % Get participant trial data path
-    trial_path = fullfile(data_path, participant_ID, good_trials_file_name(1));
 
-    % Get standing trial path
-    standing_trial_file = participant_ID + "_ST.c3d";
-    standing_trial_path = fullfile(data_path, participant_ID, standing_trial_file);
+    % Get participant metadata and standing trial data
+    standing_trial_data = raw_data(participant_number).standing_trial;
+    participant_metadata = all_metadata(participant_number);
     
     % Get metadata
-    [metadata, standing_trial] = get_metadata(trial_path, standing_trial_path, markers_guide);
+    [metadata, standing_trial] = get_metadata(participant_metadata, standing_trial_data, markers_guide);
     Dataset_2.Data.(participant_name).metadata = metadata;
     
     %                                               ---------------------
@@ -239,23 +211,25 @@ for participant_number=1:n_participants
     Dataset_2.Data.(participant_name).uniform_data.right.step = [];
     Dataset_2.Data.(participant_name).uniform_data.left.step = [];
 
+   
     % Get the number of trials
-    n_trials = length(good_trials_indices);
-    
+    n_trials = length(raw_data(participant_number).trial);
     for trial_number=1:n_trials
-        %                               ---------------- -----------
-        % Dataset_2 / Data / participant_# / processed_original_data / trial(#)
-        %                               ---------------- -----------
         
+        %                               ---------------- -----------
+        % Dataset_2 / Data / participant_# / processed_original_data
+        %                               ---------------- -----------
         % Get the signals:
-        % Condition and trial numbers in original dataset
-        original_category_number = good_trials_condition_number(trial_number);
-        original_trial_number = good_trials_trial_number(trial_number);
+        % Category and trial numbers in original dataset
+        original_index = trial_number; %good_trials(participant_number).trial(trial_number).index;
+        original_category_number = raw_data(participant_number).trial(trial_number).condition_num; % good_trials(participant_number).trial(trial_number).condition_num;
+        original_trial_number = raw_data(participant_number).trial(trial_number).trial_num; % good_trials(participant_number).trial(trial_number).trial_num;
 
         % Get the data of this trial
-        trial_path = fullfile(data_path, participant_ID, good_trials_file_name(trial_number));
+        % trial_path = fullfile(data_path, participant_ID, good_trials_file_name(trial_number));
+        trial_data = raw_data(participant_number).trial(original_index);
 
-        [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, markers_guide.reference_guide);
+        [marker_data, forceplate_data, event_data] = get_trial_data(trial_data);
         n_steps = forceplate_data.n_forceplates;
         steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps);
         
@@ -272,7 +246,7 @@ for participant_number=1:n_participants
         %                                                            -------
         % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / origin
         %                                                            -------
-        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.catagory = original_category_number;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.category = original_category_number;
         Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = original_trial_number;
 
         %                                                            ----------------------------------------------------
@@ -323,10 +297,11 @@ for participant_number=1:n_participants
         "Converted from [m/sec] to [km/hr]";
         Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = original_category_number;
 
-        %                              ---------------
-        % Dataset_2 / Data / participant_# / uniform_data
-        %                              ---------------
 
+
+        %                                 ---------------
+        % Dataset_2 / Data / participant_# / uniform_data
+        %                                 ---------------
         % reminder: the frame of reference of the processed_original data:
         %           -------------------------------------------------
         % x - the direction (in the lab) from Force_Plate_1 to Force_Plate_2
@@ -358,6 +333,11 @@ for participant_number=1:n_participants
         % -------------------------
         % the GRF should be temporally aligned (to 101 points) in the stance phase (SP) -> from initial contact to toe off 
         % while the COP and Markers should be temporally aligned (to 101 points) from initial contact to opposite initial contact 
+
+        % Don't process bad participants / trials
+        if isempty(good_trials(participant_number).trial) || ~ismember(trial_number, [good_trials(participant_number).trial.index])
+            continue
+        end
 
         %                                               ---------------------
         % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#)
@@ -444,39 +424,34 @@ save("..\Dataset_2.mat","Dataset_2")
 %% ----------------------------
 %  Auxiliary Functions
 % -----------------------------
-function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_path, markers_guide)
+function [metadata, standing_trial] = get_metadata(participant_metadata, standing_trial_raw, markers_guide)
 %GET_METADATA reads anthropometric data from the data files of the participant.
 % Also gets the standing trial data and calculates missing data from it 
 % (leg length, shank length, thigh length etc).
 % Input :
-%   trial_path - path to the data file of a trial containing the participant 
-%                metadata (anthropometric data).
-%   standing_trial_path - path to the data file of the standing trial for
-%                         calculating missing data.
+%   trial_for_metadata_raw - an example trial containing the participant 
+%                            metadata (anthropometric data).
+%   standing_trial_raw - the standing trial for calculating missing data.
 %   markers_guide - the reference guide for all the important markers.
 % Output :
 %   metadata - the anthropometric data of the participant.
 %   standing_trial - the standing trial measurement data.
 
     % Get participant metadata
-    trial_data_for_metadata = ezc3dRead(convertStringsToChars(trial_path));
+    % trial_data_for_metadata = ezc3dRead(convertStringsToChars(trial_path));
     
     % Get standing trial
-    data = ezc3dRead(convertStringsToChars(standing_trial_path));
-    standing_trial.data = data.data.points;
-    standing_trial.unit = string(data.parameters.POINT.UNITS.DATA);
-    
+    standing_trial.data = standing_trial_raw.c3d.data.points;
+    standing_trial.unit = string(standing_trial_raw.c3d.parameters.POINT.UNITS.DATA);
     
     % Get given data
     % age
-    idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "age");
-    metadata.Age.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
+    metadata.Age.value = participant_metadata.Age.value;
     metadata.Age.unit = "years";
     metadata.Age.method = "provided";
     
     % Sex
-    idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "gender");
-    if trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx)
+    if strcmp(participant_metadata.Sex.value, 'M')
         metadata.Sex.value = "Male";
     else
         metadata.Sex.value = "Female";
@@ -485,14 +460,12 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     metadata.Sex.method = "provided";
     
     % height
-    idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "height");
-    metadata.Height.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
+    metadata.Height.value = PROST.utils.convert_units(participant_metadata.Height.value, participant_metadata.Height.unit, "m");
     metadata.Height.unit = "m";
     metadata.Height.method = "provided";
     
     % mass
-    idx = matches(trial_data_for_metadata.parameters.SUBJECT.LABELS.DATA, "weight");
-    metadata.Mass.value = trial_data_for_metadata.parameters.SUBJECT.VALUES.DATA(idx);
+    metadata.Mass.value = PROST.utils.convert_units(participant_metadata.Mass.value, participant_metadata.Mass.unit, "kg");
     metadata.Mass.unit = "kg";
     metadata.Mass.method = "provided";
     
@@ -543,7 +516,7 @@ function [metadata, standing_trial] = get_metadata(trial_path, standing_trial_pa
     metadata.Shank_length.method = "calculated by distance between lateral knee and lateral ankle markers in the standing trial";
 end
 
-function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path, reference_guide)
+function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data)
 %GET_TRIAL_DATA reads the marker and force plate measurements and event 
 % information from the data file of a trial.
 % Input :
@@ -557,7 +530,8 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path,
 %                offs).
 
     % get the data of this trial:
-    [c3d, fp] = ezc3dRead(convertStringsToChars(trial_path));
+    c3d = trial_data.c3d;
+    fp = trial_data.fp;
 
     % Get trajectory data
     marker_data.n_samples = size(c3d.data.points, 3); % Number of samples in trial
@@ -567,14 +541,6 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_path,
     marker_data.n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
     marker_data.marker_names = string(c3d.parameters.POINT.LABELS.DATA); % Names of the markers
     marker_data.data = c3d.data.points; % Trial trajectory measurements
-    
-    if marker_data.n_markers ~= 52
-        important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
-        important_markers(contains(important_markers, "Virtual")) = [];
-        if ~all(ismember(important_markers, marker_data.marker_names))
-            error("Bad Trial: " + trial_path)
-        end
-    end
 
     % Get forceplate data
     forceplate_data.n_samples = size(fp(1).force, 2); % Number of samples in trial
@@ -803,8 +769,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             % Now add the new IC index to the old one
             if isempty(added_IC)
                 steps_info(step_num).step_quality = "bad";
-                % warning("Bad step because of IC.")
-                % warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF initial contact detected', participant_ID, c, t, step_num);
+                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF initial contact detected', participant_ID, c, t, step_num);
             else
                 % change the IC of this good step:
                 new_forceplate_IC_index = IC_index + added_IC - 1;
@@ -832,8 +797,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             % Now add the new IC index to the old one
             if isempty(added_OIC)
                 steps_info(step_num).step_quality = "bad";
-                % warning("Bad step because of TO.")
-                % warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF toe-off detected', participant_ID, c, t, step_num);
+                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF toe-off detected', participant_ID, c, t, step_num);
             else
                 % change the IC of this good step:
                 new_forceplate_TO_index = OIC_index + added_OIC - 1;
@@ -878,6 +842,13 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
         trajectories.(marker_name).z = squeeze(marker_data.data(3, idx, :))';
     end
 
+    % Prep virtual markers
+    trajectories.(markers_guide.reference_guide{"Right Lateral Knee"}{1}) = struct("x", [], "y", [], "z", []);
+    trajectories.(markers_guide.reference_guide{"Left Lateral Knee"}{1}) = struct("x", [], "y", [], "z", []);
+    trajectories.(markers_guide.reference_guide{"Right Medial Knee"}{1}) = struct("x", [], "y", [], "z", []);
+    trajectories.(markers_guide.reference_guide{"Left Medial Knee"}{1}) = struct("x", [], "y", [], "z", []);
+
+    try
     % Lateral Virtual Knee calculated from Fibula Head (FAX) and
     % Lateral Femoral Epicondyle (FLE)
     right_ST_above_knee = standing_trial.data(:, markers_guide.reference_guide{"Right Lateral Femoral Epicondyle"}{2}); % R_FLE
@@ -907,6 +878,10 @@ function trajectories = save_marker_data(marker_data, standing_trial, markers_gu
     PROST.utils.get_knee_marker(trajectories.(markers_guide.reference_guide{"Left Tibial Tuberosity"}{1}), ...  % L_TTC
                     trajectories.(markers_guide.reference_guide{"Left Medial Ankle"}{1}), ...       % L_TAM
                     left_ST_below_knee, left_ST_above_knee);
+    catch
+        % We skip bad trials with missing important markers, can't compute
+        % virtual knee markers.
+    end
 end
 
 function [GRF, COP] = save_forceplate_data(forceplate_data)
@@ -1184,13 +1159,13 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
 end
 
-function good_trials = get_good_trials(data_path, reference_guide)
-%GET_GOOD_TRIALS Returns a list of the file names of good trials. Good trials 
-% are defined as trials that exist in the dataset and include all the important 
+function good_trials = get_good_trials(raw_data, reference_guide)
+%GET_GOOD_TRIALS Returns a list of the file names of good trials. Good trials
+% are defined as trials that exist in the dataset and include all the important
 % markers needed for our dataset.
-% Input : 
+% Input :
 %   data_path - the path to the data files.
-%   reference_guide - the reference guide for all the important markers in the 
+%   reference_guide - the reference guide for all the important markers in the
 %                     dataset.
 % Output :
 %   good_trials - an nx3 array with the participant IDs, speed condition and
@@ -1198,18 +1173,107 @@ function good_trials = get_good_trials(data_path, reference_guide)
 % Note : the virtual markers for the knees in the markers guide are are not
 %        needed and screened out.
 
+    % Number of participants
+    n_participants = length(raw_data);
 
+    % Initialize lists of good files and good participants
+    good_trials(n_participants) = struct;
+
+    % Important markers to check
+    important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
+    important_markers(contains(important_markers, "Virtual")) = [];
+
+    
+    % Check who to keep
+    % find which of the trials exist and are good for this participant
+    % Some of the participants have less than the maximum amount of trials.
+    % Some trials are missing markers that are needed.
+    for p=1:n_participants
+        participant_ID = string(raw_data(p).folder);
+        good_trials(p).Participant_id = participant_ID;
+        standing_trial = raw_data(p).standing_trial;
+        trials = raw_data(p).trial;
+        n_trials = length(trials);
+
+        % Check that all important markers exist in the standing trial
+        c3d = standing_trial.c3d;
+        % Get trajectory data
+        n_samples = size(c3d.data.points, 3); % Number of samples in trial
+        n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
+        data = c3d.data.points; % Trial measurements
+        
+        % Get marker names
+        marker_names = string(c3d.parameters.POINT.LABELS.DATA);
+
+        % Check that all important markers exist
+        if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
+            if n_markers ~= 52
+                if ~all(ismember(important_markers, marker_names))
+                    num_excluded = num_excluded + 1;
+                    warning('TrialQuality:MissingMarkers', "P%d (%s) ST: missing important markers.", p, participant_ID)
+                    continue
+                end
+            end
+        else
+            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) ST: c3d parameter size mismatch.", p, participant_ID)
+        end
+
+        % Check that all important markers exist in the walking trials
+        good_trials(p).trial = struct([]);
+        num_excluded = 0;
+        trials_counter = 1;
+        for t=1:n_trials
+            c3d = trials(t).c3d;
+            condition_num = trials(t).condition_num;
+            trial_num = trials(t).trial_num;
+
+            % Get trajectory data
+            n_samples = size(c3d.data.points, 3); % Number of samples in trial
+            n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
+            data = c3d.data.points; % Trial measurements
+
+            % Get marker names
+            marker_names = string(c3d.parameters.POINT.LABELS.DATA);
+
+            % Check that all important markers exist
+            if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
+                if n_markers ~= 52
+                    if ~all(ismember(important_markers, marker_names))
+                        num_excluded = num_excluded + 1;
+                        warning('TrialQuality:MissingMarkers', "P%d (%s) C%d 0%d: missing important markers.", p, participant_ID, condition_num, trial_num)
+                        continue
+                    end
+                end
+                idx = length(good_trials(p).trial) + 1;
+                good_trials(p).trial(idx).condition_num = condition_num;
+                good_trials(p).trial(idx).trial_num = trial_num;
+                good_trials(p).trial(idx).index = t;
+                trials_counter = trials_counter + 1;
+            else
+                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) C%d 0%d: c3d parameter size mismatch.", p, participant_ID, condition_num, trial_num)
+            end
+
+        end
+        good_trials(p).trial = good_trials(p).trial(1:trials_counter-1);
+        if num_excluded == n_trials
+            disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
+        end
+    end
+
+end
+
+function good_trials = get_good_trials_old(data_path, reference_guide)
     % Get all participant IDs
     folders = dir(data_path); % List all items
     folders = folders([folders.isdir]); % Keep only directories
     participant_IDs = setdiff({folders.name}, {'.','..'}); % Remove '.' and '..'
-    
+
     % Number of participants
     n_participants = length(participant_IDs);
 
     % Initialize lists of good files and good participants
     good_trials = strings(n_participants*25, 3);
-    
+
     % Check who to keep
     counter = 1;
     for participant_number=1:n_participants
@@ -1218,8 +1282,7 @@ function good_trials = get_good_trials(data_path, reference_guide)
         % find which of the trials exist and are good for this participant
         % Some of the participants have less than the maximum amount of trials.
         % Some trials are missing markers that are needed.
-        % good_trials = strings(25, 1);    
-        
+        % good_trials = strings(25, 1);
         for condition_num = ["C1" "C2" "C3" "C4" "C5"]
             for trial_num = ["01" "02" "03" "04" "05"]
                 file_name = participant_ID + "_" + condition_num + "_" + trial_num + ".c3d";
@@ -1238,7 +1301,7 @@ function good_trials = get_good_trials(data_path, reference_guide)
                     if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
                         if n_markers ~= 52
                             if ~all(ismember(important_markers, marker_names))
-                                disp("P" + participant_number + " " + condition_num + "_" + trial_num)
+                                disp("P" + participant_number + " (" + participant_ID + ") " + condition_num + "_" + trial_num)
                                 continue
                             end
                         end
@@ -1252,25 +1315,43 @@ function good_trials = get_good_trials(data_path, reference_guide)
         end
     end
     good_trials = good_trials(1:counter-1, :);
-
-
 end
 
-function tf = is_good_trial(c3d, reference_guide)
-    % Get trajectory data
-    data = c3d.data.points; % Trial measurements
-    n_samples = size(data, 3); % Number of samples in trial
-    n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
-    marker_names = string(c3d.parameters.POINT.LABELS.DATA);
-    important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
+function metadata = read_metadata_table(data_path)
+    % Get given data
+    metadata_path = fullfile(data_path, "subject_metadata.csv");
+    opts = detectImportOptions(metadata_path, "ReadVariableNames", false);
+    Tmetadata = readtable(metadata_path, opts);
+    unsorted_metadata = struct([]);
 
-    if n_markers == size(data, 2) && 3 == size(data, 1)
-        if n_markers ~= 52
-            if ~all(ismember(important_markers, marker_names))
-                tf = false;
-            end
+    % Column definitions
+    subjCol = 1;
+    sexCol = 2;
+    ageCol = 3;
+    heightCol = 4;
+    massCol = 5;
+    
+    subjCounter = 0;
+    for r = 1:height(Tmetadata)
+        subjID = string(Tmetadata{r, subjCol});
+        if ~startsWith(subjID, "201")
+            continue
         end
-    else
-        tf = false;
+        subjCounter = subjCounter + 1;
+        subjNum = subjCounter;
+
+        unsorted_metadata(subjCounter).SubjNum = subjNum;
+        unsorted_metadata(subjCounter).SubjID = subjID;
+        unsorted_metadata(subjCounter).Age.value = Tmetadata{r, ageCol};
+        unsorted_metadata(subjCounter).Age.unit = "year";
+        unsorted_metadata(subjCounter).Sex.value = Tmetadata{r, sexCol};
+        unsorted_metadata(subjCounter).Sex.unit = "M\W";
+        unsorted_metadata(subjCounter).Mass.value = Tmetadata{r, massCol};
+        unsorted_metadata(subjCounter).Mass.unit = "kg";
+        unsorted_metadata(subjCounter).Height.value = Tmetadata{r, heightCol};
+        unsorted_metadata(subjCounter).Height.unit = "m";
     end
+
+    [~, order] = sort([unsorted_metadata.SubjID]);
+    metadata = unsorted_metadata(order);
 end
