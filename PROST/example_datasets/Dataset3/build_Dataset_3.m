@@ -37,6 +37,7 @@ Dataset_3.Article_data = Article_data;
 % Dataset_3 / Markers_guide :
 %       --------------
 Markers_guide.explanation_txt =  "The field reference_guide containes a dictionary that maps our naming of important markers to the names and indices in the original dataset.\n" + ...
+                                 "The knee markers in this dataset are not provided so are mapped to 'virtual' markers which will be calculated from other provided markers.\n" + ...                                 
                                  "The keys: our naming of important markers for cohesiveness between the different datasets.\n" + ...
                                  "The values: a cell array with the names and indices of each marker in the original dataset.\n" + ...
                                  "Column 1: the name they gave each marker in the article / original dataset.\n" + ...
@@ -70,7 +71,6 @@ values = {{'RxLatMal', 64, 65, 66}; ...
           {'LxHeel', 73, 74, 75}; ...
           {'Psis', 31, 32, 33}};
 Markers_guide.reference_guide = dictionary(keys, values);
-
 Dataset_3.Markers_guide = Markers_guide;
 
 %       ---------------
@@ -113,9 +113,14 @@ Experiment_protocol.explanation_txt = ...
     "Two consecutive foot-strike instants correspond to the initiation (tstart) and termination (tend) of the stride.\n" + ...
     "Only strides including one step on a force plate were considered.\n" + ...
     "The data reported in the present study includes, for each trial, the portions of kinematic, dynamic and EMG signals between tstart and tend.";
-Experiment_protocol.speed_categories = "";
+Experiment_protocol.speed_categories = "Self selected speed.\n" + ...
+                                       "5 trials in natural speed.\n" + ...
+                                       "5 trials in progressively increasing speed.\n" + ...
+                                       "5 trials in progressively decreasing speed.";
 Experiment_protocol.num_participants = 50;
-
+Experiment_protocol.num_trials = 0;
+Experiment_protocol.num_steps = 0;
+Experiment_protocol.num_markers = 29;
 Dataset_3.Experiment_protocol = Experiment_protocol;
 
 
@@ -237,7 +242,10 @@ for participant_number = 1:n_participants
     
     % Get the number of walking trials
     n_trials = size(walking_data, 2);
-    
+
+    % Add up total number of trials
+    Dataset_3.Experiment_protocol.num_trials = Dataset_3.Experiment_protocol.num_trials + n_trials;
+
     % Estimating the OIC event time\index. To do so we need to find
     % thresholds for left and right feet of heel height of the opposite
     % foot. This identifies when the heel touches the ground.
@@ -700,5 +708,7 @@ for participant_number = 1:n_participants
         end
     end
 end
+
+Dataset_3.Experiment_protocol.num_steps = Dataset_3.Experiment_protocol.num_trials;
 
 save("..\Dataset_3.mat","Dataset_3")

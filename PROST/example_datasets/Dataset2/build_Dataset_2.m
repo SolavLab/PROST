@@ -42,6 +42,7 @@ Dataset_2.Article_data = article_data;
 % Dataset_2 / marker_names :
 %       -------------
 markers_guide.explanation_txt = "The field reference_guide containes a dictionary that maps our naming of important markers to the names and indices in the original dataset.\n" + ...
+                                "The knee markers in this dataset are not provided so are mapped to 'virtual' markers which will be calculated from other provided markers.\n" + ...
                                 "The keys: our naming of important markers for cohesiveness between the different datasets.\n" + ...
                                 "The values: a cell array with the names and indices of each marker in the original dataset.\n" + ...
                                 "Column 1: the name they gave each marker in the article / original dataset.\n" + ...
@@ -78,8 +79,8 @@ values = {{"R_FAL",  21}; ...
           {"R_IAS",  16}; ...
           {"L_FAL",  10}; ...
           {"L_TAM",  11}; ...
-          {"L_LatVirtualKnee"}; ...
-          {"L_MedVirtualKnee"}; ...
+          {"L_LatVirtualKnee", NaN}; ...
+          {"L_MedVirtualKnee", NaN}; ...
           {"L_FLE",  6}; ...
           {"L_FME",  7}; ...
           {"L_FAX",  8}; ...
@@ -87,9 +88,6 @@ values = {{"R_FAL",  21}; ...
           {"L_IAS",  5}; ...
           {"SXS",  29}};
 markers_guide.reference_guide = dictionary(keys, values);
-% markers_guide.virtual_markers = dictionary(["Right Lateral Knee" "Right Medial Knee" "Left Lateral Knee" "Left Medial Knee"], ...
-%                                 ["R_LatVirtualKnee"   "R_MedVirtualKnee"  "L_LatVirtualKnee"  "L_MedVirtualKnee"]);
-
 Dataset_2.Markers_guide = markers_guide;
 
 %       --------------------
@@ -129,7 +127,7 @@ Experiment_protocol.explanation_txt = ...
     "During the walking trials, the participant was asked to walk back and forth on a 10-m straight level walkway.\n" + ...
     "The instruction given was ""to walk as naturally as possible, looking forward"".\n" + ...
     "No directive was given about the force-plates to avoid a conscious adaptation of the walk.\n" + ...
-    "A minimum of 3 trials were recorded for each condition.\n" + ...
+    "A minimum of 3 trials were recorded for each speed condition.\n" + ...
     "All trials were rapidly verified by the operator.\n" + ...
     "Five conditions of walking speed were recorded: C1, C2, C3, C4, C5.\n" + ...
     "Conditions C1, C2 and C3 were induced by a metronome and correspond to the three groups described by Perry (i.e. household ambulators, limited community ambulators and community ambulators).\n" + ...
@@ -141,7 +139,9 @@ Experiment_protocol.speed_categories = "C1 is a speed of 0 - 1.44 km/hour.\n" 
                                        "C4 is a self-selected spontaneous speed.\n" + ...
                                        "C5 is a self-selected fast speed.";
 Experiment_protocol.num_participants = 50;
-
+Experiment_protocol.num_trials = 0;
+Experiment_protocol.num_steps = 0;
+Experiment_protocol.num_markers = 52;
 Dataset_2.Experiment_protocol = Experiment_protocol;
 
 %% Load Data Files
@@ -159,15 +159,19 @@ assert(numel(all_metadata) == numel(raw_data))
 %% Create List of Good Trials to Keep
 % Bad trials are missing crucial info so we only keep those that aren't.
 if ~exist("good_trials", "var")
-    good_trials = get_good_trials(raw_data, Dataset_2.Markers_guide.reference_guide);
+    good_trials = get_good_markers_trials(raw_data, Dataset_2.Markers_guide.reference_guide, Dataset_2.Experiment_protocol.num_markers);
 end
 assert(numel(good_trials) == numel(raw_data))
+
+%% Calculate number of trials and steps
+Dataset_2.Experiment_protocol.num_trials = numel([raw_data.trial]);
+Dataset_2.Experiment_protocol.num_steps = Dataset_2.Experiment_protocol.num_trials .* Dataset_2.Lab_system.num_forceplates;
 
 %% -----------------------------
 %  participant specific info:
 % ------------------------------
 % Number of participants
-n_participants = length(good_trials);
+n_participants = length(raw_data);
 
 % Get relevant marker names in original dataset
 markers_guide = Dataset_2.Markers_guide;
@@ -221,9 +225,9 @@ for participant_number=1:n_participants
         %                               ---------------- -----------
         % Get the signals:
         % Category and trial numbers in original dataset
-        original_index = trial_number; %good_trials(participant_number).trial(trial_number).index;
-        original_category_number = raw_data(participant_number).trial(trial_number).condition_num; % good_trials(participant_number).trial(trial_number).condition_num;
-        original_trial_number = raw_data(participant_number).trial(trial_number).trial_num; % good_trials(participant_number).trial(trial_number).trial_num;
+        original_index = trial_number;
+        original_speed_category_number = raw_data(participant_number).trial(trial_number).condition_num;
+        original_trial_number = raw_data(participant_number).trial(trial_number).trial_num;
 
         % Get the data of this trial
         % trial_path = fullfile(data_path, participant_ID, good_trials_file_name(trial_number));
@@ -246,7 +250,7 @@ for participant_number=1:n_participants
         %                                                            -------
         % Dataset_2 / Data / participant_# / processed_original_data / trial(#) / origin
         %                                                            -------
-        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.category = original_category_number;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.speed_category = "C" + original_speed_category_number;
         Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = original_trial_number;
 
         %                                                            ----------------------------------------------------
@@ -295,7 +299,7 @@ for participant_number=1:n_participants
         "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
         "Then calculated the mean speed of both feet.\n" + ...
         "Converted from [m/sec] to [km/hr]";
-        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = original_category_number;
+        Dataset_2.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = "C" + original_speed_category_number;
 
 
 
@@ -362,7 +366,7 @@ for participant_number=1:n_participants
             %                                                                               ---------------
             %                                                                               / original trial
             %                                                                               ---------------
-            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial = original_category_number + "_" + original_trial_number;
+            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial = "C" + original_speed_category_number + "_" + original_trial_number;
             %                                                                               ----------------------------------
             %                                                                               / original trial number in database
             %                                                                               ----------------------------------
@@ -670,13 +674,6 @@ function steps_info = check_step(steps_info, forceplate_data, feet)
                (step_quality == "bad" || ...
                (abs(step_IC_time - fp_times(step_plate, 1) > abs(step_IC_time - fp_times(fp_num, 1)) && ...
                 abs(step_TO_time - fp_times(step_plate, 2)) > abs(step_TO_time - fp_times(fp_num, 2)))))
-                % cop_x = forceplate_data.plate(fp_num).cop(1, :);
-                % x = cop_x(~isnan(cop_x));
-                % dx = diff(x);
-                % zero_cross_idx = find(diff(sign(dx)) ~= 0);
-                % if ~isempty(zero_cross_idx) && any(diff(zero_cross_idx) > 300)
-                %     disp(evalin('base', 'participant_ID') + ", " + evalin('base', 'original_category_number') + "_" + evalin('base', 'original_trial_number') + ": plate = " + fp_num + " step = " + step_number_IC)
-                % end
                 steps_info(step_number_IC).step_quality = "good";
                 steps_info(step_number_IC).plate = fp_num;
                 steps_info(step_number_IC).foot = feet(step_number_IC);
@@ -769,7 +766,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             % Now add the new IC index to the old one
             if isempty(added_IC)
                 steps_info(step_num).step_quality = "bad";
-                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF initial contact detected', participant_ID, c, t, step_num);
+                warning('Participant %s, C%d %0d: Step %d was reported as good, but no GRF initial contact detected', participant_ID, c, t, step_num);
             else
                 % change the IC of this good step:
                 new_forceplate_IC_index = IC_index + added_IC - 1;
@@ -797,7 +794,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             % Now add the new IC index to the old one
             if isempty(added_OIC)
                 steps_info(step_num).step_quality = "bad";
-                warning('Participant %s, condition %d, trial %d: Step %d was reported as good, but no GRF toe-off detected', participant_ID, c, t, step_num);
+                warning('Participant %s, C%d %0d: Step %d was reported as good, but no GRF toe-off detected', participant_ID, c, t, step_num);
             else
                 % change the IC of this good step:
                 new_forceplate_TO_index = OIC_index + added_OIC - 1;
@@ -1159,18 +1156,18 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
 end
 
-function good_trials = get_good_trials(raw_data, reference_guide)
-%GET_GOOD_TRIALS Returns a list of the file names of good trials. Good trials
-% are defined as trials that exist in the dataset and include all the important
-% markers needed for our dataset.
+function good_trials = get_good_markers_trials(raw_data, reference_guide, expected_n_markers)
+%GET_GOOD_MARKERS_TRIALS reads the raw_data of the dataset and returns a struct
+% containing for each participant the list of good trials. The information
+% listed: file name, condition number, trial number, index in raw_data
 % Input :
-%   data_path - the path to the data files.
+%   raw_data - struct with the raw c3d data of each participant.
 %   reference_guide - the reference guide for all the important markers in the
 %                     dataset.
 % Output :
-%   good_trials - an nx3 array with the participant IDs, speed condition and
-%                 trial number of good trials.
-% Note : the virtual markers for the knees in the markers guide are are not
+%   good_trials - a struct containing for each participant, the file name,
+%   category number, trial number and index in the raw data of good trials.
+% Note : the virtual markers for the knees in the markers guide are not
 %        needed and screened out.
 
     % Number of participants
@@ -1207,7 +1204,7 @@ function good_trials = get_good_trials(raw_data, reference_guide)
 
         % Check that all important markers exist
         if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
-            if n_markers ~= 52
+            if n_markers ~= expected_n_markers
                 if ~all(ismember(important_markers, marker_names))
                     num_excluded = num_excluded + 1;
                     warning('TrialQuality:MissingMarkers', "P%d (%s) ST: missing important markers.", p, participant_ID)
