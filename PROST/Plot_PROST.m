@@ -33,10 +33,14 @@ Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 %% Plot Example ROS
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 12);
-PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="pdf");
+% who_to_plot.add_to_list(Dataset_1_ID, [3 5 14 16], [], "Left");
+% who_to_plot.add_to_list(Dataset_1_ID, [5 14 16], [], "Right");
+% who_to_plot.add_to_list(Dataset_2_ID, 31, [], "Left");
+% who_to_plot.add_to_list(Dataset_3_ID, [43, 47], [], "Left"); % Flat step (large\negative outlier radius)
+PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="nadir", show="on", file_type="pdf");
 
 %% Analyze Residuals
-[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", qq_plot=true, show="off", file_type="pdf");
+[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", qq_plot=true, show="on", file_type="pdf");
 % Residual analysis results
 disp("-------- Residuals Statistical Analysis --------")
 for i=1:numel(stats_res)
@@ -52,9 +56,9 @@ for i=1:numel(stats_res)
     else
         s = "Chi2 test: pvalue = " + chi2.pvalue;
         if chi2.pvalue < 0.05
-            s = s + " Residuals aren't normal!";
+            s = s + " Not normal!";
         else
-            s = s + " Residuals are normal!";
+            s = s + " Normal!";
         end
         disp(s)
     end
@@ -66,27 +70,27 @@ z = (residuals - mean(residuals)) / std(residuals);
 [h, p] = kstest(z);
 s = "Kolmogorov–Smirnov (KS) test: pvalue = " + p;
 if h
-    s = s + " Residuals aren't normal!";
+    s = s + " Not normal!";
 else
-    s = s + " Residuals are normal!";
+    s = s + " Normal!";
 end
 disp(s)
 
 [h, p] = lillietest(residuals);
 s = "Lilliefors test: pvalue = " + p;
 if h
-    s = s + " Residuals aren't normal!";
+    s = s + " Not normal!";
 else
-    s = s + " Residuals are normal!";
+    s = s + " Normal!";
 end
 disp(s)
 
 [h, p, ~] = adtest(residuals);
 s = "Anderson–Darling test: pvalue = " + p;
 if h
-    s = s + " Residuals aren't normal!";
+    s = s + " Not normal!";
 else
-    s = s + " Residuals are normal!";
+    s = s + " Normal!";
 end
 disp(s)
 
@@ -98,20 +102,22 @@ for i=1:numel(stats_res)
     summary = stats_i.summary;
     chi2 = stats_i.fits.normal.chi2;
 
-    disp("Dataset ID: " + stats_i.category)    
+    disp(stats_i.category)    
     disp("mu: " + summary.mean + " std: " + summary.std)
     disp("skewness: " + summary.skewness + " kurtosis: " + summary.kurtosis)
+    s = "Chi2 test:";
     if isnan(chi2.stat)
-        disp("Not enough samples!")
+        s = s + " Not enough samples!";
     else
-        s = "Chi2 test: pvalue = " + chi2.pvalue;
+        s = s + " pvalue = " + chi2.pvalue;
         if chi2.pvalue < 0.05
-            s = s + " Residuals aren't normal!";
+            s = s + " Not normal!";
         else
-            s = s + " Residuals are normal!";
+            s = s + " Normal!";
         end
-        disp(s)
     end
+    s = s + "\n";
+    disp(s)
 end
 
 %% Analyze Radius and Center Horizontal
@@ -139,17 +145,59 @@ PROSTAnalyzer.plot_stats("Radius", [], [], [], function_type="pdf", show="on", f
 PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], [], function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 PROSTAnalyzer.plot_stats("Center_horizontal", [], [], [], function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 
-
+%%
 [f_r, ~, stats_r] = PROSTAnalyzer.plot_stats("Radius", "Height", [], "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 [f_x, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 
+% Sanity Check
+radius = table2array(PROSTAnalyzer.get_samples("Radius"));
+center_h = table2array(PROSTAnalyzer.get_samples("Center_horizontal"));
+
+disp("-------- Parameters Statistical Analysis --------")
+disp("Radius:")
+[h, p] = lillietest(radius);
+s = "Lilliefors test: pvalue = " + p;
+if h
+    s = s + " Not normal!";
+else
+    s = s + " Normal!";
+end
+disp(s)
+
+[h, p, ~] = adtest(radius);
+s = "Anderson–Darling test: pvalue = " + p;
+if h
+    s = s + " Not normal!";
+else
+    s = s + " Normal!";
+end
+disp(s)
+
+disp("Center_horizontal:")
+[h, p] = lillietest(center_h);
+s = "Lilliefors test: pvalue = " + p;
+if h
+    s = s + " Not normal!";
+else
+    s = s + " Normal!";
+end
+disp(s)
+
+[h, p, ~] = adtest(center_h);
+s = "Anderson–Darling test: pvalue = " + p;
+if h
+    s = s + " Not normal!";
+else
+    s = s + " Normal!";
+end
+disp(s)
+
+
+%%
 disp("Radius:")
 fprintf(PROST.utils.pretty_print(stats_r))
 disp("Center Horizontal:")
 fprintf(PROST.utils.pretty_print(stats_horizontal))
-
-%%
-PROSTAnalyzer.plot_stats("Radius", "Height", "Side", "tLocationScale", function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 
 %% Plot Features vs Labels
 [~, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="on", file_type="pdf");
@@ -157,8 +205,9 @@ PROSTAnalyzer.plot_stats("Radius", "Height", "Side", "tLocationScale", function_
 
 %% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();
-who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
-PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=1, show="off", file_type="pdf");
+% who_to_plot.add_to_list(Dataset_2_ID, 12, 1, "Left");
+who_to_plot.add_to_list(Dataset_2_ID, 1, 17, "Left");
+PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=1, show="on", file_type="pdf");
 
 %% Save figures
 PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "jpg")

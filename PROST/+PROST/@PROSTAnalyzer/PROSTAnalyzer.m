@@ -72,7 +72,10 @@ classdef PROSTAnalyzer < handle
         %               Example:
         %               {"DB Name 1", "path/to/DB1.mat"; "DB Name", 
         %               "path/to/DB2.mat"}
-        %   toolbox_root - the root path where the toolbox is saved.
+        %   toolbox_root - the root path where the toolbox is saved for internal 
+        %                  use. By default
+        %                  opens a UI directory window that asks you where the
+        %                  toolbox is located in the file system.
 
             % Pre Initialization
             summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'doublenan', 'doublenan', 'doublenan',   'doublenan',  'doublenan', 'doublenan', 'string',           'doublenan',       'doublenan', 'doublenan',      'categorical', 'logical',    'doublenan',               'doublenan',        'doublenan',     'doublenan'};

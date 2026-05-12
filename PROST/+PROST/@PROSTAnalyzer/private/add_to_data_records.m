@@ -37,14 +37,11 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
         obj.DataRecords(index).Data(participant_num).Anthropometric_data = metadata;
         obj.DataRecords(index).Data(participant_num).Uniform_data = uniform_data;
         obj.DataRecords(index).Data(participant_num).Is_included = true;
-
+        
+        num_excluded_sides = 0;
         for side=["left" "right"]
             if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
                 obj.DataRecords(index).Data(participant_num).Uniform_data.(side).Is_included = true;
-            else
-                obj.DataRecords(index).Data(participant_num).Uniform_data.(side).Is_included = false;
-            end
-            if ~isempty(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step)
                 n_steps = length(obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step);
                 for step_num=1:n_steps
                     step = obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(step_num);
@@ -57,7 +54,15 @@ function dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical
                     obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(step_num).Shank_cop = shank_cop;
                 end
                 [obj.DataRecords(index).Data(participant_num).Uniform_data.(side).step(:).Is_included] = deal(true);
+            else
+                obj.DataRecords(index).Data(participant_num).Uniform_data.(side).Is_included = false;
+                num_excluded_sides = num_excluded_sides + 1;
             end
+        end
+        
+        % Exclude participant if both sides are excluded
+        if num_excluded_sides == 2
+            obj.DataRecords(index).Data(participant_num).Is_included = false;
         end
     end
 end
