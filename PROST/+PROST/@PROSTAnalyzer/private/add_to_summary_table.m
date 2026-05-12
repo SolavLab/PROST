@@ -28,25 +28,36 @@ function add_to_summary_table(obj, dataset_id)
     obj.SummaryTable.Dataset_url(entry_number) = dataset.Article_data.link_to_dataset;
     obj.SummaryTable.Published_year(entry_number) = dataset.Article_data.published_year;
     obj.SummaryTable.Speed_categories(entry_number) = dataset.Experiment_protocol.speed_categories;
-    obj.SummaryTable.Num_participants(entry_number) = dataset.Experiment_protocol.num_participants;
-    obj.SummaryTable.Num_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
+    obj.SummaryTable.N_participants(entry_number) = dataset.Experiment_protocol.num_participants;
+    obj.SummaryTable.N_steps(entry_number) = dataset.Experiment_protocol.num_steps;
+    obj.SummaryTable.N_forceplates(entry_number) = dataset.Lab_system.num_forceplates;
     
     % Example participant for existing data to check if participants are
-    % shod and medial markers exist
-    
+    % shod
     participant = dataset.Data(1);
     obj.SummaryTable.Is_shod(entry_number) = participant.Anthropometric_data.Is_shod.value;
-
-    if ~isempty(participant.Uniform_data.right.step)
-        step = participant.Uniform_data.right.step(1);
-    elseif ~isempty(participant.Uniform_data.left.step)
-        step = participant.Uniform_data.left.step(1);
-    else
-        throw(PROST.PROSTError('SummaryTable', 'NoSteps', ...
-            'Participant %d in dataset %d has no steps.', participant.Participant_id, dataset_id));
+    
+    % Check whether medial markers exist.
+    participants = [dataset.Data.Uniform_data];
+    right_steps = [participants.right];
+    left_steps = [participants.left];
+    steps = [right_steps.step left_steps.step];
+    try
+    obj.SummaryTable.Has_medial(entry_number) = ~isempty(steps(1).Markers.Ankle.medial);
     end
 
-    obj.SummaryTable.Has_medial(entry_number) = ~isempty(step.Markers.Ankle.medial);
+    % Count mean +- SD of age, height and mass.
+    metadata = [dataset.Data.Anthropometric_data];
+    ages = [metadata.Age]; ages = [ages.value];
+    heights = [metadata.Height]; heights = [heights.value];
+    masses = [metadata.Mass]; masses = [masses.value];
+
+    obj.SummaryTable.Age_mean(entry_number) = mean(ages);
+    obj.SummaryTable.Age_std(entry_number) = std(ages);
+    obj.SummaryTable.Height_mean(entry_number) = mean(heights);
+    obj.SummaryTable.Height_std(entry_number) = std(heights);
+    obj.SummaryTable.Mass_mean(entry_number) = mean(masses);
+    obj.SummaryTable.Mass_std(entry_number) = std(masses);
 
     % Count all included participants and steps in dataset
     obj.update_num_included_summary(dataset_id);

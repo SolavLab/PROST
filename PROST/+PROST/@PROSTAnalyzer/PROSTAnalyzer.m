@@ -75,8 +75,9 @@ classdef PROSTAnalyzer < handle
         %   toolbox_root - the root path where the toolbox is saved.
 
             % Pre Initialization
-            summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'string',            'doublenan',         'doublenan',       'categorical', 'logical'};
-            summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Speed_categories', 'Num_participants', 'Num_forceplates', 'Is_shod',     'Has_medial'};
+            summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'doublenan', 'doublenan', 'doublenan',   'doublenan',  'doublenan', 'doublenan', 'string',           'doublenan',       'doublenan', 'doublenan',      'categorical', 'logical',    'doublenan',               'doublenan',        'doublenan',     'doublenan'};
+            summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Age_mean',  'Age_std',   'Height_mean', 'Height_std', 'Mass_mean', 'Mass_std',  'Speed_categories', 'N_participants',  'N_steps',   'N_forceplates',  'Is_shod',     'Has_medial', 'N_participants_included', 'N_steps_included', 'Steps_pp_mean', 'Steps_pp_std'};
+            summary_var_units = {'',           '',             '',             '',        '',               '',            '',            'years',     'years',     'm',           'm',          'kg',        'kg',        '',                 '',                '',          '',               '',            '',           '',                        '',                 '',              ''};
             summary_numCols = numel(summary_var_names);
             
             if nargin < 2 || isempty(toolbox_root)
@@ -84,10 +85,12 @@ classdef PROSTAnalyzer < handle
             else
                 obj.Toolbox_root = toolbox_root;
             end
+
             if nargin == 0 || isempty(load_list)
                 fprintf("Creating empty PROSTAnalyzer object...\n");
                 obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
                 obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
+                obj.SummaryTable.Properties.VariableUnits = summary_var_units;
                 dataset_ids = [];
                 return
             end
@@ -115,8 +118,8 @@ classdef PROSTAnalyzer < handle
             
             % Creating summary table
             % Create an empty table for the data with the desired variable names:
-            summary_table = table('Size', [n_datasets summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
-            obj.SummaryTable = summary_table;
+            obj.SummaryTable = table('Size', [n_datasets summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
+            obj.SummaryTable.Properties.VariableUnits = summary_var_units;
             obj.SummaryTableSize = 0;
 
             % Add to summary table data from the datasets

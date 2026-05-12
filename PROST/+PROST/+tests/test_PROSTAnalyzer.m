@@ -90,8 +90,8 @@ assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
 assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_participants)
-assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
+assert(obj.SummaryTable.N_participants(1) == DB_1.Experiment_explained.num_participants)
+assert(obj.SummaryTable.N_forceplates(1) == DB_1.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_1.Data.participant_1.uniform_data.(side).step;
@@ -111,8 +111,8 @@ assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
 assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_participants)
-assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
+assert(obj.SummaryTable.N_participants(2) == DB_3.Experiment_explained.num_participants)
+assert(obj.SummaryTable.N_forceplates(2) == DB_3.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_3.Data.participant_1.uniform_data.(side).step;
@@ -188,8 +188,8 @@ assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
 assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.Num_participants(1) == DB_1.Experiment_explained.num_participants)
-assert(obj.SummaryTable.Num_forceplates(1) == DB_1.Lab_explained.num_forceplates)
+assert(obj.SummaryTable.N_participants(1) == DB_1.Experiment_explained.num_participants)
+assert(obj.SummaryTable.N_forceplates(1) == DB_1.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_1.Data.participant_1.uniform_data.(side).step;
@@ -231,8 +231,8 @@ assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
 assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
 assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
 assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.Num_participants(2) == DB_3.Experiment_explained.num_participants)
-assert(obj.SummaryTable.Num_forceplates(2) == DB_3.Lab_explained.num_forceplates)
+assert(obj.SummaryTable.N_participants(2) == DB_3.Experiment_explained.num_participants)
+assert(obj.SummaryTable.N_forceplates(2) == DB_3.Lab_explained.num_forceplates)
 assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
 for side=["left" "right"]
     steps = DB_3.Data.participant_1.uniform_data.(side).step;

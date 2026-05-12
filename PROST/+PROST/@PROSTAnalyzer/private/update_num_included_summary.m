@@ -8,15 +8,18 @@ function update_num_included_summary(obj, dataset_ids)
     end
     for dataset_id=dataset_ids
         dataset = obj.get_dataset(dataset_id);
-        entry_number = obj.DataRecordsIDLookup(dataset_id);
+        dataset_index = obj.DataRecordsIDLookup(dataset_id);
 
         % Count number of included participants
-        included_participants = [dataset.Data.Is_included];
-        num_included_participants = sum(included_participants);
-        obj.SummaryTable.Num_included_participants(entry_number) = num_included_participants;
+        included_idx = [dataset.Data.Is_included];
+        included_participants = [dataset.Data(included_idx)];
+        num_included_participants = sum(included_idx);
+        obj.SummaryTable.N_participants_included(dataset_index) = num_included_participants;
 
-        num_included_steps = 0;
-        for participant=[dataset.Data(included_participants)]
+        num_included_steps = zeros(1, num_included_participants);
+        for participant_num=1:num_included_participants
+            participant = included_participants(participant_num);
+
             num_included_right_steps = 0;
             num_included_left_steps = 0;
 
@@ -27,9 +30,11 @@ function update_num_included_summary(obj, dataset_ids)
                 num_included_left_steps = sum([participant.Uniform_data.left.step.Is_included]);
             end
 
-            num_included_steps = num_included_steps + num_included_right_steps + num_included_left_steps;
+            num_included_steps(participant_num) = num_included_right_steps + num_included_left_steps;
         end
-        obj.SummaryTable.Num_included_steps(entry_number) = num_included_steps;
+        obj.SummaryTable.N_steps_included(dataset_index) = sum(num_included_steps);
+        obj.SummaryTable.Steps_pp_mean(dataset_index) = mean(num_included_steps);
+        obj.SummaryTable.Steps_pp_std(dataset_index) = std(num_included_steps);
     end
 end
 
