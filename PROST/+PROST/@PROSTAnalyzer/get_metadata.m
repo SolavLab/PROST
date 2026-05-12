@@ -1,7 +1,7 @@
 function [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side)
-%GET_METADATA get anthropometric metadata parameters.
+%GET_METADATA get separate metadata parameters from field.
 % Input :
-%   metadata - struct with the anthropometric data of a participant.
+%   metadata - struct with the anthropometric + functional data of a participant.
 %   side - the side of the leg measurements (leg, thigh or shank
 %          lengths) to return. Either "right" or "left".
 % Output :

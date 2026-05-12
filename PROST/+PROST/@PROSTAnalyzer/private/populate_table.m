@@ -46,7 +46,7 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
             steps = uniform_data.(side).step; % get the steps
             % Not all participants have measurements from both
             % legs.
-            if isempty(steps)
+            if ~uniform_data.(side).Is_included
                 continue
             end
 

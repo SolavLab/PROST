@@ -15,6 +15,7 @@ function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums,
     % contain artifacts from beginning and end of the step
     n_temporal = 101;
     cut_length = 15;
+    % cut_length = 0;
     trial_size = (n_temporal - 2*cut_length);
 
     if nargin < 4
@@ -33,7 +34,7 @@ function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums,
 
         % add this step to the point cloud.
         idx = (1+cut_length:numel(step.Shank_cop.(anatomical_side).u)-cut_length);
-        point_cloud((1 + (step_idx - 1)*trial_size):(step_idx*trial_size), :) = [step.Shank_cop.(anatomical_side).u(idx)', step.Shank_cop.(anatomical_side).w(idx)', step.source.original_trial_number_in_database + 0.*idx'];
+        point_cloud((1 + (step_idx - 1)*trial_size):(step_idx*trial_size), :) = [step.Shank_cop.(anatomical_side).u(idx)', step.Shank_cop.(anatomical_side).w(idx)', step_num + 0.*idx'];
     end
 
     % Check for NaN or Inf values in the point cloud

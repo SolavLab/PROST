@@ -4,7 +4,7 @@ function [good_steps] = get_good_steps(steps, min_speed)
 % higher than min_speed in [km/hour]. By default min_speed = 0 [km/hour]
 
     % Set default value for min_speed
-    if nargin == 1
+    if nargin == 1 || isempty(min_speed)
         min_speed = 0; % [km/hour]
     end
 
