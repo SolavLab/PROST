@@ -64,7 +64,6 @@ values = {{"RANK"};...
           {"LASI"};...
           {"C7"}};
 markers_guide.reference_guide = dictionary(keys, values);
-markers_guide.virtual_reference_guide = dictionary;
 Dataset_4.Markers_guide = markers_guide;
 
 %       --------------------
@@ -108,15 +107,13 @@ Experiment_protocol.explanation_txt = ...
     "No information was provided concerning the purpose of the ground-embedded force plates to avoid any targeting.\n\n" + ...
     "The aim was to record a minimum of six walking trials during steady-state walking phase without gait initiation and termination, and with three ‘correct’ heel strikes on the force plates from the right and three from the left stride without contact of the other foot on the force plate.\n" + ...
     "A detailed description per participant of how many clean strikes were retrieved and the need for assistance can be found in the data records paragraph.";
-Experiment_protocol.speed_categories = "";
+Experiment_protocol.speed_categories = "Self selected speed.";
 Experiment_protocol.num_participants = 138;
+Experiment_protocol.num_trials = 0;
+Experiment_protocol.num_steps = 0;
+Experiment_protocol.num_markers = 109;
 
 Dataset_4.Experiment_protocol = Experiment_protocol;
-
-%% Read List of Good Trials
-if ~exist("good_trials", "var")
-    good_trials = read_good_trials_table(data_path);
-end
 
 %% Load Data Files
 % load raw data
@@ -129,27 +126,41 @@ if ~exist("all_metadata", "var")
     all_metadata = read_metadata_table(data_path);
 end
 
+%% Calculate number of trials and steps
+Dataset_4.Experiment_protocol.num_trials = numel([raw_data.trial]);
+Dataset_4.Experiment_protocol.num_steps = Dataset_4.Experiment_protocol.num_trials .* 3;
+
+%% Read List of Good Trials
+% Here the expected number of markers also include post processed values like 
+% joint angles which are also stored in the c3d files with their own labels.
+if ~exist("good_markers_trials", "var")
+    good_markers_trials = get_good_markers_trials(raw_data, markers_guide.reference_guide, 191);
+end
+if ~exist("good_trials", "var")
+    good_trials = read_good_trials_table(data_path, good_markers_trials);
+end
+
 %% -----------------------------
 %  participant specific info:
 % ------------------------------
 % Number of participants
-n_participants = numel(good_trials);
+n_participants = numel(raw_data);
 
 % Get relevant marker names in original dataset
 markers_guide = Dataset_4.Markers_guide;
 
 for participant_number=1:n_participants
     % Get participant name and original ID from number
-    participant_ID = good_trials(participant_number).SubjID;
-    original_participant_number =  good_trials(participant_number).SubjNum;
+    participant_ID = raw_data(participant_number).folder;
+    % original_participant_number =  good_trials(participant_number).SubjNum;
     participant_name = "participant_" + string(participant_number);
    
     % Initializing counters for right and left steps of all trials
     right_steps_counter = 0; left_steps_counter = 0;
 
     % Get participant metadata and standing trial data
-    standing_trial_data = raw_data(original_participant_number).standing_trial;
-    participant_metadata = all_metadata(original_participant_number);
+    standing_trial_data = raw_data(participant_number).standing_trial;
+    participant_metadata = all_metadata(participant_number);
 
     %                              -------------------------------------
     % Dataset_4 / Data / participant_# / participant_ID_in_original_structure :
@@ -173,7 +184,8 @@ for participant_number=1:n_participants
     Dataset_4.Data.(participant_name).uniform_data.left.step = [];
 
     % Get the number of trials
-    n_trials = numel(good_trials(participant_number).trials);
+    n_trials = length(raw_data(participant_number).trial);
+    %n_trials = numel(good_trials(participant_number).trials);
 
     for trial_number=1:n_trials
         try
@@ -183,18 +195,26 @@ for participant_number=1:n_participants
         
         % Get the signals:
         % trial number in original dataset
-        original_trial_number = good_trials(participant_number).trials(trial_number).trial_num;
-        
+        % original_trial_number = good_trials(participant_number).trials(trial_number).trial_num;
+        original_trial_number = raw_data(participant_number).trial(trial_number).trial_num;
+
         % Raw data of trial
-        trial_data = raw_data(original_participant_number).trial(original_trial_number == [raw_data(original_participant_number).trial.trial_num]);
-        good_forceplates = good_trials(participant_number).trials(trial_number).forceplates;
-        good_segments = good_trials(participant_number).trials(trial_number).segments;
-        [marker_data, forceplate_data, event_data] = get_trial_data(trial_data, markers_guide.reference_guide);
+        trial_data = raw_data(participant_number).trial(trial_number);
+        good_trial = [];
+        
+        if ~isempty(good_trials(participant_number).trials)
+            good_trial_idx = find(original_trial_number == [good_trials(participant_number).trials.trial_num]);
+            if ~isempty(good_trial_idx)
+                good_trial = good_trials(participant_number).trials(good_trial_idx);
+            end
+        end
+
+        [marker_data, forceplate_data, event_data] = get_trial_data(trial_data);
         % Number of steps in a trial
         n_steps = 3; % There should be 3 full steps at each trial (IC to TO of the same foot)
 
         % Save information for each step
-        steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps, good_forceplates, good_segments);
+        steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps, good_trial);
 
         % Fix event times:
         % if the step is good,
@@ -204,7 +224,7 @@ for participant_number=1:n_participants
 
         % Save data into easier to store format
         [GRF, COP] = save_forceplate_data(forceplate_data);
-            trajectories = save_marker_data(marker_data);
+        trajectories = save_marker_data(marker_data);
 
         %                                                            -------
         % Dataset_4 / Data / participant_# / processed_original_data / trial(#) / origin
@@ -302,7 +322,12 @@ for participant_number=1:n_participants
         % -------------------------
         % the GRF should be temporally aligned (to 101 points) in the stance phase (SP) -> from initial contact to toe off 
         % while the COP and Markers should be temporally aligned (to 101 points) in the weight acceptance + single support phase (SS) -> from initial contact to opposite initial contact 
-
+        
+        % Don't process bad participants / trials
+        if isempty(good_trials(participant_number).trials) || ~ismember(original_trial_number, [good_trials(participant_number).trials.trial_num])
+            continue
+        end
+        
         %                                               ---------------------
         % Dataset_4 / Data / participant_# / uniform_data / Right,Left / step(#)
         %                                               ---------------------
@@ -414,18 +439,7 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     assert(standing_trial.n_markers == size(standing_trial.data, 2))
     assert(3 == size(standing_trial.data, 1))
     standing_trial.unit = string(standing_trial_raw.c3d.parameters.POINT.UNITS.DATA);
-    
-    important_markers = [markers_guide.reference_guide{"Right Lateral Ankle"}{1}, ...
-                         markers_guide.reference_guide{"Left Lateral Ankle"}{1}, ...
-                         markers_guide.reference_guide{"Right Lateral Knee"}{1}, ...
-                         markers_guide.reference_guide{"Left Lateral Knee"}{1}, ...
-                         markers_guide.reference_guide{"Right ASIS"}{1}, ...
-                         markers_guide.reference_guide{"Left ASIS"}{1}];
-    if ~all(ismember(important_markers, standing_trial.marker_names))
-        missing_markers = important_markers(~ismember(important_markers, standing_trial.marker_names));
-        error("PROST:BadTrial", "Bad Trial: missing %s", join(missing_markers, ", "))
-    end
-
+   
     % age
     metadata.Age.value = participant_metadata.Age.value;
     metadata.Age.unit = "years";
@@ -456,33 +470,31 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     metadata.Is_shod.method = "provided";
     
     % Calculate missing metadata from standing trial
-    % Marker names:
-    % ankle - Lateral Ankle (ANK)
-    % knee - Lateral Knee (KNE)
-    % asis - ASIS (ASI)
-    i_right_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Ankle"}{1}); % RANK
-    right_ankle = standing_trial.data(:, i_right_ankle, :); % RANK
-    right_ankle = mean(squeeze(right_ankle), 2, "omitmissing");
+    % Markers:
+    % Lateral Ankle, Lateral Knee, ASIS
+    i_right_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Ankle"}{1});
+    right_ankle = standing_trial.data(:, i_right_ankle, :);
+    right_ankle = squeeze(mean(right_ankle, 3, "omitmissing"));
 
-    i_left_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Ankle"}{1}); % LANK
-    left_ankle = standing_trial.data(:, i_left_ankle, :); % LANK
-    left_ankle = mean(squeeze(left_ankle), 2, "omitmissing");
+    i_left_ankle = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Ankle"}{1});
+    left_ankle = standing_trial.data(:, i_left_ankle, :);
+    left_ankle = squeeze(mean(left_ankle, 3, "omitmissing"));
     
-    i_right_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Knee"}{1}); % RKNE
-    right_knee = standing_trial.data(:, i_right_knee, :); % RKNE
-    right_knee = mean(squeeze(right_knee), 2, "omitmissing");
+    i_right_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right Lateral Knee"}{1});
+    right_knee = standing_trial.data(:, i_right_knee, :);
+    right_knee = squeeze(mean(right_knee, 3, "omitmissing"));
     
-    i_left_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Knee"}{1}); % LKNE
-    left_knee = standing_trial.data(:, i_left_knee, :); % LKNE
-    left_knee = mean(squeeze(left_knee), 2, "omitmissing");
+    i_left_knee = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left Lateral Knee"}{1});
+    left_knee = standing_trial.data(:, i_left_knee, :);
+    left_knee = squeeze(mean(left_knee, 3, "omitmissing"));
 
-    i_right_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right ASIS"}{1}); % RASI
-    right_asis = standing_trial.data(:, i_right_asis, :); % RASI
-    right_asis = mean(squeeze(right_asis), 2, "omitmissing");
+    i_right_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Right ASIS"}{1});
+    right_asis = standing_trial.data(:, i_right_asis, :);
+    right_asis = squeeze(mean(right_asis, 3, "omitmissing"));
 
-    i_left_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left ASIS"}{1}); % LASI
-    left_asis = standing_trial.data(:,  i_left_asis, :); % LASI
-    left_asis = mean(squeeze(left_asis), 2, "omitmissing");
+    i_left_asis = matches(standing_trial.marker_names, markers_guide.reference_guide{"Left ASIS"}{1});
+    left_asis = standing_trial.data(:,  i_left_asis, :);
+    left_asis = squeeze(mean(left_asis, 3, "omitmissing"));
 
     % leg length - from ASIS to lateral ankle
     metadata.Leg_length.right = PROST.utils.convert_units(norm(right_asis - right_ankle), standing_trial.unit, "m");
@@ -503,7 +515,7 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     metadata.Shank_length.method = "calculated by distance between lateral knee and lateral ankle markers in the standing trial";
 end
 
-function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data, reference_guide)
+function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data)
 %GET_TRIAL_DATA reads the marker and force plate measurements and event 
 % information from the data of a trial.
 % Input :
@@ -542,20 +554,9 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data,
     marker_data.marker_names = convertCharsToStrings(matlab.lang.makeValidName(data_labels)); % Names of the markers
     marker_data.data = c3d.data.points; % Trial trajectory measurements
 
-    assert(marker_data.n_markers == size(marker_data.data, 2))
-    assert(3 == size(marker_data.data, 1))
-    if marker_data.n_markers ~= 191
-        important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
-        important_markers(contains(important_markers, "Virtual")) = [];
-        if ~all(ismember(important_markers, marker_data.marker_names))
-            missing_markers = important_markers(~ismember(important_markers, marker_data.marker_names));
-            error("PROST:BadTrial", "Bad Trial: missing %s", join(missing_markers, ", "))
-        end
-    end
-
     % Get forceplate data
     forceplate_data.n_samples = size(fp(1).force, 2); % Number of samples in trial
-    forceplate_data.n_forceplates = size(fp, 1); % Number of force plates
+    forceplate_data.n_forceplates = size(fp, 1); % Number of expected force plates
     % The force-plates were sampled at the same frequency as the EMG
     forceplate_data.freq = c3d.parameters.ANALOG.RATE.DATA; % Sampling frequency. Should be 1000 Hz
     assert(forceplate_data.freq == 1000)
@@ -565,9 +566,9 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data,
    
     % Trial forceplate measurements
     forceplate_data.plate(forceplate_data.n_forceplates) = struct("grf", [], "cop", []); % Preallocate
-    for k = 1:forceplate_data.n_forceplates
-        forceplate_data.plate(k).grf =  fp(k).force; % Copy each vector after filtering
-        forceplate_data.plate(k).cop = fp(k).center_of_pressure; % Copy each vector after filtering
+    for k = 1:forceplate_data.n_forceplates % actual number of force plates
+        forceplate_data.plate(k).grf =  fp(k).force;
+        forceplate_data.plate(k).cop = fp(k).center_of_pressure;
         assert(3 == size(forceplate_data.plate(k).grf, 1))
         assert(3 == size(forceplate_data.plate(k).cop, 1))
     end
@@ -590,7 +591,7 @@ function [marker_data, forceplate_data, event_data] = get_trial_data(trial_data,
     event_data.feet = event_data.feet(idx);
 end
 
-function steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps, good_forceplates, good_segments)
+function steps_info = save_steps_info(event_data, forceplate_data, marker_data, n_steps, good_trial)
 %GET_STEPS_INFO saves the step information of all steps in a single trial to our 
 % preferred structure format for easier access later.
 % Input :
@@ -627,10 +628,10 @@ function steps_info = save_steps_info(event_data, forceplate_data, marker_data, 
     % Initialize steps info parameters
     steps_info(n_steps) = struct("events", [], "step_quality", [], "plate", [], "foot", []);
     event_struct = struct("time", NaN, "forceplate_index", NaN, "trajectory_index", NaN);
-    [steps_info.step_quality] = deal("bad");
-    [steps_info.plate] = deal(NaN);
-    [steps_info.foot] = deal("bad");
     for step_number=1:n_steps
+        steps_info(step_number).step_quality = "bad";
+        steps_info(step_number).plate = NaN;
+        steps_info(step_number).foot = "bad";
         steps_info(step_number).events.IC = event_struct;
         steps_info(step_number).events.OIC = event_struct;
         steps_info(step_number).events.TO = event_struct;
@@ -642,32 +643,63 @@ function steps_info = save_steps_info(event_data, forceplate_data, marker_data, 
     [~, fp_order] = sort(fp_times(:, 1), MissingPlacement="last");
     
     % Match events to step
-    step_IC_times = 0.*(1:n_steps);
     for step_number=1:n_steps
-        activation_time = fp_times(fp_order(step_number), 1);
-        [~, event_idx] = min(abs(activation_time - event_data.times(ICindices)));
+        try
+            activation_time = fp_times(fp_order(step_number), 1);
+            [~, event_idx] = min(abs(activation_time - event_data.times(ICindices)));
 
-        % Set step feet
-        feet(step_number) = lower(event_data.feet(ICindices(event_idx)));
+            % Set step feet
+            feet(step_number) = lower(event_data.feet(ICindices(event_idx)));
 
-        % Initial contact
-        steps_info(step_number).events.IC.time = event_data.times(ICindices(event_idx));
-        steps_info(step_number).events.IC.time = round(round_by*(steps_info(step_number).events.IC.time))/round_by;
-        [~, steps_info(step_number).events.IC.forceplate_index] = min(abs(steps_info(step_number).events.IC.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.IC.trajectory_index] = min(abs(steps_info(step_number).events.IC.time - marker_data.time_vector));
+            % Initial contact
+            steps_info(step_number).events.IC.time = event_data.times(ICindices(event_idx));
+            steps_info(step_number).events.IC.time = round(round_by*(steps_info(step_number).events.IC.time))/round_by;
+            [~, steps_info(step_number).events.IC.forceplate_index] = min(abs(steps_info(step_number).events.IC.time - forceplate_data.time_vector));
+            [~, steps_info(step_number).events.IC.trajectory_index] = min(abs(steps_info(step_number).events.IC.time - marker_data.time_vector));
+
+            % Opposite initial contact
+            steps_info(step_number).events.OIC.time = event_data.times(OICindices(event_idx));
+            steps_info(step_number).events.OIC.time = round(round_by*(steps_info(step_number).events.OIC.time))/round_by;
+            [~, steps_info(step_number).events.OIC.forceplate_index] = min(abs(steps_info(step_number).events.OIC.time - forceplate_data.time_vector));
+            [~, steps_info(step_number).events.OIC.trajectory_index] = min(abs(steps_info(step_number).events.OIC.time - marker_data.time_vector));
+
+            % Toe off
+            steps_info(step_number).events.TO.time = event_data.times(TOindices(event_idx));
+            steps_info(step_number).events.TO.time = round(round_by*(steps_info(step_number).events.TO.time))/round_by;
+            [~, steps_info(step_number).events.TO.forceplate_index] = min(abs(steps_info(step_number).events.TO.time - forceplate_data.time_vector));
+            [~, steps_info(step_number).events.TO.trajectory_index] = min(abs(steps_info(step_number).events.TO.time - marker_data.time_vector));
+        catch
+            continue
+        end
+    end
+
+    if ~isempty(good_trial)
+        good_forceplates = good_trial.forceplates;
+        good_segments = good_trial.segments;
+        steps_info = check_step(steps_info, fp_times, feet, good_forceplates, good_segments);
+    end
+end
+
+function steps_info = check_step(steps_info, fp_times, feet, good_forceplates, good_segments)
+%CHECK_STEP checks the quality of the step and updates the step information
+% accordingly. A "bad" step is one that either started or ended on a force
+% plate, had both feet on the plate or had the foot on both steps at the same
+% time.
+% Input :
+%   steps_info - the information of all the steps.
+%   
+%   good_forceplates - list of force plates where a single good step was
+%                      measured.
+%   good_segments - the corresponding foot of each good step.
+% Output :
+%   steps_info - the information of each step updated with the step quality, the
+%                relevant plate and foot (if "good").
+
+    % Get IC times
+    n_steps = numel(steps_info);
+    step_IC_times = nan(1, n_steps);
+    for step_number=1:n_steps
         step_IC_times(step_number) = steps_info(step_number).events.IC.time;
-
-        % Opposite initial contact
-        steps_info(step_number).events.OIC.time = event_data.times(OICindices(event_idx));
-        steps_info(step_number).events.OIC.time = round(round_by*(steps_info(step_number).events.OIC.time))/round_by;
-        [~, steps_info(step_number).events.OIC.forceplate_index] = min(abs(steps_info(step_number).events.OIC.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.OIC.trajectory_index] = min(abs(steps_info(step_number).events.OIC.time - marker_data.time_vector));
-
-        % Toe off
-        steps_info(step_number).events.TO.time = event_data.times(TOindices(event_idx));
-        steps_info(step_number).events.TO.time = round(round_by*(steps_info(step_number).events.TO.time))/round_by;
-        [~, steps_info(step_number).events.TO.forceplate_index] = min(abs(steps_info(step_number).events.TO.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.TO.trajectory_index] = min(abs(steps_info(step_number).events.TO.time - marker_data.time_vector));
     end
 
     % Check good forceplates
@@ -678,64 +710,23 @@ function steps_info = save_steps_info(event_data, forceplate_data, marker_data, 
         steps_info(step_number).plate = good_fp_num;
         steps_info(step_number).foot = feet(step_number);
         steps_info(step_number).step_quality = "good";
-        assert((steps_info(step_number).foot == "right" && good_segment == "R") || ...
-               (steps_info(step_number).foot == "left" && good_segment == "L"))
+        
+            assert((steps_info(step_number).foot == "right" && good_segment == "R") || ...
+                (steps_info(step_number).foot == "left" && good_segment == "L"))
+       
     end
 end
 
-% function steps_info = check_step(steps_info, forceplate_data, feet, good_forceplates, good_segments)
-% %CHECK_STEP checks the quality of the step and updates the step information
-% % accordingly. A "bad" step is one that either started or ended on a force
-% % plate, had both feet on the plate or had the foot on both steps at the same
-% % time.
-% % Input :
-% %   steps_info - the information of the steps. 
-% %   forceplate_data - force plate measurements of all plates.
-% %   feet - the foot of each step according to the data files.
-% %   good_forceplates - list of force plates where a single good step was
-% %                      measured.
-% %   good_segments - the corresponding foot of each good step.
-% % Output :
-% %   steps_info - the information of each step updated with the step quality, the 
-% %                relevant plate and foot (if "good").
-% 
-%     % Set default values of steps_info to "bad" steps
-%     step_numbers = 1:numel(steps_info);
-% 
-%     % Get IC indices of all steps
-%     events = [steps_info.events];
-%     foot_strikes = [events.IC];
-%     ICindices = [foot_strikes.forceplate_index];
-% 
-%     % Find force plate of each step for good steps
-%     for idx=1:length(good_forceplates)
-%         fp_num = good_forceplates(idx);
-%         segment = good_segments(idx);
-%         if strcmp(segment, "L")
-%             side = "left";
-%         else
-%             side = "right";
-%         end
-% 
-%         [~, iPeak] = max(forceplate_data.plate(fp_num).grf(3, :));
-%         [~, iIC] = min(abs(iPeak - ICindices(strcmpi(feet, side)' & ICindices <= iPeak)));
-% 
-%         step_number = step_numbers(strcmpi(feet, side)' & ICindices <= iPeak);
-%         step_number = step_number(iIC);
-%         steps_info(step_number).plate = fp_num;
-%         steps_info(step_number).step_quality = "good";
-%         steps_info(step_number).foot = side;
-%     end
-% end
-
-function [activation_time, deactivation_time, activation_index, deactivation_index] = get_plate_activation_deactivation(Fz, time, Fs, threshold)
+function [activation_time, deactivation_time, activation_index, deactivation_index] = get_plate_activation_deactivation(F, time, freq_s, threshold)
 %GET_PLATE_ACTIVATION_DEACTIVATION calculates the activation and deactivation 
 % times and indices of a given force plate. These are the first and last times
 % when normal ground reaction force is measured above a given threshold. 
 % Input :
-%   Fz - the GRF measurement data in the z direction of a single force plate.
+%   F - an 3xn vector of the X-Y-Z GRF measurement data of a single force plate, 
+%       where n is the number of samples.
 %   time - the time vector of the force plate.
-%   Fs - the sampling frequency of the force plate.
+%   freq_s - the sampling frequency of the force plate.
+%            Default: the sampling frequency of the force.
 %   threshold - the threshold force measurement in [N] above which we identify
 %               activation. Default: 0 [N].
 % Output :
@@ -747,10 +738,19 @@ function [activation_time, deactivation_time, activation_index, deactivation_ind
     if nargin < 4
         threshold = 0; % [N]
     end
-    if nargin < 3 || isempty(Fs)
-        Fs = 1./(time(2) - time(1));
+    if nargin < 3 || isempty(freq_s)
+        freq_s = 1./(time(2) - time(1));
     end
-    Fz_filtered = filter_data(Fz, Fs);
+    if isempty(F)
+         activation_index = 0;
+         activation_time = NaN;
+         deactivation_index = 0;
+         deactivation_time = NaN;
+         return
+    end
+
+    Fz = F(3, :);
+    Fz_filtered = filter_data(Fz, freq_s);
     dFz = diff(Fz_filtered);
     dFz = [dFz dFz(end)];
 
@@ -793,11 +793,15 @@ function fp_times = get_forceplate_times(forceplate_data)
 
     fp_times = zeros(forceplate_data.n_forceplates, 2);
     for fp_num=1:forceplate_data.n_forceplates
+        force = forceplate_data.plate(fp_num).grf;
+        if isempty(force)
+            continue
+        end
         [activation_time, deactivation_time] = get_plate_activation_deactivation( ...
-            forceplate_data.plate(fp_num).grf(3, :), ...
-            forceplate_data.time_vector, ...
-            forceplate_data.freq, ...
-            20);
+                                                force, ...
+                                                forceplate_data.time_vector, ...
+                                                forceplate_data.freq, ...
+                                                20);
         fp_times(fp_num, 1) = activation_time;
         fp_times(fp_num, 2) = deactivation_time;
     end
@@ -1209,19 +1213,20 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
 end
 
-function good_trials = read_good_trials_table(data_path)
-%READ_GOOD_TRIALS_TABLE Returns a list of the file names of good trials. Good 
-% trials are defined as trials that exist in the dataset and include all the 
-% important markers needed for our dataset with steps completely on a single 
-% force plate.
+function good_trials = read_good_trials_table(data_path, good_markers_trials)
+%READ_GOOD_TRIALS_TABLE returns a list of the good trials as provided by the
+% dataset. This is the list of trials and segments where a single foot stepped
+% on a single forceplate once. This function also checks whether all important
+% markers exist.
 % Input : 
 %   data_path - the path to the data files.
 %   reference_guide - the reference guide for all the important markers in the 
 %                     dataset.
 % Output :
-%   good_trials - an nx3 array with the participant IDs, speed condition and
-%                 trial number of good trials.
-% Note : the virtual markers for the knees in the markers guide are are not
+%   good_trials - a struct containing for each participant, the file name,
+%                 and trial number, forceplate numbers and segments (left or 
+%                 right) and of good trials.
+% Note : the virtual markers for the knees in the markers guide are not
 %        needed and screened out.
     
     good_trials_path = fullfile(data_path, "41597_2023_2767_MOESM1_ESM.xlsx");
@@ -1250,6 +1255,7 @@ function good_trials = read_good_trials_table(data_path)
             unsorted_good_trials(subjCounter).SubjID = sprintf("SUBJ%02d", numID);
             unsorted_good_trials(subjCounter).standing_trial.file_name = sprintf("SUBJ%d (0)", numID);
             unsorted_good_trials(subjCounter).standing_trial.trial_num = 0;
+            unsorted_good_trials(subjCounter).trials = struct([]);
 
             trialMap = configureDictionary("double", "struct");
     
@@ -1305,27 +1311,145 @@ function good_trials = read_good_trials_table(data_path)
                     trialMap(tr).segments;
             end
         end
+
     end
     [~, order] = sort([unsorted_good_trials.SubjNum]);
     good_trials = unsorted_good_trials(order);
 
+    for p=1:138
+        if isempty(good_markers_trials(p).trial)
+            good_trials(p).trials = struct([]);
+            continue
+        end
+        markers_trials = [good_markers_trials(p).trial.trial_num];
+        exclude_idx = ~ismember([good_trials(p).trials.trial_num], markers_trials);
+        good_trials(p).trials(exclude_idx) = [];
+        if any(exclude_idx)
+            disp("P" + p + " Excluded bad markers!")
+        end
+    end
+
     % Manual corrections to good trials list due to record mistakes
     good_trials([good_trials.SubjNum] == 9).trials([good_trials([good_trials.SubjNum] == 9).trials.trial_num] == 3).segments = "L"; % Wrong Segments
-    good_trials([good_trials.SubjNum] == 10).trials([good_trials([good_trials.SubjNum] == 10).trials.trial_num] == 2) = []; % Bad trial
+    % good_trials([good_trials.SubjNum] == 10).trials([good_trials([good_trials.SubjNum] == 10).trials.trial_num] == 2) = []; % Bad trial
     good_trials([good_trials.SubjNum] == 19).trials([good_trials([good_trials.SubjNum] == 19).trials.trial_num] == 3).segments = "L"; % Wrong Segments
     good_trials([good_trials.SubjNum] == 20).trials([good_trials([good_trials.SubjNum] == 20).trials.trial_num] == 3).segments = ["L" "R" "L"]; % Wrong Segments
-    good_trials([good_trials.SubjNum] == 37) = []; % Missing markers in standing trial
-    good_trials([good_trials.SubjNum] == 44).trials([good_trials([good_trials.SubjNum] == 44).trials.trial_num] == 5) = []; % Bad trial
-    good_trials([good_trials.SubjNum] == 63).trials([good_trials([good_trials.SubjNum] == 63).trials.trial_num] == 2) = []; % Bad trial
-    good_trials([good_trials.SubjNum] == 66).trials([good_trials([good_trials.SubjNum] == 66).trials.trial_num] == 1) = []; % Bad trial
-    good_trials([good_trials.SubjNum] == 79).trials([good_trials([good_trials.SubjNum] == 79).trials.trial_num] == 2) = []; % Bad trial
+    % good_trials([good_trials.SubjNum] == 37).trials = struct([]); % Missing markers in standing trial
+    % good_trials([good_trials.SubjNum] == 44).trials([good_trials([good_trials.SubjNum] == 44).trials.trial_num] == 5) = []; % Bad trial
+    % good_trials([good_trials.SubjNum] == 63).trials([good_trials([good_trials.SubjNum] == 63).trials.trial_num] == 2) = []; % Bad trial
+    good_trials([good_trials.SubjNum] == 66).trials([good_trials([good_trials.SubjNum] == 66).trials.trial_num] == 1) = []; % Bad trial - can't identify step events
+    good_trials([good_trials.SubjNum] == 79).trials([good_trials([good_trials.SubjNum] == 79).trials.trial_num] == 2) = []; % Bad trial - can't identify step events
     good_trials([good_trials.SubjNum] == 84).trials([good_trials([good_trials.SubjNum] == 84).trials.trial_num] == 1).segments = ["R" "L" "R"]; % Wrong Segments
     good_trials([good_trials.SubjNum] == 84).trials([good_trials([good_trials.SubjNum] == 84).trials.trial_num] == 4).segments = ["R" "L" "R"]; % Wrong Segments
     good_trials([good_trials.SubjNum] == 95).trials([good_trials([good_trials.SubjNum] == 95).trials.trial_num] == 3).segments = ["R" "L" "R"]; % Wrong Segments
-    good_trials([good_trials.SubjNum] == 100) = [];  % Missing markers in standing trial
+    % good_trials([good_trials.SubjNum] == 100).trials = struct([]);  % Missing markers in standing trial
     good_trials([good_trials.SubjNum] == 108).trials([good_trials([good_trials.SubjNum] == 108).trials.trial_num] == 2).forceplates = [1, 2]; % Wrong Force plates
     good_trials([good_trials.SubjNum] == 108).trials([good_trials([good_trials.SubjNum] == 108).trials.trial_num] == 2).segments = ["L" "R"]; % Wrong Segments
     good_trials([good_trials.SubjNum] == 136).trials([good_trials([good_trials.SubjNum] == 136).trials.trial_num] == 2).segments = ["R" "L"]; % Wrong Segments
+end
+
+function good_markers_trials = get_good_markers_trials(raw_data, reference_guide, expected_n_markers)
+    % Number of participants
+    n_participants = length(raw_data);
+
+    % Initialize lists of good files and good participants
+    good_markers_trials(n_participants) = struct;
+
+    % Important markers to check
+    important_markers = string(cellfun(@(x) x{1}, reference_guide.values, 'UniformOutput', false));
+    important_markers(contains(important_markers, "Virtual")) = [];
+   
+    % Local function used for taking out the subject name from the marker names,
+    % so we have the same names across participants.
+    function s_new = takeout_subject_name(s_old)
+        s_idx = strfind(s_old, ":");
+        if isempty(s_idx)
+            s_idx = 0;
+        end
+        s_new = s_old(s_idx+1:end);
+    end
+
+    % Check who to keep
+    % find which of the trials exist and are good for this participant
+    % Some of the participants have less than the maximum amount of trials.
+    % Some trials are missing markers that are needed.
+    for p=1:n_participants
+        participant_ID = string(raw_data(p).folder);
+        good_markers_trials(p).Participant_id = participant_ID;
+        standing_trial = raw_data(p).standing_trial;
+        trials = raw_data(p).trial;
+        n_trials = length(trials);
+
+        % Check that all important markers exist in the standing trial
+        c3d = standing_trial.c3d;
+        % Get trajectory data
+        n_samples = size(c3d.data.points, 3); % Number of samples in trial
+        % n_markers = size(c3d.parameters.POINT.LABELS.DATA, 1); % Number of markers
+        data = c3d.data.points; % Trial measurements
+        
+        % Some markers were saved with the participant identifier so we need to
+        % change that.
+        data_labels = c3d.parameters.POINT.LABELS.DATA;
+        data_labels = cellfun(@takeout_subject_name, data_labels, 'UniformOutput', false);
+        n_markers = length(data_labels); % Number of markers
+        marker_names = convertCharsToStrings(matlab.lang.makeValidName(data_labels)); % Names of the markers
+
+        % Check that all important markers exist
+        if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
+            if n_markers ~= expected_n_markers
+                if ~all(ismember(important_markers, marker_names))
+                    warning('TrialQuality:MissingMarkers', "P%d (%s) ST: missing important markers.", p, participant_ID)
+                    disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
+                    continue
+                end
+            end
+        else
+            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) ST: c3d parameter size mismatch.", p, participant_ID)
+            disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
+        end
+
+        % Check that all important markers exist in the walking trials
+        good_markers_trials(p).trial = struct([]);
+        num_excluded = 0;
+        trials_counter = 1;
+        for t=1:n_trials
+            c3d = trials(t).c3d;
+            trial_num = trials(t).trial_num;
+
+            % Get trajectory data
+            n_samples = size(c3d.data.points, 3); % Number of samples in trial
+            data = c3d.data.points; % Trial measurements
+
+            % Some markers were saved with the participant identifier so we need to
+            % change that.
+            data_labels = c3d.parameters.POINT.LABELS.DATA;
+            data_labels = cellfun(@takeout_subject_name, data_labels, 'UniformOutput', false);
+            n_markers = length(data_labels); % Number of markers
+            marker_names = convertCharsToStrings(matlab.lang.makeValidName(data_labels)); % Names of the markers
+
+            % Check that all important markers exist
+            if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
+                if n_markers ~= 191
+                    if ~all(ismember(important_markers, marker_names))
+                        num_excluded = num_excluded + 1;
+                        warning('TrialQuality:MissingMarkers', "P%d (%s) %d: missing important markers.", p, participant_ID, trial_num)
+                        continue
+                    end
+                end
+                idx = length(good_markers_trials(p).trial) + 1;
+                good_markers_trials(p).trial(idx).trial_num = trial_num;
+                good_markers_trials(p).trial(idx).index = t;
+                trials_counter = trials_counter + 1;
+            else
+                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) %d: c3d parameter size mismatch.", p, participant_ID, trial_num)
+            end
+
+        end
+        good_markers_trials(p).trial = good_markers_trials(p).trial(1:trials_counter-1);
+        if num_excluded == n_trials
+            disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
+        end
+    end
 end
 
 function metadata = read_metadata_table(data_path)
@@ -1453,31 +1577,24 @@ function [clean_forceplate_data, clean_marker_data] = clean_data(forceplate_data
 
     % Clean force plate 3 data. Since we are not using it we don't want to save
     % any signal from it.
-    clean_forceplate_data.plate(3).grf = 0.*clean_forceplate_data.plate(3).grf;
-    clean_forceplate_data.plate(3).cop = NaN.*clean_forceplate_data.plate(3).cop;
+    if numel(clean_forceplate_data.plate) >= 3
+        clean_forceplate_data.plate(3).grf = 0.*clean_forceplate_data.plate(3).grf;
+        clean_forceplate_data.plate(3).cop = NaN.*clean_forceplate_data.plate(3).cop;
+    end
 
     time_vector = clean_forceplate_data.time_vector;
     sampling_freq = clean_forceplate_data.freq;
     signal_threshold = 20; % [N]
-    for fp_num=[1 2 4]
-        % clean_forceplate_data.plate(fp_num).grf = filter_data(clean_forceplate_data.plate(fp_num).grf, sampling_freq, filter_order);
-        Fz = clean_forceplate_data.plate(fp_num).grf(3, :);
-        [~, ~, signal_start_index, signal_end_index] = get_plate_activation_deactivation(Fz, time_vector, sampling_freq, signal_threshold);
-        clean_forceplate_data.plate(fp_num).grf = offset_data(clean_forceplate_data.plate(fp_num).grf, signal_start_index, signal_end_index); 
-        clean_forceplate_data.plate(fp_num).cop(:, 1:signal_start_index-1) = NaN;
-        clean_forceplate_data.plate(fp_num).cop(:, signal_end_index+1:end) = NaN;
-        % for dim=1:3
-        %     not_nan_idx = ~isnan(clean_forceplate_data.plate(fp_num).cop(dim, :));
-        %     clean_forceplate_data.plate(fp_num).cop(dim, not_nan_idx) = filter_data(clean_forceplate_data.plate(fp_num).cop(dim, not_nan_idx), sampling_freq, filter_order);
-        % end
+    for fp_num=1:clean_forceplate_data.n_forceplates
+        
+            F = clean_forceplate_data.plate(fp_num).grf;
+            [~, ~, signal_start_index, signal_end_index] = get_plate_activation_deactivation(F, time_vector, sampling_freq, signal_threshold);
+            if signal_start_index == 0 || signal_end_index == 0
+                continue
+            end
+            clean_forceplate_data.plate(fp_num).grf = offset_data(clean_forceplate_data.plate(fp_num).grf, signal_start_index, signal_end_index); 
+            clean_forceplate_data.plate(fp_num).cop(:, 1:signal_start_index-1) = NaN;
+            clean_forceplate_data.plate(fp_num).cop(:, signal_end_index+1:end) = NaN;
     end
-    % for marker_num=1:clean_marker_data.n_markers
-    %     squeezed_marker_data = squeeze(clean_marker_data.data(:, marker_num, :));
-    %     not_nan_idx = ~isnan(squeezed_marker_data);
-    %     if sum(not_nan_idx) < 3*filter_order
-    %         continue
-    %     end
-    %     clean_marker_data.data(:, marker_num, not_nan_idx) = filter_data(squeezed_marker_data(not_nan_idx), sampling_freq, filter_order);
-    % end
 end
 

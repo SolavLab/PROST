@@ -280,9 +280,9 @@ for particpant_num=participants
         end % side=dataset_sides_uniform
     else % isempty(tests_processed_orig)
         test_trials = tests_processed_orig;
-        for trial_num=[test_trials{:, 1}]
-            if isempty(test_trials{trial_num, 2})
-                test_trials{trial_num, 2} = 1:dataset_n_steps;
+        for tdx=1:size(test_trials, 1)
+            if isempty(test_trials{tdx, 2})
+                test_trials{tdx, 2} = 1:dataset_n_steps;
             end
         end % trial_num
     end % isempty(tests_processed_orig)
@@ -290,8 +290,15 @@ for particpant_num=participants
     for tdx=1:size(test_trials, 1)
         trial_num = test_trials{tdx, 1};
         step_nums = test_trials{tdx, 2};
+        if trial_num > numel(Dataset.Data.(participant_name).processed_original_data.trial)
+            continue
+        end
         trial = Dataset.Data.(participant_name).processed_original_data.trial(trial_num);
         for step_num=step_nums
+            if ~ismember("step_" + step_num + "_info", (fieldnames(trial)))
+                continue
+            end
+
             % Get step info
             step_info = trial.("step_" + step_num + "_info");
             

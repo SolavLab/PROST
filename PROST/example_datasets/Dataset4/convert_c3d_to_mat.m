@@ -27,8 +27,9 @@ raw_data(138) = struct;
 for p=1:138
     subject_folder = sprintf("SUBJ%02d", p);
     raw_data(p).folder = subject_folder;
-    subject_files = [dir(fullfile(subjects_path, subject_folder, "*.c3d"))];
+    subject_files = [dir(fullfile(subjects_path, subject_folder, "SUBJ* (*).c3d"))];
     subject_file_names = {subject_files.name};
+
     idx = contains(subject_file_names, "(0)");
     [c3d, fp] = ezc3dRead(convertStringsToChars(fullfile(subjects_path, subject_folder, subject_file_names{idx})));
     raw_data(p).standing_trial.filename = convertCharsToStrings(subject_file_names{idx});
