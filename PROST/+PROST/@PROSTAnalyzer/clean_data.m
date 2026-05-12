@@ -16,12 +16,12 @@ function clean_data(obj, ignore_list, opts)
         ignore_list    {mustBeScalarOrEmpty, mustBeAOrEmpty(ignore_list, "PROST.PROSTDatasetList")} = []
         opts.BadSteps  (1, 1) logical = true
     end
-    
+
+    fprintf("Filtering data...\n");
     if ~isempty(ignore_list)
         obj.IgnoreObject.merge_lists(ignore_list);
+        obj.filter_data_by_ignore(ignore_list);
     end
-    fprintf("Filtering data...\n");
-    obj.filter_data_by_ignore();
     if opts.BadSteps
         obj.filter_data_by_bad_steps();
     end

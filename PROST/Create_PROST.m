@@ -43,12 +43,19 @@ Dataset_4_ID = dataset_ids(4);
 
 %% Clean data
 % Some participants have bad data and should be ignored so we add them to an
-% ignored list
+% ignored list (mislabeled markers, faulty measurement etc.)
+% We also filter out steps where the measurement resulted in a long toe-to-heel
+% step in the shank-CS.
 ignore_list = PROST.PROSTDatasetList();
-ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
-ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
-ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");
-ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left");
+ignore_list.add_to_list(Dataset_1_ID, 3, 63, "Left"); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 5, 69, "Left"); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 5, 138, "Right"); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 15, [], "Left"); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 15, [], "Right"); % Mislabeled markers or axes
+% ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
+% ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
+% ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");
+ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left"); % Flat step (large\negative outlier radius)
 PROSTAnalyzer.clean_data(ignore_list);
 
 %% Add to samples table data from datasets

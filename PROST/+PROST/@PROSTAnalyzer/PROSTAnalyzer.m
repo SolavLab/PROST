@@ -79,7 +79,8 @@ classdef PROSTAnalyzer < handle
             summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Age_mean',  'Age_std',   'Height_mean', 'Height_std', 'Mass_mean', 'Mass_std',  'Speed_categories', 'N_participants',  'N_steps',   'N_forceplates',  'Is_shod',     'Has_medial', 'N_participants_included', 'N_steps_included', 'Steps_pp_mean', 'Steps_pp_std'};
             summary_var_units = {'',           '',             '',             '',        '',               '',            '',            'years',     'years',     'm',           'm',          'kg',        'kg',        '',                 '',                '',          '',               '',            '',           '',                        '',                 '',              ''};
             summary_numCols = numel(summary_var_names);
-            
+            obj.IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
+
             if nargin < 2 || isempty(toolbox_root)
                 obj.Toolbox_root = uigetdir([], "Where is the toolbox saved?");
             else

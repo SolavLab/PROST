@@ -4,11 +4,16 @@ classdef PROSTDatasetList < handle
         DatasetID2IndexLookup = configureDictionary("double", "double"); % Lookup dataset_id -> index
     end
     methods
-        function ig = PROSTDatasetList() 
+        function obj = PROSTDatasetList() 
         %PROSTDatasetList default constructor
         end
 
-        function add_to_list(ig, dataset_id, participants, trials, side)
+        function tf = isempty(obj)
+        %PROSTDatasetList isempty overloading
+            tf = isempty(obj.DatasetID2IndexLookup);
+        end
+
+        function add_to_list(obj, dataset_id, participants, trials, side)
         %ADD_TO_LIST adds either a specific dataset, a specific participant
         % or list of participants, or a specific list of trials (of either
         % 'Left' or 'Right' or both) to the list.
@@ -25,25 +30,25 @@ classdef PROSTDatasetList < handle
         %   side - the side of the trials to add. Either 'Left' or 'Right'. If 
         %          missing then adds to both Left and Right.
         % Usage :
-        %   ig.add_to_list(dataset_id, participants, trials, side)
-        %   ig.add_to_list(dataset_id, participants, trials)
-        %   ig.add_to_list(dataset_id, participants, [], side)
-        %   ig.add_to_list(dataset_id, participants)
-        %   ig.add_to_list(dataset_id)
+        %   obj.add_to_list(dataset_id, participants, trials, side)
+        %   obj.add_to_list(dataset_id, participants, trials)
+        %   obj.add_to_list(dataset_id, participants, [], side)
+        %   obj.add_to_list(dataset_id, participants)
+        %   obj.add_to_list(dataset_id)
 
-            if ~ig.is_in_list_dataset(dataset_id)
-                dataset_index = length(ig.List) + 1;
-                ig.DatasetID2IndexLookup(dataset_id) = dataset_index;
-                ig.List(dataset_index).Dataset_id = dataset_id;
-                ig.List(dataset_index).ParticipantID2IndexLookup = configureDictionary("double", "double"); % Lookup dataset_id -> index
-                ig.List(dataset_index).Participants = struct([]);
+            if ~obj.is_in_list_dataset(dataset_id)
+                dataset_index = length(obj.List) + 1;
+                obj.DatasetID2IndexLookup(dataset_id) = dataset_index;
+                obj.List(dataset_index).Dataset_id = dataset_id;
+                obj.List(dataset_index).ParticipantID2IndexLookup = configureDictionary("double", "double"); % Lookup dataset_id -> index
+                obj.List(dataset_index).Participants = struct([]);
             else
-                dataset_index = ig.DatasetID2IndexLookup(dataset_id);
+                dataset_index = obj.DatasetID2IndexLookup(dataset_id);
             end
             
             if nargin == 2 || isempty(participants)
-                ig.List(dataset_index).ParticipantID2IndexLookup(NaN) = 1;
-                ig.List(dataset_index).Participants = struct("Participant_id", NaN, "Left", NaN, "Right", NaN);
+                obj.List(dataset_index).ParticipantID2IndexLookup(NaN) = 1;
+                obj.List(dataset_index).Participants = struct("Participant_id", NaN, "Left", NaN, "Right", NaN);
                 return
             end
             
@@ -62,30 +67,30 @@ classdef PROSTDatasetList < handle
             for pdx=1:n_participants
                 participant_id = participants(pdx);
 
-                if ~ig.is_in_list_participants(dataset_id, participant_id)
-                    participant_index = length(ig.List(dataset_index).Participants) + 1;
-                    ig.List(dataset_index).ParticipantID2IndexLookup(participant_id) = participant_index;
-                    ig.List(dataset_index).Participants(participant_index).Participant_id = participant_id;
-                    ig.List(dataset_index).Participants(participant_index).Left = [];
-                    ig.List(dataset_index).Participants(participant_index).Right = [];
+                if ~obj.is_in_list_participants(dataset_id, participant_id)
+                    participant_index = length(obj.List(dataset_index).Participants) + 1;
+                    obj.List(dataset_index).ParticipantID2IndexLookup(participant_id) = participant_index;
+                    obj.List(dataset_index).Participants(participant_index).Participant_id = participant_id;
+                    obj.List(dataset_index).Participants(participant_index).Left = [];
+                    obj.List(dataset_index).Participants(participant_index).Right = [];
                 else
-                    participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
+                    participant_index = obj.List(dataset_index).ParticipantID2IndexLookup(participant_id);
                 end
 
                 for s=side
                     if nargin == 3 || isempty(trials)
-                         ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
+                         obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
                     else
-                        ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = unique([ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) trials]);
-                        if any(isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))))
-                            ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
+                        obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = unique([obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) trials]);
+                        if any(isnan(obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))))
+                            obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = NaN;
                         end
                     end
                 end
             end
         end
         
-        function delete_from_list(ig, dataset_id, participants, trials, side)
+        function delete_from_list(obj, dataset_id, participants, trials, side)
         %DELETE_FROM_LIST deletes the dataset with ID 'dataset_id' from the 
         % list, or the participant\s with ID 'participants' of that dataset or 
         % 'trials' of 'side' of 'participants' in 'dataset_id'.
@@ -101,30 +106,30 @@ classdef PROSTDatasetList < handle
         %   side - the side of the trials to delete. Either 'Left' or 'Right'. 
         %          If missing then deletes both Left and Right trials.
         % Usage :
-        %   ig.delete_from_list(dataset_id, participants, trials, side)
-        %   ig.delete_from_list(dataset_id, participants, trials)
-        %   ig.delete_from_list(dataset_id, participants, [], side)
-        %   ig.delete_from_list(dataset_id, participants)
-        %   ig.delete_from_list(dataset_id)
+        %   obj.delete_from_list(dataset_id, participants, trials, side)
+        %   obj.delete_from_list(dataset_id, participants, trials)
+        %   obj.delete_from_list(dataset_id, participants, [], side)
+        %   obj.delete_from_list(dataset_id, participants)
+        %   obj.delete_from_list(dataset_id)
         
-            if ~ig.is_in_list_dataset(dataset_id)
+            if ~obj.is_in_list_dataset(dataset_id)
                 return
             end
-            dataset_index = ig.DatasetID2IndexLookup(dataset_id);
+            dataset_index = obj.DatasetID2IndexLookup(dataset_id);
 
             if nargin == 2
-                ig.List(dataset_index) = [];
-                ig.DatasetID2IndexLookup(dataset_id) = [];
-                if numEntries(ig.DatasetID2IndexLookup) > 0
-                    keys = ig.DatasetID2IndexLookup.keys';
-                    values = ig.DatasetID2IndexLookup.values';
+                obj.List(dataset_index) = [];
+                obj.DatasetID2IndexLookup(dataset_id) = [];
+                if numEntries(obj.DatasetID2IndexLookup) > 0
+                    keys = obj.DatasetID2IndexLookup.keys';
+                    values = obj.DatasetID2IndexLookup.values';
                     idx = values > dataset_index;
-                    ig.DatasetID2IndexLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
+                    obj.DatasetID2IndexLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
                 end
                 return
             end
 
-            [tf, all_participants] = ig.is_in_list_participants(dataset_id, participants);
+            [tf, all_participants] = obj.is_in_list_participants(dataset_id, participants);
             if all_participants
                 error("PROSTDatasetList:Participant:DeletionError", ...
                       "Can't delete participants.\n" + ...
@@ -140,14 +145,14 @@ classdef PROSTDatasetList < handle
             if nargin == 3
                 for pdx=1:n_participants
                     participant_id = participants_in_list(pdx);
-                    participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
-                    ig.List(dataset_index).Participants(participant_index) = [];
-                    ig.List(dataset_index).ParticipantID2IndexLookup(participant_id) = [];
-                    if numEntries(ig.List(dataset_index).ParticipantID2IndexLookup) > 0
-                        keys = ig.List(dataset_index).ParticipantID2IndexLookup.keys';
-                        values = ig.List(dataset_index).ParticipantID2IndexLookup.values';
+                    participant_index = obj.List(dataset_index).ParticipantID2IndexLookup(participant_id);
+                    obj.List(dataset_index).Participants(participant_index) = [];
+                    obj.List(dataset_index).ParticipantID2IndexLookup(participant_id) = [];
+                    if numEntries(obj.List(dataset_index).ParticipantID2IndexLookup) > 0
+                        keys = obj.List(dataset_index).ParticipantID2IndexLookup.keys';
+                        values = obj.List(dataset_index).ParticipantID2IndexLookup.values';
                         idx = values > participant_index;
-                        ig.List(dataset_index).ParticipantID2IndexLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
+                        obj.List(dataset_index).ParticipantID2IndexLookup(keys(idx)) = values(idx) - 1; % Update remaining indices in lookup table
                     end
                 end
                 return
@@ -159,25 +164,25 @@ classdef PROSTDatasetList < handle
             
             for pdx=1:n_participants
                 participant_id = participants_in_list(pdx);
-                participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
+                participant_index = obj.List(dataset_index).ParticipantID2IndexLookup(participant_id);
                 for s=side
                     if isempty(trials)
-                        ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = [];
+                        obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s)) = [];
                     else
-                        [tf, all_trials] = ig.is_in_list_trials(dataset_id, participant_id, trials, s);
+                        [tf, all_trials] = obj.is_in_list_trials(dataset_id, participant_id, trials, s);
                         if all_trials
                             error("PROSTDatasetList:Trial:DeletionError", ...
                                   "Can't delete trials.\n" + ...
                                   "All possible trials of side %s of participant %d in dataset %d are in the list.\n" + ...
                                   "Delete entire side and re-add trials manually.", s, participant_id, dataset_id)
                         end
-                        ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))(tf) = [];
+                        obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(s))(tf) = [];
                     end
                 end
             end
         end
 
-        function merge_lists(ig, other_list)
+        function merge_lists(obj, other_list)
         %MERGE_LISTS merges the current list with the other list as a single
         % dataset list in the current object.
         % Input :
@@ -189,23 +194,23 @@ classdef PROSTDatasetList < handle
                       "Instead is of type %s.", class(other_list))
             end
             for d=1:numel(other_list.List)
-              dataset_id = other_list.List(d).Dataset_id;
-              for p=1:numel(other_list.List(d).Participants)
-                  participant_id = other_list.List(d).Participants(p).Participant_id;
-                  for side=["Left" "Right"]
-                      trials = other_list.List(d).Participants(p).(side);
-                      if isnan(trials)
-                          trials = [];
-                      elseif isempty(trials)
-                          continue;
-                      end
-                      ig.add_to_list(dataset_id, participant_id, trials, side);
-                  end
+                dataset_id = other_list.List(d).Dataset_id;
+                for p=1:numel(other_list.List(d).Participants)
+                    participant_id = other_list.List(d).Participants(p).Participant_id;
+                    for side=["Left" "Right"]
+                        trials = other_list.List(d).Participants(p).(side);
+                        if isnan(trials)
+                            trials = [];
+                        elseif isempty(trials)
+                            continue;
+                        end
+                        obj.add_to_list(dataset_id, participant_id, trials, side);
+                    end
                 end
             end
         end
 
-        function tf = is_in_list_dataset(ig, dataset_id)
+        function tf = is_in_list_dataset(obj, dataset_id)
         %IS_IN_LIST_DATASET returns logical 1 (true) if the dataset with ID 
         % 'dataset_id' is in the list. Otherwise, returns logical 0
         % (false).
@@ -216,19 +221,19 @@ classdef PROSTDatasetList < handle
         %   tf - is logical 1 (true) if the dataset is in the list, and
         %        otherwise is logical 0 (false).
         % Usage :
-        %   ig.is_in_list_dataset(dataset_id)
+        %   obj.is_in_list_dataset(dataset_id)
 
             if ~isnumeric(dataset_id) || ~isscalar(dataset_id) || dataset_id <= 0 || dataset_id ~= floor(dataset_id)
                 error("PROSTDatasetList:Dataset:WrongFormat", "Dataset ID should be a positive integer number.")
             end
-            if ~isKey(ig.DatasetID2IndexLookup, dataset_id)
+            if ~isKey(obj.DatasetID2IndexLookup, dataset_id)
                 tf = false;
             else
                 tf = true;
             end
         end
 
-        function [tf, all_flag] = is_in_list_participants(ig, dataset_id, participants)
+        function [tf, all_flag] = is_in_list_participants(obj, dataset_id, participants)
         %IS_IN_LIST_PARTICIPANTS returns an array containing logical 1 (true) 
         % where the participant in 'participants' of the dataset with ID 
         % 'dataset_id' is in the list. Elsewhere, the array contains logical 0 
@@ -247,25 +252,25 @@ classdef PROSTDatasetList < handle
         %              participant in 'dataset_id' is in the list, and logical 
         %              0 (false) otherwise.
         % Usage :
-        %   ig.is_in_list_participants(dataset_id, participants)
+        %   obj.is_in_list_participants(dataset_id, participants)
 
             if ~isnumeric(participants) || ~isvector(participants) || any(participants <= 0) || any(participants ~= floor(participants))
                 error("PROSTDatasetList:Participant:WrongFormat", "'participants' should be a positive integer or vector of positive integers.")
             end
-            if ~ig.is_in_list_dataset(dataset_id)
+            if ~obj.is_in_list_dataset(dataset_id)
                 error("PROSTDatasetList:Dataset:MissingValue", "Dataset %d doesn't exist.", dataset_id)
             end
-            dataset_index = ig.DatasetID2IndexLookup(dataset_id);           
-            if isKey(ig.List(dataset_index).ParticipantID2IndexLookup, NaN)
+            dataset_index = obj.DatasetID2IndexLookup(dataset_id);           
+            if isKey(obj.List(dataset_index).ParticipantID2IndexLookup, NaN)
                 tf = true(size(participants));
                 all_flag = true;
             else
-                tf = isKey(ig.List(dataset_index).ParticipantID2IndexLookup, participants);
+                tf = isKey(obj.List(dataset_index).ParticipantID2IndexLookup, participants);
                 all_flag = false;
             end
         end
 
-        function [tf, all_flag] = is_in_list_trials(ig, dataset_id, participant_id, trials, side)
+        function [tf, all_flag] = is_in_list_trials(obj, dataset_id, participant_id, trials, side)
         %IS_IN_LIST_TRIALS returns an array containing logical 1 (true) where 
         % 'trials' is in the list. Elsewhere, the array contains logical 0 
         % (false). The trials are of 'side' of the participant with ID
@@ -285,7 +290,7 @@ classdef PROSTDatasetList < handle
         %              'side' in 'participant_id' is in the list, and logical 0 
         %             (false) otherwise.
         % Usage :
-        %   ig.is_in_list_participants(dataset_id, participant_id, trials, side)
+        %   obj.is_in_list_participants(dataset_id, participant_id, trials, side)
 
             if ~isnumeric(trials) || ~isvector(trials) || any(trials <= 0) || any(trials ~= floor(trials))
                 error("PROSTDatasetList:Trial:WrongFormat", "'trials' should be a positive integer or vector of positive integers.")
@@ -297,7 +302,7 @@ classdef PROSTDatasetList < handle
                 error("PROSTDatasetList:Participant:WrongFormat", "Participant ID should be a positive integer number.")
             end
             try
-                [tf, participant_all] = ig.is_in_list_participants(dataset_id, participant_id);
+                [tf, participant_all] = obj.is_in_list_participants(dataset_id, participant_id);
             catch ME
                 if contains(ME.identifier, "Participant")
                     ME.message = "Participant ID should be a positive integer number.";
@@ -314,18 +319,18 @@ classdef PROSTDatasetList < handle
                 return
             end
 
-            dataset_index = ig.DatasetID2IndexLookup(dataset_id);
-            participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
-            if any(isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side))))
+            dataset_index = obj.DatasetID2IndexLookup(dataset_id);
+            participant_index = obj.List(dataset_index).ParticipantID2IndexLookup(participant_id);
+            if any(isnan(obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side))))
                 tf = true(size(trials));
                 all_flag = true;
             else
-                tf = ismember(trials, ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side)));
+                tf = ismember(trials, obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side)));
                 all_flag = false;
             end
         end
 
-        function [tf, all_flag] = is_in_list_side(ig, dataset_id, participant_id, side)
+        function [tf, all_flag] = is_in_list_side(obj, dataset_id, participant_id, side)
         %IS_IN_LIST_SIDE returns logical 1 (true) if there are any trials in the 
         % list of side 'side'. Otherwise, returns logical 0 (false). The trial 
         % of 'side' is of the participant with ID 'participant_id' in the 
@@ -343,7 +348,7 @@ classdef PROSTDatasetList < handle
         %              'participant_id' is in the list, and logical 0 (false)
         %              otherwise.
         % Usage :
-        %   ig.is_in_list_participants(dataset_id, participant_id, side)
+        %   obj.is_in_list_participants(dataset_id, participant_id, side)
 
             if ~strcmpi(side, "Left") && ~strcmpi(side, "Right")
                 error("PROSTDatasetList:Side:WrongFormat", "'side' should be either 'Left' or 'Right'.")
@@ -352,7 +357,7 @@ classdef PROSTDatasetList < handle
                 error("PROSTDatasetList:Participant:WrongFormat", "Participant ID should be a positive integer number.")
             end
             try
-                [tf, participant_all] = ig.is_in_list_participants(dataset_id, participant_id);
+                [tf, participant_all] = obj.is_in_list_participants(dataset_id, participant_id);
             catch ME
                 if contains(ME.identifier, "Participant")
                     ME.message = "Participant ID should be a positive integer number.";
@@ -369,14 +374,14 @@ classdef PROSTDatasetList < handle
                 return
             end
 
-            dataset_index = ig.DatasetID2IndexLookup(dataset_id); 
-            participant_index = ig.List(dataset_index).ParticipantID2IndexLookup(participant_id);
-            if isempty(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side)))
+            dataset_index = obj.DatasetID2IndexLookup(dataset_id); 
+            participant_index = obj.List(dataset_index).ParticipantID2IndexLookup(participant_id);
+            if isempty(obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side)))
                 tf = false;
                 all_flag = false;
             else
                 tf = true;
-                all_flag = all(isnan(ig.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side))));
+                all_flag = all(isnan(obj.List(dataset_index).Participants(participant_index).(PROST.utils.capitalize(side))));
             end
         end
     end
