@@ -66,11 +66,10 @@ function fit_to_circular_arc(obj, entry_number)
     % options = optimoptions('lsqnonlin', 'Display', 'off');
     % [params, residual] = lsqnonlin(objective_func, initial_guess,[],[], options);
     options = optimoptions('fminunc', 'Display', 'off');
-    [params, residual] = fminunc(objective_func, initial_guess, options);
-    % obj.PointClouds{entry_number}(:, 3) = residual;
+    [params, fval] = fminunc(objective_func, initial_guess, options);
 
     % Normalize residual by number of data points
-    residual_norm = sqrt(residual / n_points);
+    residual_norm = sqrt(fval / n_points);
 
     % 3) Get ROS parameters: angles, arc length:
     % find ROS start point and end point
