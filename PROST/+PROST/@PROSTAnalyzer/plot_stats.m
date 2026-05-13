@@ -46,11 +46,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 % Output :
 %   fig_data - figure handle for the plot of the histogram and distribution 
 %              estimations.
-%              When figures are saved instead of shown the figure is 
-%              automatically closed.
 %   fig_qq - the figure handle for the QQ-plots (if exist).
-%            When figures are saved instead of shown the figure is automatically
-%            closed.
 %   stats - the results of the statistical analysis including Chi2 stats and
 %           AIC and BIC rankings.
 
@@ -188,7 +184,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             fig_data.WindowStyle = 'normal';
             fig_data.Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.3*screen_size(3) 0.25*screen_size(4)];
         else
-            sgtitle(fig_data, replace(fig_data.Name, "_", " "), FontSize=obj.FONT_SIZE)
+            sgtitle(fig_data, replace(fig_data.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
         colororder(fig_data, "gem12");
     end
@@ -201,7 +197,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             fig_qq.WindowStyle = 'normal';
             fig_qq.Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
         else
-            sgtitle(fig_qq, replace(fig_qq.Name, "_", " "), FontSize=obj.FONT_SIZE)
+            sgtitle(fig_qq, replace(fig_qq.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
         colororder(fig_qq, "gem12");
     end
@@ -213,13 +209,17 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         x = linspace(min(value_i), max(value_i), 1000);
         
         if dataplot_flag % hist_flag || kde_flag || dist_flag
+            % Set axis parameters
             ax_data = nexttile(tl_data);
             ax_data.FontUnits = "points";
             ax_data.FontSize = obj.FONT_SIZE;
-            ax_data.TitleFontWeight = "normal";
-            title(ax_data, category_labels(cat_idx))
+            ax_data.FontName = obj.FONT_NAME;
+            ax_data.TitleFontWeight = obj.FONT_WEIGHT;
+            ax_data.FontWeight = obj.FONT_WEIGHT;
             hold(ax_data, "on");
             grid(ax_data, "on");
+            title(ax_data, category_labels(cat_idx))
+
             if function_type == "icdf"
                 xlabel(ax_data, "probability")
             else
@@ -235,7 +235,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             n_rows = ceil(num_axes / n_cols);
             tl_qq_inner = tiledlayout(tl_qq, n_rows, n_cols, 'Padding', 'tight', 'TileSpacing','tight');
             tl_qq_inner.Layout.Tile = cat_idx;
-            title(tl_qq_inner, category_labels(cat_idx), FontSize=obj.FONT_SIZE)
+            title(tl_qq_inner, category_labels(cat_idx), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
 
         if hist_flag
@@ -256,9 +256,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         txt = join(txt, newline);
         text(ax_data, 0.01, 1, txt, ...
             Units="normalized", ...
-            FontSize=obj.FONT_SIZE, ...
-            FontName="FixedWidth", ...
-            FontWeight=obj.FONT_WEIGHT, ...
+            FontSize=obj.FONT_SIZE_TEXT, ...
+            FontName=obj.FONT_NAME_TEXT, ...
+            FontWeight=obj.FONT_WEIGHT_TEXT, ...
             HorizontalAlignment="left", ...
             VerticalAlignment="top", ...
             BackgroundColor="white");
@@ -295,13 +295,15 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                                      DisplayName=txt);
                 
                     if qqplot_flag
+                        % Set axis parameters
                         ax_qq = nexttile(tl_qq_inner, dist_idx);
                         ax_qq.FontUnits = "points";
                         ax_qq.FontSize = obj.FONT_SIZE;
-                        ax_qq.TitleFontWeight = "normal";
+                        ax_qq.FontName = obj.FONT_NAME;
+                        ax_qq.TitleFontWeight = obj.FONT_WEIGHT;
+                        ax_qq.FontWeight = obj.FONT_WEIGHT;
                         hold(ax_qq, "on");
                         grid(ax_qq, "on");
-
                         if stats_i.fits.(key).type == "toolbox"
                             qqplot(ax_qq, value_i, stats_i.fits.(key).pd)
                         else
@@ -324,10 +326,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     if strcmp(show, 'off')
         figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
         PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, file_type, append);
-        close(fig_data)
         if qqplot_flag
             PROST.PROSTAnalyzer.save_figure(fig_qq, figure_path, file_type, append);
-            close(fig_qq)
         end
         fprintf("All figures saved.\n");
     end

@@ -29,8 +29,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 %                           elements in the range [0-100].
 % Output :
 %   fig - array of figure handles of all the created plots.
-%         When figures are saved instead of shown the figures is automatically
-%         closed.
 %   correlations - the correlation calculation information for each response and
 %                  predictor. Includes Rsquared, Pearson and Spearman
 %                  coefficients for numeric data and Wilcoxon test result for
@@ -184,7 +182,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                     fig(fig_counter).Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
                     
                 else
-                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE)
+                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
                 end
             end
 
@@ -194,6 +192,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             % Set axis parameters
             ax.FontUnits = "points";
             ax.FontSize = obj.FONT_SIZE;
+            ax.FontName = obj.FONT_NAME;
+            ax.TitleFontWeight = obj.FONT_WEIGHT;
+            ax.FontWeight = obj.FONT_WEIGHT;
             hold(ax, "on")
             grid(ax, "on")
             if strcmp(predictor_unit, response_unit)
@@ -204,14 +205,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             % Test Predictor-Response Correlations
             correlation_struct = struct;
             if predictor_numeric % Regression and Spearman rank coefficients
-                % Create linear model
-                % X = [ones(size(x)), x]; % intercept + predictor
-                % b = X \ y; % regression coefficients
-                % y_pred = X * b;
-                % SSres = sum((y - y_pred).^2);
-                % SStot = sum((y - mean(y)).^2);
-                % correlation_struct.Rsquared = 1 - SSres/SStot;
-
                 % Spearman rank coefficient
                 [rho, pvalue] = corr(x, y, "Type", "Spearman", Rows="complete");
                 correlation_struct.Spearman.rho = rho;
@@ -235,22 +228,20 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             correlations.(response_name).(predictor_name) = correlation_struct;
 
             % Plot predictors vs responses for both sides
-            directions = dictionary(["right" "left"], ["positive" "negative"]);
+            % directions = dictionary(["right" "left"], ["positive" "negative"]);
             if predictor_numeric
-                plot_h = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+                h_plot = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+               
                 for i_side=1:n_sides
                     for i_dataset=1:n_dataset_ids
                         i = (i_side - 1).*n_dataset_ids + i_dataset;
                         side = unique_sides{i_side};
                         dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
-                        try
-                        plot_h(i).DisplayName = sprintf('%s %s', dataset_name, side);
-                        catch
-                            disp("!!!")
-                        end
-                        plot_h(i).Color = color{side};
-                        plot_h(i).MarkerFaceColor = color{side};
-                        plot_h(i).MarkerEdgeColor = color{side};
+                        h_plot(i).DisplayName = sprintf('%s %s', dataset_name, side);
+                        h_plot(i).Color = color{side};
+                        h_plot(i).MarkerFaceColor = color{side};
+                        h_plot(i).MarkerEdgeColor = color{side};
+
                     end
                 end
 
@@ -263,17 +254,15 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                     correlations.(response_name).(predictor_name).Rsquared, ...
                     correlations.(response_name).(predictor_name).Spearman.rho, ...
                     correlations.(response_name).(predictor_name).Spearman.pvalue);
-            else
-                
-                plot_h = violinplot(ax, x, y, GroupByColor=sides);
+            else  
+                h_plot = violinplot(ax, x, y, GroupByColor=sides);
                 for i_side=1:n_sides
                     side = unique_sides{i_side};
-                    plot_h(i_side).DisplayName = sprintf('%s', side);
+                    h_plot(i_side).DisplayName = sprintf('%s', side);
                     % plot_h(i_side).DensityDirection = directions(side);
-                    plot_h(i_side).FaceColor = color{side};
-                    plot_h(i_side).EdgeColor = color{side};
+                    h_plot(i_side).FaceColor = color{side};
+                    h_plot(i_side).EdgeColor = color{side};
                 end
-
                 % Wilcoxon \ Mann-Whitney U-test
                 txt = sprintf(" Wilcoxon: h = %d, p-value = %.2g", ...
                     correlations.(response_name).(predictor_name).Wilcoxon.h, ...
@@ -282,9 +271,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
             text(ax, 0.01, 1, txt, ...
                 Units="normalized", ...
-                FontSize=obj.FONT_SIZE, ...
-                FontName="FixedWidth", ...
-                FontWeight=obj.FONT_WEIGHT, ...
+                FontSize=obj.FONT_SIZE_TEXT, ...
+                FontName=obj.FONT_NAME_TEXT, ...
+                FontWeight=obj.FONT_WEIGHT_TEXT, ...
                 HorizontalAlignment="left", ...
                 VerticalAlignment="top", ...
                 BackgroundColor="white");
@@ -301,18 +290,40 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             % Set axis params
             xlim(ax, 'padded');
             ylim(ax, 'padded');
-            legend(ax, Location="northeast");
 
             % Increment counter
             axes_counter = axes_counter + 1;
 
-            % Save figure
+            % Save figure and create legend
             if axes_counter == number_of_axes_in_fig || (predictor_index==n_predictors)
+                % Dummy plots for legend in last axes
+                ax1 = axes(Position=ax.Position, Visible="off");
+                ax1.FontUnits = "points";
+                ax1.FontSize = obj.FONT_SIZE;
+                ax1.FontName = obj.FONT_NAME;
+                ax1.TitleFontWeight = obj.FONT_WEIGHT;
+                ax1.FontWeight = obj.FONT_WEIGHT;
+                hold(ax1, "on")
+                grid(ax1, "on")
+                h_gscatter = gscatter(ax1, nan(1, n_dataset_ids), nan(1, n_dataset_ids), unique_dataset_ids, 'k', obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+                for i_dataset=1:n_dataset_ids
+                     dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
+                     h_gscatter(i_dataset).DisplayName = dataset_name;
+                end
+                h_fill1 =  fill(ax1, nan(1, 4), nan(1, 4), color{"right"}, FaceColor=color{"right"}, FaceAlpha=0.2, EdgeColor=color{"right"}, DisplayName="Right");
+                h_fill2 = fill(ax1, nan(1, 4), nan(1, 4), color{"left"}, FaceColor=color{"left"}, FaceAlpha=0.2, EdgeColor=color{"left"}, DisplayName="Left");
+                h_dummy = [h_gscatter', h_fill1, h_fill2];
+
+                % Legend
+                lgd = legend(ax, h_dummy, Location="layout");
+                lgd.Layout.Tile = "east";
+                ax1.Visible = "off";
+                
+                % Save figures
                 if strcmp(show, 'off')
                     drawnow
                     file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
                     PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
-                    close(fig(fig_counter))
                 end
 
                 % Reset axis counter

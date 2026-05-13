@@ -10,6 +10,7 @@ dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_
 cd(toolbox_root); % Change to folder of current script
 
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+warning('off', 'backtrace')
 
 %% Load Datasets
 db_list = ["Dataset_1", fullfile(dataset_dir, "Dataset_1.mat"); ...

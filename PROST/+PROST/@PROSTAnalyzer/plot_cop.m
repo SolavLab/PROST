@@ -31,8 +31,6 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                              Default: "lateral".
 % Output :
 %   fig - array of figure handles of all the created plots.
-%         When figures are saved instead of shown the figures is automatically
-%         closed.
 
     arguments
         obj 
@@ -84,6 +82,13 @@ function fig = plot_cop(obj, who_to_plot, opts)
         participants = participants(participant_idx);
 
         for participant_id=participants
+            if ~dataset.Data(participant_id).Is_included
+                PROST.PROSTWarning.warn("CoPPlot", "NotIncluded", ...
+                    "Dataset %d (%s) P%d not included in database. skipping.", ...
+                    dataset_id, dataset_name, participant_id)
+                continue
+            end
+            
             % Get steps
             step_numbers_left = 1:length(dataset.Data(participant_id).Uniform_data.left.step);
             step_idx_left = who_to_plot.is_in_list_trials(dataset_id, participant_id, step_numbers_left, "Left");
@@ -94,15 +99,18 @@ function fig = plot_cop(obj, who_to_plot, opts)
 
             step_numbers = [step_numbers_left step_numbers_right];
             step_sides = ["left" + strings(size(step_numbers_left)) "right" + strings(size(step_numbers_right))];
+            
             for s_idx=1:length(step_numbers)
+                % Get step data
                 step_number = step_numbers(s_idx);
                 side = step_sides(s_idx);
                 capitalized_side = PROST.utils.capitalize(side);
+                step = dataset.Data(participant_id).Uniform_data.(side).step(step_number);
 
-                % Get step data
-                trial = dataset.Data(participant_id).Uniform_data.(side).step(step_number);
-
-                if ~trial.Is_included
+                if ~step.Is_included
+                    PROST.PROSTWarning.warn("CoPPlot", "NotIncluded", ...
+                        "Dataset %d (%s) P%d step %d %s not included in database. skipping.", ...
+                        dataset_id, dataset_name, participant_id, step_number, side)
                     continue
                 end
 
@@ -123,7 +131,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                         fig(fig_counter).WindowStyle = 'normal';
                         fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.3*screen_size(3) 0.25*screen_size(4)];
                     else
-                        sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE)
+                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
 
                     end
                 end
@@ -133,17 +141,17 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
                 if strcmp(show, "on")
-                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE)
+                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
                 end
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
 
                 % Get COP and ankle, knee trajectories after temporal alignment
-                cop = trial.COP;
+                cop = step.COP;
                 cop.z = 0.*cop.x;
-                ankle = trial.Markers.Ankle.(anatomical_side);
-                knee = trial.Markers.Knee.(anatomical_side);
+                ankle = step.Markers.Ankle.(anatomical_side);
+                knee = step.Markers.Knee.(anatomical_side);
                 if isempty(ankle) || isempty(knee)
                     throw(PROST.PROSTError("DataRecords", "MissingAnatomicalSide", ...
                         "The dataset %s has no marker trajectories with anatomical side %s.", dataset_name, anatomical_side));
@@ -168,9 +176,12 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % Set axis parameters
                 ax1.FontUnits = "points";
                 ax1.FontSize = obj.FONT_SIZE;
-                ax1.TitleFontWeight = "normal";
+                ax1.FontName = obj.FONT_NAME;
+                ax1.TitleFontWeight = obj.FONT_WEIGHT;
+                ax1.FontWeight = obj.FONT_WEIGHT;
                 hold(ax1, 'on');
                 grid(ax1, "on");
+                % axis(ax1, 'tight');
                 axis(ax1, 'equal');
                 pbaspect(ax1, [1 1 1]);
 
@@ -178,9 +189,9 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 Y = [ankle.z; knee.z];
                 h = gobjects(3, 1);
                 plot(ax1, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=0.5, Color=obj.LINE_COLOR)
-                h(1) = scatter(ax1, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
-                h(2) = scatter(ax1, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
-                h(3) = scatter(ax1, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
+                h(1) = scatter(ax1, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h(2) = scatter(ax1, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h(3) = scatter(ax1, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 title(ax1, "Laboratory CS")
                 xlabel(ax1, "x [mm]")
                 ylabel(ax1, "z [mm]")
@@ -210,19 +221,22 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 ax2 = nexttile(tInner, 2);
                 ax2.FontUnits = "points";
                 ax2.FontSize = obj.FONT_SIZE;
-                ax2.TitleFontWeight = "normal";
+                ax2.FontName = obj.FONT_NAME;
+                ax2.TitleFontWeight = obj.FONT_WEIGHT;
+                ax2.FontWeight = obj.FONT_WEIGHT;
                 hold(ax2, 'on');
                 grid(ax2, "on");
-                axis(ax2, 'equal');
-                pbaspect(ax2, [1 1 1]);
+                % axis(ax2, 'tight');
+                axis(ax2, 'equal');               
+                % pbaspect(ax2, [1 1 1]);
 
                 X = [shank_ankle.u; shank_knee.u];
                 Y = [shank_ankle.w; shank_knee.w];
                 plot(ax2, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=0.5, Color=obj.LINE_COLOR)
                 h = gobjects(3, 1);
-                h(1) = scatter(ax2, shank_ankle.u, shank_ankle.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle');
-                h(2) = scatter(ax2, shank_knee.u, shank_knee.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee');
-                h(3) = scatter(ax2, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP');
+                h(1) = scatter(ax2, shank_ankle.u, shank_ankle.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h(2) = scatter(ax2, shank_knee.u, shank_knee.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h(3) = scatter(ax2, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 title(ax2, "Shank CS")
                 xlabel(ax2, "u [mm]")
                 ylabel(ax2, "w [mm]")
@@ -239,7 +253,6 @@ function fig = plot_cop(obj, who_to_plot, opts)
                         drawnow
                         file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/COP Plots");
                         PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
-                        close(fig(fig_counter))
                     end
                     
                     % Reset axis counter
