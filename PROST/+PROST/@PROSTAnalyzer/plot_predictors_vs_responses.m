@@ -172,17 +172,18 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"])) && append
                     fig_name = "Predictors vs Responses";
                 else
-                    fig_name = "Predictors vs Responses: " + response_name + " Plot " + fig_counter;
+                    fig_name = "Predictors vs Responses: " + y_name + " Plot " + fig_counter;
                 end
                 fig(fig_counter)  = figure(Name=fig_name, Visible=show);
-                tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
+                tl = tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
                 if strcmp(show, "off")
                     screen_size = get(0, 'ScreenSize');
                     fig(fig_counter).WindowStyle = 'normal';
                     fig(fig_counter).Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
                     
                 else
-                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
+                    % sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
+                    title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
                 end
             end
 
@@ -238,9 +239,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                         side = unique_sides{i_side};
                         dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
                         h_plot(i).DisplayName = sprintf('%s %s', dataset_name, side);
-                        h_plot(i).Color = color{side};
-                        h_plot(i).MarkerFaceColor = color{side};
-                        h_plot(i).MarkerEdgeColor = color{side};
+                        h_plot(i).Color = side_color{side};
+                        h_plot(i).MarkerFaceColor = side_color{side};
+                        h_plot(i).MarkerEdgeColor = side_color{side};
 
                     end
                 end
@@ -249,8 +250,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 if correlations.(response_name).(predictor_name).Rsquared > 0.5
                     plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
                 end
-                txt = sprintf(" Rsquared = %.2g\n" + ...
-                    " Spearman: rho = %.2g, p-value = %.2g", ...
+                txt = sprintf(" R^2 = %.2g\n" + ...
+                              " Spearman: \\rho = %.2g, p = %.2g", ...
                     correlations.(response_name).(predictor_name).Rsquared, ...
                     correlations.(response_name).(predictor_name).Spearman.rho, ...
                     correlations.(response_name).(predictor_name).Spearman.pvalue);
@@ -260,11 +261,11 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                     side = unique_sides{i_side};
                     h_plot(i_side).DisplayName = sprintf('%s', side);
                     % plot_h(i_side).DensityDirection = directions(side);
-                    h_plot(i_side).FaceColor = color{side};
-                    h_plot(i_side).EdgeColor = color{side};
+                    h_plot(i_side).FaceColor = side_color{side};
+                    h_plot(i_side).EdgeColor = side_color{side};
                 end
                 % Wilcoxon \ Mann-Whitney U-test
-                txt = sprintf(" Wilcoxon: h = %d, p-value = %.2g", ...
+                txt = sprintf(" Wilcoxon: H = %d, p = %.2g", ...
                     correlations.(response_name).(predictor_name).Wilcoxon.h, ...
                     correlations.(response_name).(predictor_name).Wilcoxon.pvalue);
             end % predictor_numeric
@@ -310,8 +311,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                      dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
                      h_gscatter(i_dataset).DisplayName = dataset_name;
                 end
-                h_fill1 =  fill(ax1, nan(1, 4), nan(1, 4), color{"right"}, FaceColor=color{"right"}, FaceAlpha=0.2, EdgeColor=color{"right"}, DisplayName="Right");
-                h_fill2 = fill(ax1, nan(1, 4), nan(1, 4), color{"left"}, FaceColor=color{"left"}, FaceAlpha=0.2, EdgeColor=color{"left"}, DisplayName="Left");
+                h_fill1 =  fill(ax1, nan(1, 4), nan(1, 4), side_color{"right"}, FaceColor=side_color{"right"}, FaceAlpha=0.2, EdgeColor=side_color{"right"}, DisplayName="Right");
+                h_fill2 = fill(ax1, nan(1, 4), nan(1, 4), side_color{"left"}, FaceColor=side_color{"left"}, FaceAlpha=0.2, EdgeColor=side_color{"left"}, DisplayName="Left");
                 h_dummy = [h_gscatter', h_fill1, h_fill2];
 
                 % Legend

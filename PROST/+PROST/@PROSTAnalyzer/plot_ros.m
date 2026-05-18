@@ -105,6 +105,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 tl = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
                 
                 if strcmp(show, "off")
+
                     screen_size = get(0, 'ScreenSize');
                     fig(fig_counter).WindowStyle = 'normal';
                     fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.45*screen_size(3) 0.375*screen_size(4)];
@@ -131,7 +132,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
             end
 
             % Plot ankle point
-            plot(ax, 0, 0, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineStyle="none");
+            plot(ax, 0, 0, Marker=obj.MARKER_ANKLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineStyle="none", LineWidth=obj.LINE_WIDTH);
             
             % Plot trials of participant
             offset = 0;
@@ -176,13 +177,13 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 % Plot ROS fitted arc and circle
                 plot(ax, arc_points(1, :), arc_points(2, :), LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted arc
                 if strcmp(plot_type, "circle")
-                    plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % fitted circle
-                    plot(ax, center_horizontal, center_vertical, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, LineStyle="none"); % center
+                    plot(ax, circle_points(1, :), circle_points(2, :), LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % circle
+                    plot(ax, center_horizontal, center_vertical, Marker=obj.MARKER_CENTER, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, LineStyle="none", LineWidth=obj.LINE_WIDTH); % center
                     plot(ax, [center_horizontal arc_points(1, 1)], [center_vertical arc_points(2, 1)], LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % start angle line
                     plot(ax, [center_horizontal arc_points(1, end)], [center_vertical arc_points(2, end)], LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{side}, LineWidth=obj.LINE_WIDTH); % end angle line
 
                 elseif strcmp(plot_type, "nadir")
-                    plot(ax, center_horizontal, min(circle_points(2, :)), Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, LineStyle="none"); % ndir
+                    plot(ax, center_horizontal, min(circle_points(2, :)), Marker=obj.MARKER_NADIR, MarkerSize=10, MarkerFaceColor=color_arc{side}, MarkerEdgeColor=color_arc{side}, LineStyle="none", LineWidth=obj.LINE_WIDTH); % ndir
                 else
                     throw(PROST.PROSTError("PlotROS", "WrongPlotType", ...
                         "plot_type should be either 'circle' or 'nadir'."))
@@ -213,23 +214,33 @@ function fig = plot_ros(obj, who_to_plot, opts)
             % Create legend and save figure
             if axes_counter == number_of_axes_in_fig || participant_id == participants(end)
                 % Dummy plots for legend in last axes
-                n_plots = 3 + strcmp(plot_type, "circle");
-                h = gobjects(2*n_plots + 1, 1);
-                h(1) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineStyle="none", DisplayName="ankle");
-                h(2) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"left"}(1, :), obj.MARKER_DOT, DisplayName="left CoP");
-                h(3) = scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"right"}(1, :), obj.MARKER_DOT, DisplayName="right CoP");
-                h(4) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted arc");
-                h(5) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted arc");
+                h = gobjects(0);
+                h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_ANKLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Ankle")]; % dummy ankle
+                % h = [h scatter(ax, NaN, NaN, obj.MARKER_SIZE_SCATTER, "black", obj.MARKER_DOT, DisplayName="CoP")]; % dummy CoP
+                % h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color="black", LineWidth=obj.LINE_WIDTH, DisplayName="Arc")]; % dummy arc
+                
+                h = [h scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"left"}(1, :), obj.MARKER_DOT, DisplayName="CoP_L")]; % dummy left CoP
+                h = [h scatter(ax, NaN, NaN, obj.MARKER_SIZE, color_scatter{"right"}(1, :), obj.MARKER_DOT, DisplayName="CoP_R")]; % dummy right CoP
+                h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="Arc_L")]; % dummy left arc
+                h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_SOLID, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="Arc_R")];  % dummy right arc
                 
                 if strcmp(plot_type, "circle")
-                    h(6) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="left fitted circle");
-                    h(7) = plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="right fitted circle");
-                    h(8) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, DisplayName="right center", LineStyle="none");
-                    h(9) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, DisplayName="left center", LineStyle="none");
+                    % h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color="black", LineWidth=obj.LINE_WIDTH, DisplayName="Circle")]; % dummy circle
+                    % h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_CENTER, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Center")]; % dummy center
+
+                    h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, DisplayName="Circle_L")]; % dummy left circle
+                    h = [h plot(ax, NaN, NaN, LineStyle=obj.LINE_STYLE_DASHED, Color=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, DisplayName="Circle_R")]; % dummy right circle
+                    h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_CENTER, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Center_L")]; % dummy left center
+                    h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_CENTER, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Center_R")]; % dummy right center
                 else
-                    h(6) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, DisplayName="right nadir", LineStyle="none");
-                    h(7) = plot(ax, NaN, NaN, Marker=obj.MARKER_CIRCLE, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, DisplayName="left nadir", LineStyle="none");
+                    % h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_NADIR, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Nadir")]; % dummy nadir
+                    
+                    h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_NADIR, MarkerSize=10, MarkerFaceColor=color_arc{"right"}, MarkerEdgeColor=color_arc{"right"}, LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Nadir_L")]; % dummy left nadir
+                    h = [h plot(ax, NaN, NaN, Marker=obj.MARKER_NADIR, MarkerSize=10, MarkerFaceColor=color_arc{"left"}, MarkerEdgeColor=color_arc{"left"}, LineWidth=obj.LINE_WIDTH, LineStyle="none", DisplayName="Nadir_R")]; % dummy right nadir
                 end
+
+                % h =  [h fill(ax, nan(1, 4), nan(1, 4), color_arc{"right"}, FaceColor=color_arc{"right"}, FaceAlpha=0.2, EdgeColor=color_arc{"right"}, DisplayName="Right")];
+                % h = [h fill(ax, nan(1, 4), nan(1, 4), color_arc{"left"}, FaceColor=color_arc{"left"}, FaceAlpha=0.2, EdgeColor=color_arc{"left"}, DisplayName="Left")];
                 
                 % Legend
                 lgd = legend(h, Location="layout");

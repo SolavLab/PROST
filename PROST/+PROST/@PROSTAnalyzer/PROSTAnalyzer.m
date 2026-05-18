@@ -16,8 +16,8 @@ classdef PROSTAnalyzer < handle
         % Some constants for graphics so everything looks uniform
         COLOR_RIGHT_BRIGHT = [0 0.9 0]; % greenish bright
         COLOR_LEFT_BRIGHT = [0.9 0 0]; % reddish bright
-        COLOR_RIGHT_DARK = [0 0.5 0.4]; % greenish dark
-        COLOR_LEFT_DARK = [0.5, 0.0, 0.4]; % reddish dark
+        COLOR_RIGHT_DARK = [0 0.5 0.0]; % greenish dark
+        COLOR_LEFT_DARK = [0.5, 0.0, 0.0]; % reddish dark
         COLORMAP_RIGHT = "summer";
         COLORMAP_LEFT = "autumn";
         COLOR_DEFAULT_BLUE = [0 0.4470 0.7410];
@@ -27,10 +27,13 @@ classdef PROSTAnalyzer < handle
         COLOR_DEFAULT_GREEN = [0.4660 0.6740 0.1880];
         COLOR_DEFAULT_LIGHTBLUE = [0.3010 0.7450 0.9330];
         COLOR_DEFAULT_RED = [0.6350 0.0780 0.1840];
-        MARKER_CIRCLE = 'o';
+        MARKER_CENTER = 's';
+        MARKER_NADIR = 's';
+        MARKER_ANKLE = '+';
         MARKER_DOT = '.';
-        MARKER_SQUARE = 'square';
-        MARKER_UP = '^';
+        MARKER_SQUARE = 's';
+        MARKER_TRIANGLE_UP = '^';
+        MARKER_CIRCLE = 'o';
         MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 5;
         MARKER_SIZE_SCATTER = 50;
@@ -42,7 +45,7 @@ classdef PROSTAnalyzer < handle
         LINE_STYLE_DASHED_DOTTED = "-.";
         LINE_STYLES = ["-" "--" ":" "-."];
         LINE_COLOR = "black";
-        FONT_SIZE = 20;
+        FONT_SIZE = 14;
         FONT_SIZE_TEXT = 14;
         FONT_WEIGHT = "normal";
         FONT_WEIGHT_TEXT = "bold";
