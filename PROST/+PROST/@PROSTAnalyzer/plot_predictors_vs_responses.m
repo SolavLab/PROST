@@ -23,7 +23,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 %                          "outlier" to filter outlier points, "winsor" for 
 %                          Winsorizing the data or "none".
 %                          Default: "none".
-%       filt_opts.options - a struct containing filter-dependent options. 
+%       filt_opts.filter_options - a struct containing filter-dependent options. 
 %                           When filtering outliers, these are the options for 
 %                           the isoutlier function. The Name-Value pairs for the 
 %                           function need to be defined under the field 
@@ -50,7 +50,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         opts.width_pt              (1, 1) double = 480
         opts.height_pt             (1, 1) double = 622
         filt_opts.filter           {mustBeMember(filt_opts.filter, ["winsor" "outlier" "none"])} = "none"
-        filt_opts.options =        []
+        filt_opts.filter_options   struct = []
     end
 
     % Prep Input Arguments
@@ -81,14 +81,12 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     sides = table2array(obj.get_sample_var("Side"));
     unique_sides = categories(sides);
     n_sides = numel(unique_sides);
+    side_color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT}); % Define colors for sides
 
     % Get Dataset IDs
     dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
     unique_dataset_ids = unique(dataset_ids)';
     n_dataset_ids = numel(unique_dataset_ids);
-
-    % Define colors for sides
-    color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT});
 
     % Start plotting
     axes_counter = 0;
@@ -124,36 +122,40 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 % ignore filter_opts entirely
             case "winsor"
                 % validate Winsor-specific options
-                f = filt_opts.options;
-                if ~isfield(f, "p")
+                f_opts = filt_opts.filter_options;
+                if ~isfield(f_opts, "p")
                     PROST.PROSTError("Winsor", "WrongFilterOptions", "winsor requires 'p' field in filter_opts")
                 end
-                y = PROST.utils.winsorize(y, f.p);
+                y = PROST.utils.winsorize(y, f_opts.p);
             case "outlier"
-                f = filt_opts.options;
+                f_opts = filt_opts.filter_options;
 
-                % Convert name-values
-                name_value = {};
-                if isfield(f, "NameValues")
-                    name_value= namedargs2cell(f.NameValues);
-                end
-
-                % validate fields relevant to isoutlier
-                if isfield(f, "movmethod") && strlength(f.movmethod) > 0 % Moving method
-                    mustBeMember("window", fields(f));
-                    mustBeNonempty(f.window);
-                    mask = isoutlier(y, f.movmethod, f.window, name_value{:});
-                elseif isfield(f, "method") && strlength(f.method) > 0 % Outlier method
-                    switch f.method
-                        case "percentiles"
-                            mustBeMember("threshold", fields(f));
-                            mustBeNonempty(f.threshold);
-                            mask = isoutlier(y, "percentiles", f.threshold, name_value{:});
-                        otherwise
-                            mask = isoutlier(x, f.method, name_value{:});
-                    end
+                if isempty(f_opts)
+                    mask = isoutlier(y);
                 else
-                    PROST.PROSTError("Outlier", "WrongFilterOptions", "Invalid outlier configuration");
+                    % Convert name-values
+                    name_value = {};
+                    if isfield(f_opts, "NameValues")
+                        name_value= namedargs2cell(f_opts.NameValues);
+                    end
+    
+                    % validate fields relevant to isoutlier
+                    if isfield(f_opts, "movmethod") && strlength(f_opts.movmethod) > 0 % Moving method
+                        mustBeMember("window", fields(f_opts));
+                        mustBeNonempty(f_opts.window);
+                        mask = isoutlier(y, f_opts.movmethod, f_opts.window, name_value{:});
+                    elseif isfield(f_opts, "method") && strlength(f_opts.method) > 0 % Outlier method
+                        switch f_opts.method
+                            case "percentiles"
+                                mustBeMember("threshold", fields(f_opts));
+                                mustBeNonempty(f_opts.threshold);
+                                mask = isoutlier(y, "percentiles", f_opts.threshold, name_value{:});
+                            otherwise
+                                mask = isoutlier(x, f_opts.method, name_value{:});
+                        end
+                    else
+                        throw(PROST.PROSTError("PlotPredictorsVsResponses", "WrongFilterOptions", "Invalid outlier configuration"));
+                    end
                 end
                 y(mask) = NaN;
         end
@@ -169,6 +171,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             x = predictor;
             x_name = replace(predictor_name, "_", " ");
             x_unit = replace(predictor_unit, "_", " ");
+            % if (x_unit == "m" || x_unit == "mm") && (y_unit == "m" || y_unit == "mm")
+            %     x = PROST.utils.convert_units(x, x_unit, y_unit);
+            %     x_unit = y_unit;
+            % end
             if ~predictor_numeric
                 x = categorical(x);
                 x_cateogries = categories(x);
