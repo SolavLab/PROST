@@ -14,6 +14,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 %                     Logical 0 (false) otherwise.
 %                     Appending only works for "pdf" and "gif" file types.
 %                     Default: false.
+%       opts.width_pt - figure and paper width when saving in points.
+%                       Default: 480pt.
+%       opts.height_pt - figure and paper height when saving in points.
+%                        Default: 622pt.
 %   filt_opts - options for filtering the response data
 %       filt_opts.filter - which filter to use for the response data. Either
 %                          "outlier" to filter outlier points, "winsor" for 
@@ -43,6 +47,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append                (1, 1) logical = false
+        opts.width_pt              (1, 1) double = 480
+        opts.height_pt             (1, 1) double = 622
         filt_opts.filter           {mustBeMember(filt_opts.filter, ["winsor" "outlier" "none"])} = "none"
         filt_opts.options =        []
     end
@@ -58,6 +64,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     norm_var_name = opts.norm_var_name;
     append = opts.append;
     filter = filt_opts.filter;
+    width_pt = opts.width_pt;
+    height_pt = opts.height_pt;
 
     % Prep Output Arguments
     fig = gobjects(0);
@@ -179,10 +187,12 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 if strcmp(show, "off")
                     screen_size = get(0, 'ScreenSize');
                     fig(fig_counter).WindowStyle = 'normal';
-                    fig(fig_counter).Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
-                    
+                    fig(fig_counter).Units="points";
+                    fig(fig_counter).Position = [0 0 width_pt height_pt];
+                    fig(fig_counter).PaperUnits="points";
+                    fig(fig_counter).PaperSize = [width_pt height_pt];
+                    fig(fig_counter).PaperPosition = [0 0 width_pt height_pt];                 
                 else
-                    % sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
                     title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
                 end
             end

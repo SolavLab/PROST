@@ -41,6 +41,10 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %                     Logical 0 (false) otherwise.
 %                     Appending only works for "pdf" and "gif" file types.
 %                     Default: false.
+%       opts.width_pt - figure and paper width when saving in points.
+%                       Default: 480pt.
+%       opts.height_pt - figure and paper height when saving in points.
+%                        Default: 622pt.
 %   hist_opts - histogram parameters as Name-Value pairs. Equivalent to options
 %               in the Matlab histogram function.
 % Output :
@@ -61,6 +65,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         opts.file_type          {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append             (1, 1) logical = false
         opts.qq_plot            (1, 1) logical = false
+        opts.width_pt           (1, 1) double = 480
+        opts.height_pt          (1, 1) double = 622
         hist_opts.?matlab.graphics.chart.primitive.Histogram
         hist_opts.DisplayName   {mustBeTextScalar} = "Histogram"
     end
@@ -71,6 +77,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     file_type = opts.file_type;
     append = opts.append;
     qq_plot = opts.qq_plot;
+    width_pt = opts.width_pt;
+    height_pt = opts.height_pt;
 
     % Normalize distribution names
     if ~isempty(distnames)
@@ -180,9 +188,13 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         fig_data = figure(Name="Statistics: " + value_name + " Distribution Estimation", Visible=show);
         tl_data = tiledlayout(TileSpacing="compact", Padding="compact");
         if strcmp(show, "off")
-            screen_size = get(0, 'ScreenSize');
             fig_data.WindowStyle = 'normal';
-            fig_data.Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.3*screen_size(3) 0.25*screen_size(4)];
+            fig_data.Units="points";
+            fig_data.Position = [0 0 width_pt height_pt];
+            fig_data.PaperUnits="points";
+            fig_data.PaperSize = [width_pt height_pt];
+            fig_data.PaperPosition = [0 0 width_pt height_pt];
+
         else
             sgtitle(fig_data, replace(fig_data.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
@@ -193,9 +205,12 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         fig_qq = figure(Name="Statistics: " + value_name + " QQ Plot", Visible=show);
         tl_qq = tiledlayout(TileSpacing="compact", Padding="compact");
         if strcmp(show, "off")
-            screen_size = get(0, 'ScreenSize');
             fig_qq.WindowStyle = 'normal';
-            fig_qq.Position = [1 1 0.6*screen_size(3) 0.5*screen_size(4)];
+            fig_qq.Units="points";
+            fig_qq.Position = [0 0 width_pt height_pt];
+            fig_qq.PaperUnits="points";
+            fig_qq.PaperSize = [width_pt height_pt];
+            fig_qq.PaperPosition = [0 0 width_pt height_pt];
         else
             sgtitle(fig_qq, replace(fig_qq.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end

@@ -40,6 +40,8 @@ function fig = plot_cop(obj, who_to_plot, opts)
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append                (1, 1) logical = false
         opts.anatomical_side       {mustBeTextScalar, mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
+        opts.width_pt              (1, 1) double = 480
+        opts.height_pt             (1, 1) double = 622
     end
 
     % Prep Input Arguments
@@ -48,6 +50,9 @@ function fig = plot_cop(obj, who_to_plot, opts)
     file_type = opts.file_type;
     append = opts.append;
     anatomical_side = opts.anatomical_side;
+    width_pt = opts.width_pt;
+    height_pt = opts.height_pt;
+
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
@@ -127,9 +132,12 @@ function fig = plot_cop(obj, who_to_plot, opts)
                     n_rows = ceil(number_of_axes_in_fig / n_cols);
                     tOuter = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
                     if strcmp(show, "off")
-                        screen_size = get(0, 'ScreenSize');
                         fig(fig_counter).WindowStyle = 'normal';
-                        fig(fig_counter).Position = [0.1*screen_size(3) 0.1*screen_size(4) 0.3*screen_size(3) 0.25*screen_size(4)];
+                        fig(fig_counter).Units="points";
+                        fig(fig_counter).Position = [0 0 width_pt height_pt];
+                        fig(fig_counter).PaperUnits="points";
+                        fig(fig_counter).PaperSize = [width_pt height_pt];
+                        fig(fig_counter).PaperPosition = [0 0 width_pt height_pt];
                     else
                     sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
 
