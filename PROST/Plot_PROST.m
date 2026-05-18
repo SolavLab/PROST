@@ -37,11 +37,11 @@ who_to_plot.add_to_list(Dataset_2_ID, 7);
 PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="pdf");
 PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="jpeg");
 
-%% Analyze Residuals
-[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", show="off", file_type="pdf");
-PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", show="off", file_type="jpeg");
-% Residual analysis results
-% disp("-------- Residuals Statistical Analysis --------")
+%% Analyze Residual RMS
+[~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual_rms", [], [], ["normal"], function_type="pdf", show="off", file_type="pdf");
+
+% Residual RMS analysis results
+% disp("-------- Residual RMS Statistical Analysis --------")
 % for i=1:numel(stats_res)
 %     stats_i = stats_res(i);
 %     summary = stats_i.summary;
@@ -64,8 +64,8 @@ PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", sh
 % end
 % 
 % % Sanity Check
-% residuals = table2array(PROSTAnalyzer.get_samples("Residual"));
-% z = (residuals - mean(residuals)) / std(residuals);
+% residual_rms = table2array(PROSTAnalyzer.get_samples("Residual_rms"));
+% z = (residual_rms - mean(residual_rms)) / std(residual_rms);
 % [h, p] = kstest(z);
 % s = "Kolmogorov–Smirnov (KS) test: pvalue = " + p;
 % if h
@@ -75,7 +75,7 @@ PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", sh
 % end
 % disp(s)
 % 
-% [h, p] = lillietest(residuals);
+% [h, p] = lillietest(residual_rms);
 % s = "Lilliefors test: pvalue = " + p;
 % if h
 %     s = s + " Not normal!";
@@ -84,7 +84,7 @@ PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", sh
 % end
 % disp(s)
 % 
-% [h, p, ~] = adtest(residuals);
+% [h, p, ~] = adtest(residual_rms);
 % s = "Anderson–Darling test: pvalue = " + p;
 % if h
 %     s = s + " Not normal!";
@@ -93,9 +93,9 @@ PROSTAnalyzer.plot_stats("Residual", [], [], ["normal"], function_type="pdf", sh
 % end
 % disp(s)
 
-%% Analyze Residuals per Dataset
-% [~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual", [], "Dataset_id", ["normal" "kernel" "tlocationscale"], function_type="pdf", qq_plot=true);
-% disp("-------- Residuals Statistical Analysis --------")
+%% Analyze Residual RMS per Dataset
+% [~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual_rms", [], "Dataset_id", ["normal" "kernel" "tlocationscale"], function_type="pdf", qq_plot=true);
+% disp("-------- Residual RMS Statistical Analysis --------")
 % for i=1:numel(stats_res)
 %     stats_i = stats_res(i);
 %     summary = stats_i.summary;

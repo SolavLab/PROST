@@ -69,7 +69,7 @@ function fit_to_circular_arc(obj, entry_number)
     [params, fval] = fminunc(objective_func, initial_guess, options);
 
     % Normalize residual by number of data points
-    residual_norm = sqrt(fval / n_points);
+    residual_rms = sqrt(fval / n_points);
 
     % 3) Get ROS parameters: angles, arc length:
     % find ROS start point and end point
@@ -103,5 +103,5 @@ function fit_to_circular_arc(obj, entry_number)
     obj.SamplesTable.Ang_start(entry_number) = ang_start;
     obj.SamplesTable.Ang_end(entry_number) = ang_end;
     obj.SamplesTable.Arc_length(entry_number) = arc_length;
-    obj.SamplesTable.Residual(entry_number) = residual_norm;
+    obj.SamplesTable.Residual_rms(entry_number) = residual_rms;
 end

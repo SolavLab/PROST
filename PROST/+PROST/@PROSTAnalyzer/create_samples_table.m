@@ -4,7 +4,7 @@ function create_samples_table(obj)
     
     % Samples Table Initialization
     samples_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan',         'doublenan',        'doublenan', 'doublenan', 'doublenan',  'doublenan'};
-    samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Sex',         'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_horizontal', 'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual' };
+    samples_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Sex',         'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_horizontal', 'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual_rms' };
     samples_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Yes/No',      'mm',        'mm',                'mm',               'deg',       'deg',       'deg',        'mm'       };
     samples_var_descriptions = {'',           '',               '',            '',                    'predictor', 'predictor',   'predictor', 'predictor', 'predictor',  'predictor',    'predictor',    'predictor',   'response',  'response',          'response',         'response',  'response',  'response',   ''         };
     samples_numCols = numel(samples_var_names);

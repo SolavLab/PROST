@@ -151,7 +151,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
 
                 % Get arc parameters
                 [radius, center_horizontal, center_vertical, ang_start, ang_end, residual] = ...
-                    deal(sample.Radius, sample.Center_horizontal, sample.Center_vertical, sample.Ang_start, sample.Ang_end, sample.Residual);
+                    deal(sample.Radius, sample.Center_horizontal, sample.Center_vertical, sample.Ang_start, sample.Ang_end, sample.Residual_rms);
                 
                 % Get side
                 side = sample.Side;
@@ -189,7 +189,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 end
 
                 % Print Text on axis
-                txt = sprintf(" C: (%.2f, %.2f), R: %.2f [mm],\n residual mean: %.2f [mm]", center_horizontal, center_vertical, radius, residual);
+                txt = sprintf(" C: (%.2f, %.2f), R: %.2f [mm],\n residual RMS: %.2f [mm]", center_horizontal, center_vertical, radius, residual);
                 txt_handle = text(ax, ...
                                   0.01, 1 - offset, txt, ...
                                   Units="normalized", ...
