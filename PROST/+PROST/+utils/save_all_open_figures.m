@@ -65,13 +65,29 @@ function save_all_open_figures(figures_path, sub_folders, file_type, append)
         end
 
         % Create a valid filename (replace spaces etc.)
-        clean_name = matlab.lang.makeValidName(f.Name);
-        if isempty(clean_name)
-            clean_name = sprintf('Figure%d', f.Number);
+        base_name = matlab.lang.makeValidName(f.Name);
+        if isempty(base_name)
+            base_name = sprintf('Figure%d', f.Number);
         end
 
         % Full file path
-        file_path = fullfile(output_folder, clean_name + "." + file_type);
+        file_path = fullfile(output_folder, base_name + "." + file_type);
+        if ~append && isfile(file_name)
+            letters = ['a':'z'];
+            for j = 1:numel(letters)
+                candidate_name = sprintf('%s_%s.%s', base_name, letters(j), file_type);
+                candidate_path = fullfile(file_path, candidate_name);
+                if ~isfile(candidate_path)
+                    file_name = candidate_path;
+                    break
+                end
+            end
+
+            % Safeguard
+            if isfile(file_name)
+                error('No available filename suffix remaining.')
+            end
+        end
 
         % Save based on file type
         if strcmpi(file_type, "fig")

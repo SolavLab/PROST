@@ -29,13 +29,31 @@ function save_figure(f, file_path, file_type, append)
     end
 
     % Create a valid filename (replace spaces etc.)
-    clean_name = matlab.lang.makeValidName(f.Name);
-    if isempty(clean_name)
-        clean_name = sprintf('Figure%d', f.Number);
+    base_name = matlab.lang.makeValidName(f.Name);
+    if isempty(base_name)
+        base_name = sprintf('Figure%d', f.Number);
     end
 
     % Full file path
-    file_name = fullfile(file_path, clean_name + "." + file_type);
+    file_name = fullfile(file_path, base_name + "." + file_type);
+
+    % If file exists and not appending, create incremented suffix
+    if ~append && isfile(file_name)
+        letters = ['a':'z'];
+        for k = 1:numel(letters)
+            candidate_name = sprintf('%s_%s.%s', base_name, letters(k), file_type);
+            candidate_path = fullfile(file_path, candidate_name);
+            if ~isfile(candidate_path)
+                file_name = candidate_path;
+                break
+            end
+        end
+
+        % Safeguard
+        if isfile(file_name)
+            error('No available filename suffix remaining.')
+        end
+    end
 
     % Save based on file type
     if strcmpi(file_type, "fig")
@@ -47,9 +65,9 @@ function save_figure(f, file_path, file_type, append)
                 ex_opts = [ex_opts, 'ContentType', 'vector', 'Append', append];
             case "gif"
                 ex_opts = [ex_opts, 'Append', append];
-            case {"emf" "esp"}
+            case {"emf" "eps"}
                 ex_opts = [ex_opts, 'ContentType', 'vector'];
         end
-    end
-    exportgraphics(f, file_name, ex_opts{:});
+        exportgraphics(f, file_name, ex_opts{:});
+    end 
 end
