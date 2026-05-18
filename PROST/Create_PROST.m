@@ -53,6 +53,7 @@ ignore_list.add_to_list(Dataset_1_ID, 5, 69, "Left"); % Mislabeled markers or ax
 ignore_list.add_to_list(Dataset_1_ID, 5, 138, "Right"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 15, [], "Left"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 15, [], "Right"); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 14); % something weird is going on with this participant
 % ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
 % ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
 % ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");

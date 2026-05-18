@@ -35,7 +35,6 @@ Dataset_4_ID = dataset_ids(matches(dataset_names, "Dataset 4"));
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 7);
 PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="pdf");
-PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle", show="off", file_type="jpeg");
 
 %% Analyze Residual RMS
 [~, ~, stats_res] = PROSTAnalyzer.plot_stats("Residual_rms", [], [], ["normal"], function_type="pdf", show="off", file_type="pdf");
@@ -138,7 +137,6 @@ PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle",
 % PROSTAnalyzer.plot_stats("Radius", [], [], ["lognormal" "t Location Scale"], function_type="pdf", BinMethod='fd');
 % PROSTAnalyzer.plot_stats("Center_horizontal", [], [], ["tlocationscale"], function_type="pdf", show="on", BinMethod='fd');
 
-
 % PROSTAnalyzer.plot_stats("Radius", "Height", [], [], function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 % PROSTAnalyzer.plot_stats("Radius", [], [], [], function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
 % PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], [], function_type="pdf", show="on", file_type="pdf", BinMethod="fd");
@@ -149,8 +147,8 @@ PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="circle",
 [f_x, ~, stats_horizontal] = PROSTAnalyzer.plot_stats("Center_horizontal", "Height", [], "tLocationScale", function_type="pdf", show="off", file_type="pdf", BinMethod="fd");
 
 % Sanity Check
-radius = table2array(PROSTAnalyzer.get_samples("Radius"));
-center_h = table2array(PROSTAnalyzer.get_samples("Center_horizontal"));
+% radius = table2array(PROSTAnalyzer.get_samples("Radius"));
+% center_h = table2array(PROSTAnalyzer.get_samples("Center_horizontal"));
 
 % disp("-------- Parameters Statistical Analysis --------")
 % disp("Radius:")
@@ -190,26 +188,31 @@ center_h = table2array(PROSTAnalyzer.get_samples("Center_horizontal"));
 %     s = s + " Normal!";
 % end
 % disp(s)
-
-
-%%
-disp("Radius:")
-fprintf(PROST.utils.pretty_print(stats_r))
-disp("Center Horizontal:")
-fprintf(PROST.utils.pretty_print(stats_horizontal))
+% disp("Radius:")
+% fprintf(PROST.utils.pretty_print(stats_r))
+% disp("Center Horizontal:")
+% fprintf(PROST.utils.pretty_print(stats_horizontal))
 
 %% Plot Predictors vs Responses
-[f, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="on", file_type="pdf");
-[f_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], norm_var_name="Height", show="on", file_type="pdf");
-% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="off", file_type="jpeg");
-% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], norm_var_name="Height", show="off", file_type="jpeg");
+winsor_options.p = [5 95];
+outlier_options.method = "percentiles";
+outlier_options.threshold = [5 95];
+[f, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], show="on", file_type="pdf");
+[f, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], show="on", file_type="pdf", filter="outlier", filter_options=outlier_options);
+[f, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], show="on", file_type="pdf", filter="winsor", filter_options=winsor_options);
+
+[f_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf");
+[f_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf", filter="outlier", filter_options=outlier_options);
+[f_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf", filter="winsor", filter_options=winsor_options);
+
+% [f, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="off", file_type="pdf");
+% [f_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], norm_var_name="Height", show="off", file_type="pdf");
 
 %% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();
 who_to_plot.add_to_list(Dataset_2_ID, 7, 14, "Left");
-PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=4, show="on", file_type="pdf");
-% PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig=1, show="off", file_type="jpeg");
+PROSTAnalyzer.plot_cop(who_to_plot, number_of_axes_in_fig= 1, show="off", file_type="pdf");
 
 %% Save figures
-PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "jpg")
-close all
+% PROST.utils.save_all_open_figures(fullfile(toolbox_root, "figures/ROS Analysis"), [], "jpg")
+% close all
