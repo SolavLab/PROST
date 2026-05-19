@@ -7,26 +7,28 @@ function fig = plot_ros(obj, who_to_plot, opts)
 %                 participants to plot for each side. 
 %                 Default: all participants and all datasets are plotted for
 %                 both left and right sides.
-%   opts - Name-Value pairs of options for plotting.
-%       opts.number_of_axes_in_fig - number of axes per figure to plot. 
+%   Name-Value pair options:
+%   number_of_axes_in_fig - number of axes per figure to plot. 
 %                                    Default: 6.
-%       opts.plot_type - either "nadir" for plotting the nadir point of the 
+%   plot_type - either "nadir" for plotting the nadir point of the 
 %                        circle matching the ROS arc, "circle" for the circle 
 %                        center point and the circle itself.
 %                        Default: "circle".
-%       opts.show - whether to show the figures or save them. Either "on" for 
-%                   showing the figures or "off" for saving them. 
-%                   Default: "on".
-%       opts.file_type - the type to save the figure if saved. 
-%                        Default: fig.
-%       opts.append - Logical 1 (true) to append this figure to "COP Plots".
-%                     Logical 0 (false) otherwise.
-%                     Appending only works for "pdf" and "gif" file types.
-%                     Default: false.
-%       opts.width_pt - figure and paper width when saving in points.
-%                       Default: 480pt.
-%       opts.height_pt - figure and paper height when saving in points.
-%                        Default: 622pt.
+%   show - a value denoting whether to show the figures or save them. Specified 
+%          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
+%          value of 'on' is equivalent to true, and 'off' is equivalent to false.
+%               - 'on' - show the figure.
+%               - 'off' - save the figure.
+%          Default: "on".
+%   file_type - the type to save the figure if saved. 
+%               Default: 'fig'.
+%   append - if show = 'off', whether to append this figure to an existing file
+%            with the same name in the file path. Specified as 'on' or 'off', or 
+%            as numeric or logical 1 (true) or 0 (false). A value of 'on' is 
+%            equivalent to true, and 'off' is equivalent to false. 
+%               - 'on' - append the figure.
+%               - 'off' - save the figure in a new file.
+%            Default: false.
 % Output :
 %   fig - array of figure handles of all the created plots.
 
@@ -35,21 +37,17 @@ function fig = plot_ros(obj, who_to_plot, opts)
         who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
         opts.plot_type             {mustBeTextScalar, mustBeMember(opts.plot_type, ["circle" "nadir"])} = "circle"
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
-        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append                (1, 1) logical = false
-        opts.width_pt              (1, 1) double = 480
-        opts.height_pt             (1, 1) double = 622
+        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
     end
 
     % Prep Input Arguments
     number_of_axes_in_fig = opts.number_of_axes_in_fig;
+    plot_type = opts.plot_type;
     show = opts.show;
     file_type = opts.file_type;
-    plot_type = opts.plot_type;
     append = opts.append;
-    width_pt = opts.width_pt;
-    height_pt = opts.height_pt;
     
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
@@ -70,11 +68,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
 
     % Start plotting
     fig_counter = 0;
-    if strcmp(show, 'off')
-        fprintf("Saving ROS...\n");
-    else
-        fprintf("Plotting ROS...\n");
-    end
+    fprintf("Plotting ROS...\n");
     for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
         
@@ -103,27 +97,12 @@ function fig = plot_ros(obj, who_to_plot, opts)
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"])) && append
-                    fig_name = "ROS Plots";
-                else
-                    fig_name = "ROS Plots: Plot " + fig_counter;
-                end
+                fig_name = "ROS Plots: ROS Arc & " + PROST.utils.capitalize(plot_type);
                 fig(fig_counter) = figure(Name=fig_name, Visible=show);
                 n_cols = ceil(sqrt(number_of_axes_in_fig));
                 n_rows = ceil(number_of_axes_in_fig / n_cols);
                 tl = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
-                
-                if strcmp(show, "off")
-                    % screen_size = get(0, 'ScreenSize');
-                    fig(fig_counter).WindowStyle = 'normal';
-                    fig(fig_counter).Units="points";
-                    fig(fig_counter).Position = [0 0 width_pt height_pt];
-                    fig(fig_counter).PaperUnits="points";
-                    fig(fig_counter).PaperSize = [width_pt height_pt];
-                    fig(fig_counter).PaperPosition = [0 0 width_pt height_pt];  
-                else
-                    sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
-                end
+                sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
             end
 
             % Initialize axis
@@ -139,9 +118,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
             grid(ax, "on")
             axis(ax, "equal");
             pbaspect(ax, [1 1 1]);
-            if strcmp(show, "on")
-                title(ax, erase(dataset_name, "_") + " P" + participant_id)
-            end
+            title(ax, erase(dataset_name, "_") + " P" + participant_id)
 
             % Plot ankle point
             plot(ax, 0, 0, Marker=obj.MARKER_ANKLE, MarkerSize=10, MarkerFaceColor="black", MarkerEdgeColor="black", LineStyle="none", LineWidth=obj.LINE_WIDTH);
@@ -255,23 +232,20 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 % h = [h fill(ax, nan(1, 4), nan(1, 4), color_arc{"left"}, FaceColor=color_arc{"left"}, FaceAlpha=0.2, EdgeColor=color_arc{"left"}, DisplayName="Left")];
                 
                 % Legend
-                lgd = legend(h, Location="layout");
-                lgd.Layout.Tile = "east";
+                lgd = legend(h, Location="eastoutside");
 
                 % Save figures
-                if strcmp(show, 'off')
+                if ~show
                     drawnow
                     figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/ROS Plots");
-                    PROST.PROSTAnalyzer.save_figure(fig(fig_counter), figure_path, file_type, append);
+                    PROST.utils.save_figure(fig(fig_counter), figure_path, file_type=file_type, append=append);
+                    fprintf("Saved figure...\n")
                 end
                 
                 % Reset axis counter
                 axes_counter = 0;
             end
         end
-    end
-    if strcmp(show, 'off')
-        fprintf("All figures saved.\n");
     end
 end
 

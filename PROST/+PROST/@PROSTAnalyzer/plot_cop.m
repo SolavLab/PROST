@@ -9,26 +9,30 @@ function fig = plot_cop(obj, who_to_plot, opts)
 % Input :
 %   who_to_plot - A PROSTDatasetList object that lists the datasets, 
 %                 participants and trials to plot for each side. 
-%                 Default: all trials of all participants and all datasets are 
-%                 plotted for both left and right sides (not recommended unless 
-%                 there are a small number of trials overall).
-%   opts - Name-Value pairs of options for plotting.
-%       opts.number_of_axes_in_fig - number of axes per figure to plot. 
-%                                    Default: 6.
-%       opts.show - whether to show the figures or save them. Either "on" for 
-%                   showing the figures or "off" for saving them. 
-%                   Default: "on".
-%       opts.file_type - the type to save the figure if saved. 
-%                        Default: fig.
-%       opts.append - Logical 1 (true) to append this figure to "COP Plots".
-%                     Logical 0 (false) otherwise.
-%                     Appending only works for "pdf" and "gif" file types.
-%                     Default: false.
-%       opts.anatomical_side - which anatomical side to use for the knee and 
-%                              ankle trajectories and calculation of the shank 
-%                              frame. Choose between: "lateral", "medial" and 
-%                              "mean". 
-%                              Default: "lateral".
+%                 Default: the entire database in the data records is plotted 
+%                 for both left and right sides (not recommended unless the 
+%                 database is small).
+%   Name-Value pair options:
+%   number_of_axes_in_fig - number of axes per figure to plot. Default: 6.
+%   show - a value denoting whether to show the figures or save them. Specified 
+%          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
+%          value of 'on' is equivalent to true, and 'off' is equivalent to false.
+%               - 'on' - show the figure.
+%               - 'off' - save the figure.
+%          Default: "on".
+%   file_type - the type to save the figure if saved. 
+%               Default: 'fig'.
+%   append - if show = 'off', whether to append this figure to an existing file
+%            with the same name in the file path. Specified as 'on' or 'off', or 
+%            as numeric or logical 1 (true) or 0 (false). A value of 'on' is 
+%            equivalent to true, and 'off' is equivalent to false. 
+%               - 'on' - append the figure.
+%               - 'off' - save the figure in a new file.
+%            Default: false.
+%   anatomical_side - which anatomical side to use for the knee and ankle 
+%                     trajectories and calculation of the shank frame. 
+%                     Choose between: 'lateral', 'medial' and 'mean'. 
+%                     Default: 'lateral'.
 % Output :
 %   fig - array of figure handles of all the created plots.
 
@@ -36,12 +40,10 @@ function fig = plot_cop(obj, who_to_plot, opts)
         obj 
         who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
-        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append                (1, 1) logical = false
+        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
         opts.anatomical_side       {mustBeTextScalar, mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
-        opts.width_pt              (1, 1) double = 480
-        opts.height_pt             (1, 1) double = 622
     end
 
     % Prep Input Arguments
@@ -50,8 +52,6 @@ function fig = plot_cop(obj, who_to_plot, opts)
     file_type = opts.file_type;
     append = opts.append;
     anatomical_side = opts.anatomical_side;
-    width_pt = opts.width_pt;
-    height_pt = opts.height_pt;
 
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
@@ -66,11 +66,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
    
     % Start plotting
     fig_counter = 0;
-    if strcmp(show, 'off')
-        fprintf("Saving COP...\n");
-    else
-        fprintf("Plotting COP...\n");
-    end
+    fprintf("Plotting COP...\n");
     for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
         
@@ -122,35 +118,19 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 % Create new figure for new set of axes
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
-                    if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"])) && append
-                        fig_name = "COP Plots";
-                    else
-                        fig_name = "COP Plots: Plot " + fig_counter;
-                    end
+                    fig_name = "COP Plots: Lab & shank CS";
                     fig(fig_counter)  = figure(Name=fig_name, Visible=show);
                     n_cols = ceil(sqrt(number_of_axes_in_fig));
                     n_rows = ceil(number_of_axes_in_fig / n_cols);
                     tOuter = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
-                    if strcmp(show, "off")
-                        fig(fig_counter).WindowStyle = 'normal';
-                        fig(fig_counter).Units="points";
-                        fig(fig_counter).Position = [0 0 width_pt height_pt];
-                        fig(fig_counter).PaperUnits="points";
-                        fig(fig_counter).PaperSize = [width_pt height_pt];
-                        fig(fig_counter).PaperPosition = [0 0 width_pt height_pt];
-                    else
                     sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
-
-                    end
                 end
 
                 % Inner tile for pair of Ankle-Knee Trajectories and COPs in
                 % World and Shank Frames
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="tight", Padding="tight");
                 tInner.Layout.Tile = axes_counter + 1;
-                if strcmp(show, "on")
-                    title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
-                end
+                title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
@@ -189,7 +169,6 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 ax1.FontWeight = obj.FONT_WEIGHT;
                 hold(ax1, 'on');
                 grid(ax1, "on");
-                % axis(ax1, 'tight');
                 axis(ax1, 'equal');
                 pbaspect(ax1, [1 1 1]);
 
@@ -257,10 +236,11 @@ function fig = plot_cop(obj, who_to_plot, opts)
 
                 % Save figure
                 if axes_counter == number_of_axes_in_fig || (participant_id == participants(end) && s_idx == length(step_numbers))
-                    if strcmp(show, 'off')
+                    if ~show
                         drawnow
                         file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/COP Plots");
-                        PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
+                        PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append);
+                        fprintf("Saved figure...\n")
                     end
                     
                     % Reset axis counter
@@ -268,9 +248,6 @@ function fig = plot_cop(obj, who_to_plot, opts)
                 end
             end
         end
-    end
-    if strcmp(show, 'off')
-        fprintf("All figures saved.\n");
     end
 end
 

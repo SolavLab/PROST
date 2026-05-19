@@ -4,33 +4,36 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 % Input :
 %   predictors_list - list of anthropometric parameters to plot.
 %   responses_list - list of ROS parameters to plot.
-%   opts - Name-Value pairs of options for plotting.
-%       opts.number_of_axes_in_fig - number of axes per figure to plot.
-%       opts.norm_var_name - variable name by which we normalize the responses.
-%       opts.show - whether to show the figures or save them. Either "on"
-%                   (default) for showing the figures or "off" for saving them.
-%       opts.file_type - the type to save the figure if saved.
-%       opts.append - Logical 1 (true) to append this figure to "COP Plots".
-%                     Logical 0 (false) otherwise.
-%                     Appending only works for "pdf" and "gif" file types.
-%                     Default: false.
-%       opts.width_pt - figure and paper width when saving in points.
-%                       Default: 480pt.
-%       opts.height_pt - figure and paper height when saving in points.
-%                        Default: 622pt.
-%   filt_opts - options for filtering the response data
-%       filt_opts.filter - which filter to use for the response data. Either
-%                          "outlier" to filter outlier points, "winsor" for 
-%                          Winsorizing the data or "none".
-%                          Default: "none".
-%       filt_opts.filter_options - a struct containing filter-dependent options. 
-%                           When filtering outliers, these are the options for 
-%                           the isoutlier function. The Name-Value pairs for the 
-%                           function need to be defined under the field 
-%                           "NameValues" in the form: NameValues.name = value.
-%                           When Winsorizing, this must contain the percentile
-%                           threshold "p" as a two-element row vector with
-%                           elements in the range [0-100].
+%   Name-Value pair options:
+%   number_of_axes_in_fig - number of axes per figure to plot.
+%   norm_var_name - variable name by which we normalize the responses.
+%   show - a value denoting whether to show the figures or save them. Specified 
+%          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
+%          value of 'on' is equivalent to true, and 'off' is equivalent to false.
+%               - 'on' - show the figure.
+%               - 'off' - save the figure.
+%          Default: "on".
+%   file_type - the type to save the figure if saved. 
+%               Default: 'fig'.
+%   append - if show = 'off', whether to append this figure to an existing file
+%            with the same name in the file path. Specified as 'on' or 'off', or 
+%            as numeric or logical 1 (true) or 0 (false). A value of 'on' is 
+%            equivalent to true, and 'off' is equivalent to false. 
+%               - 'on' - append the figure.
+%               - 'off' - save the figure in a new file.
+%            Default: false.
+%   Options for filtering the response data:
+%   filter - which filter to use for the response data. Either 'outlier' to 
+%            filter outlier points, 'winsor' for Winsorizing the data or 'none'.
+%            Default: 'none'.
+%   filter_options - a struct containing filter-dependent options. 
+%                    - When filtering outliers, these are the options for the 
+%                    isoutlier function. The Name-Value pairs for the 
+%                    function need to be defined under the field 
+%                    'NameValues' in the form: NameValues.name = value.
+%                    - When Winsorizing, this must contain the percentile
+%                    threshold 'p' as a two-element row vector with
+%                    elements in the range [0-100].
 % Output :
 %   fig - array of figure handles of all the created plots.
 %   correlations - the correlation calculation information for each response and
@@ -44,11 +47,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         responses_list             {mustBeTextOrEmpty} = []
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = []
         opts.norm_var_name         {mustBeTextScalarOrEmpty} = []
-        opts.show                  {mustBeTextScalar, mustBeMember(opts.show, ["on" "off"])} = "on"
+        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append                (1, 1) logical = false
-        opts.width_pt              (1, 1) double = 480
-        opts.height_pt             (1, 1) double = 622
+        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
         filt_opts.filter           {mustBeMember(filt_opts.filter, ["winsor" "outlier" "none"])} = "none"
         filt_opts.filter_options   struct = []
     end
@@ -64,8 +65,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     norm_var_name = opts.norm_var_name;
     append = opts.append;
     filter = filt_opts.filter;
-    width_pt = opts.width_pt;
-    height_pt = opts.height_pt;
 
     % Prep Output Arguments
     fig = gobjects(0);
@@ -91,11 +90,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     % Start plotting
     axes_counter = 0;
     fig_counter = 0;
-    if strcmp(show, 'off')
-        fprintf("Saving Predictors vs Responses...\n");
-    else
-        fprintf("Plotting Predictors vs Responses...\n");
-    end
+    fprintf("Plotting Predictors vs Responses...\n");
+   
     for response_index=1:n_responses
         % Get response data
         response = responses{:, response_index};
@@ -183,24 +179,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             % Create new figure for new set of axes
             if axes_counter == 0
                 fig_counter = fig_counter + 1;
-                if strcmp(show, "off") && any(strcmp(file_type, ["pdf" "gif"])) && append
-                    fig_name = "Predictors vs Responses";
-                else
-                    fig_name = "Predictors vs Responses: " + y_name + " Plot " + fig_counter;
-                end
+                fig_name = "Predictors vs Responses: " + y_name;
                 fig(fig_counter)  = figure(Name=fig_name, Visible=show);
                 tl = tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
-                if strcmp(show, "off")
-                    screen_size = get(0, 'ScreenSize');
-                    fig(fig_counter).WindowStyle = 'normal';
-                    fig(fig_counter).Units="points";
-                    fig(fig_counter).Position = [0 0 width_pt height_pt];
-                    fig(fig_counter).PaperUnits="points";
-                    fig(fig_counter).PaperSize = [width_pt height_pt];
-                    fig(fig_counter).PaperPosition = [0 0 width_pt height_pt];                 
-                else
-                    title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
-                end
+                title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
             end
 
             % Initialize axis
@@ -337,19 +319,17 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
                 ax1.Visible = "off";
                 
                 % Save figures
-                if strcmp(show, 'off')
+                if ~show
                     drawnow
                     file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
                     PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
+                    fprintf("Saved figure...\n")
                 end
 
                 % Reset axis counter
                 axes_counter = 0;
             end
         end
-    end
-    if strcmp(show, 'off')
-        fprintf("All figures saved.\n");
     end
 end
 
