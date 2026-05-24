@@ -205,10 +205,15 @@ classdef PROSTAnalyzer < handle
     %% STATIC METHODS
     methods(Static)
         out = analyze_stats(value, distnames, opts);
+        correlations = compute_correlations(predictors, responses);
         shank_data = convert_to_shank_frame(data, knee, ankle);
         shank_cop = cop_to_shank_frame(step, anatomical_side);
         [good_steps] = get_good_steps(steps, min_speed);
+    end
+
+    methods(Static, Access=private)
         [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side);
+        y = filter_outliers(y, filter, filter_options);
     end
 end
 

@@ -75,12 +75,12 @@ f_ros = PROSTAnalyzer.plot_ros(who_to_plot, number_of_axes_in_fig=1, plot_type="
 % PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], show="on", file_type="pdf", filter="outlier", filter_options=outlier_options);
 % PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], show="on", file_type="pdf", filter="winsor", filter_options=winsor_options);
 
-% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf");
-% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf", filter="outlier", filter_options=outlier_options);
-% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], norm_var_name="Height", show="on", file_type="pdf", filter="winsor", filter_options=winsor_options);
+% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], normalizer_name="Height", show="on", file_type="pdf");
+% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], normalizer_name="Height", show="on", file_type="pdf", filter="outlier", filter_options=outlier_options);
+% PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius"], normalizer_name="Height", show="on", file_type="pdf", filter="winsor", filter_options=winsor_options);
 
 [f_pvr, correlations] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], show="on", file_type="pdf");
-[f_pvr_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], norm_var_name="Height", show="on", file_type="pdf");
+[f_pvr_n, correlations_norm] = PROSTAnalyzer.plot_predictors_vs_responses([], ["Radius" "Center_horizontal"], normalizer_name="Height", show="on", file_type="pdf");
 
 %% Plot Example COP
 who_to_plot = PROST.PROSTDatasetList();
