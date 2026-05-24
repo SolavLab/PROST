@@ -266,10 +266,14 @@ for particpant_num=participants
     if isempty(tests_processed_orig)
         test_trials = {};
         for side=dataset_sides_uniform
-            for step_num=tests_uniform.(side)
+            for s_idx=tests_uniform.(side)
                 try
-                    trial_num = Dataset.Data.(participant_name).uniform_data.(side).step(step_num).source.original_trial_number_in_database;
-                    step_num = Dataset.Data.(participant_name).uniform_data.(side).step(step_num).source.step_number;
+                    original_trial = Dataset.Data.(participant_name).uniform_data.(side).step(s_idx).source.original_trial;
+                    preprocesseed_trials = [Dataset_4.Data.(participant_name).processed_original_data.trial];
+                    origins = [preprocesseed_trials.origin];
+                    original_trials = [origins.original_trial];
+                    trial_num = find(original_trials == original_trial);
+                    step_num = Dataset.Data.(participant_name).uniform_data.(side).step(s_idx).source.step_number;
                 catch ME
                     if ME.identifier == 'MATLAB:badsubscript'
                         continue;
