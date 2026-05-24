@@ -144,7 +144,7 @@ for participant_number = 1:n_participants
     %                              -------------------------------------
     % the participant ID in the original data structure:
     participant_ID = s.name;
-    Dataset_3.Data.(participant_name).participant_ID_in_original_structure = participant_ID;
+    Dataset_3.Data.(participant_name).participant_ID_in_original_structure = string(participant_ID);
     
     %                              ---------
     % Dataset_3 / Data / participant_# / metadata :
@@ -577,10 +577,6 @@ for participant_number = 1:n_participants
             %                                                                               / original trial
             %                                                                               ---------------
             Dataset_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_trial = string(trial_number);
-            %                                                                               ----------------------------------
-            %                                                                               / original trial number in database
-            %                                                                               ----------------------------------
-            Dataset_3.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_trial_number_in_database = trial_number;
             %                                                                               ---------------------
             %                                                                               / step number in trial
             %                                                                               ---------------------

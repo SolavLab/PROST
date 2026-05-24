@@ -193,7 +193,7 @@ for participant_number=1:n_participants
     % Dataset_2 / Data / participant_# / participant_ID_in_original_structure :
     %                              -------------------------------------
     % the participant ID in the original data structure:
-    Dataset_2.Data.(participant_name).participant_ID_in_original_structure = participant_ID;
+    Dataset_2.Data.(participant_name).participant_ID_in_original_structure = string(participant_ID);
 
     %                              ---------
     % Dataset_2 / Data / participant_# / metadata :
@@ -367,10 +367,6 @@ for participant_number=1:n_participants
             %                                                                               / original trial
             %                                                                               ---------------
             Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial = "C" + original_speed_category_number + "_" + original_trial_number;
-            %                                                                               ----------------------------------
-            %                                                                               / original trial number in database
-            %                                                                               ----------------------------------
-            Dataset_2.Data.(participant_name).uniform_data.(side).step(step_index).source.original_trial_number_in_database = trial_number;
             %                                                                               ---------------------
             %                                                                               / step number in trial
             %                                                                               ---------------------
