@@ -1,12 +1,12 @@
 function populate_table(obj, dataset_id, start_row, anatomical_side)
 %POPULATE_TABLE processes the dataset and adds new rows to
-% samples table.
+% IPD table.
 %  Input :
-%   dataset_id - the ID of the dataset to add to the samples table.
+%   dataset_id - the ID of the dataset to add to the IPD table.
 %                A positive integer number.
-%   start_row - the row where the new data starts in samples table.
+%   start_row - the row where the new data starts in the IPD table.
 %   anatomical_side - which anatomical side to to use for the
-%                     samples table. Either "lateral" (default),
+%                     IPD table. Either "lateral" (default),
 %                     "medial" or "mean".
 
     % Get dataset
@@ -19,16 +19,16 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
 
     % Check table is large enough for new data
     n_participants = length(dataset.Data);
-    if size(obj.SamplesTable, 1) < start_row + obj.NUM_SIDES*n_participants - 1
-        throw(PROST.PROSTError("SamplesTable", "AllocationError", ...
-            "Not enough rows allocated to samples table.\n""" + ...
-            "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.SamplesTable, 1)));
+    if size(obj.IPDTable, 1) < start_row + obj.NUM_SIDES*n_participants - 1
+        throw(PROST.PROSTError("IPDTable", "AllocationError", ...
+            "Not enough rows allocated to IPD table.\n""" + ...
+            "Expected at least %d rows, but actual table size is %d", start_row + obj.NUM_SIDES*n_participants - 1, size(obj.IPDTable, 1)));
     end
 
     % Check if anatomical_side exists
     if ~obj.has_medial(dataset_id) && anatomical_side == "medial"
         dataset_name = obj.get_dataset_name(dataset_id);
-        throw(PROST.PROSTError("SamplesTable", "MissingMedial", ...
+        throw(PROST.PROSTError("IPDTable", "MissingMedial", ...
             "Dataset %s does not contain medial marker trajectories.", dataset_name));
     end
 
@@ -64,11 +64,11 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
             [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = PROST.PROSTAnalyzer.get_metadata(anthropometric_data, side);
 
             % Add trial parameters to data entry
-            obj.SamplesTable(row_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
+            obj.IPDTable(row_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};
 
             % Add predictors to data entry
             new_row_predictors = {age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod};
-            obj.SamplesTable(row_num, {'Age', 'Sex', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_predictors;
+            obj.IPDTable(row_num, {'Age', 'Sex', 'Height', 'Mass', 'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod'}) = new_row_predictors;
 
             % Make all the "good steps" into a 2D point cloud in the UW plane (the sagittal plane)
             obj.make_point_cloud(dataset_id, participant_id, side, good_steps, row_num, anatomical_side);
@@ -82,7 +82,7 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
         end
     end
 
-    % Update size of populated portion of samples table
+    % Update size of populated portion of IPD table
     % there are extra rows in table which are empty
-    obj.SamplesTableSize = row_num - 1;
+    obj.IPDTableSize = row_num - 1;
 end

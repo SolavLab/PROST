@@ -6,9 +6,9 @@ function fit_to_circular_arc(obj, entry_number)
 % from Dana.
 % This function receives the 2D point cloud and fits this to a
 % circular arc, saves the parameters of the fitted circular arc and fills the 
-% samples table with them.
+% IPD table with them.
 % Input :
-%   entry_number - the row number in the samples table where the
+%   entry_number - the row number in the IPD table where the
 %                  fitted data is entered.
 %  Output :
 %   circular arc parameters:
@@ -20,13 +20,13 @@ function fit_to_circular_arc(obj, entry_number)
 %       arc_length [deg]
 
     % Check if participant exists
-    if entry_number > size(obj.SamplesTable, 1)
-        throw(PROST.PROSTError("SamplesTable", "OutOfBounds", ...
-            "Entry number %d is too large.\nSamples table has %d entries.", entry_number, size(obj.SamplesTable, 1)));
+    if entry_number > size(obj.IPDTable, 1)
+        throw(PROST.PROSTError("IPDTable", "OutOfBounds", ...
+            "Entry number %d is too large.\nIPD table has %d entries.", entry_number, size(obj.IPDTable, 1)));
     end
 
     % Check for NaN or Inf values in the point cloud
-    % get point cloud of corresponding entry in samples table.
+    % get point cloud of corresponding entry in IPD table.
     point_cloud = obj.PointClouds{entry_number};
     point_cloud = point_cloud(:, 1:2);
     if any(isnan(point_cloud(:))) || any(isinf(point_cloud(:)))
@@ -96,12 +96,12 @@ function fit_to_circular_arc(obj, entry_number)
     ang_end = asind(cross_product(3));
     arc_length = ang_end - ang_start;
 
-    % 4) Fill samples table
-    obj.SamplesTable.Radius(entry_number) = radius;
-    obj.SamplesTable.Center_horizontal(entry_number) = center_horizontal;
-    obj.SamplesTable.Center_vertical(entry_number) = center_vertical;
-    obj.SamplesTable.Ang_start(entry_number) = ang_start;
-    obj.SamplesTable.Ang_end(entry_number) = ang_end;
-    obj.SamplesTable.Arc_length(entry_number) = arc_length;
-    obj.SamplesTable.Residual_rms(entry_number) = residual_rms;
+    % 4) Fill IPD table
+    obj.IPDTable.Radius(entry_number) = radius;
+    obj.IPDTable.Center_horizontal(entry_number) = center_horizontal;
+    obj.IPDTable.Center_vertical(entry_number) = center_vertical;
+    obj.IPDTable.Ang_start(entry_number) = ang_start;
+    obj.IPDTable.Ang_end(entry_number) = ang_end;
+    obj.IPDTable.Arc_length(entry_number) = arc_length;
+    obj.IPDTable.Residual_rms(entry_number) = residual_rms;
 end

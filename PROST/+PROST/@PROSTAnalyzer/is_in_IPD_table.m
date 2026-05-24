@@ -1,5 +1,5 @@
-function tf = is_in_samples_table(obj, dataset_id, participant_id, side)
-%IS_IN_SAMPLES_TABLE returns whether a trial is in the samples table. A
+function tf = is_in_IPD_table(obj, dataset_id, participant_id, side)
+%IS_IN_IPD_TABLE returns whether a trial is in the IPD table. A
 % trial is a combination of 'dataset_id', 'participant_id' and 'side'.
 % Input :
 %   dataset_id - the ID of the dataset. A positive integer number.
@@ -8,7 +8,7 @@ function tf = is_in_samples_table(obj, dataset_id, participant_id, side)
 %   side - Either "left" or "right" or a vector containing both "left"
 %          and "right" (default).
 % Output :
-%   tf - true (logical 1) if trial is in the samples table and false
+%   tf - true (logical 1) if trial is in the IPD table and false
 %        (logical 0) otherwise.
 
     if nargin < 4
@@ -22,9 +22,10 @@ function tf = is_in_samples_table(obj, dataset_id, participant_id, side)
         dataset = obj.get_dataset(dataset_id);
         participant_id = [dataset.Data(:).Participant_id];
     end
-    side_rows = ismember(obj.SamplesTable.Side, side);
-    participant_rows = ismember(obj.SamplesTable.Participant_id, participant_id);
-    dataset_rows = ismember(obj.SamplesTable.Dataset_id, dataset_id);
-    entry_numbers = find(dataset_rows & participant_rows & side_rows & anatomical_side_rows, 1, 'first');
-    tf = isempty(entry_numbers);
+    
+    side_rows = ismember(obj.IPDTable.Side, side);
+    participant_rows = ismember(obj.IPDTable.Participant_id, participant_id);
+    dataset_rows = ismember(obj.IPDTable.Dataset_id, dataset_id);
+    row_numbers = find(dataset_rows & participant_rows & side_rows, 1, 'first');
+    tf = isempty(row_numbers);
 end

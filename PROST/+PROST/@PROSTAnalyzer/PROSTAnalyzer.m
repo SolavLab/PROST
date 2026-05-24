@@ -54,9 +54,9 @@ classdef PROSTAnalyzer < handle
     end
     properties(Access=public)
         DataRecords = struct([]); % Data records
-        SamplesTable = table; % Unified table of all participant data
+        IPDTable = table; % Unified table of all participant data
         SummaryTable = table; % Summary information of the datasets
-        SamplesTableSize = 0; % Size of the populated part of the samples table
+        IPDTableSize = 0; % Size of the populated part of the IPD table
         SummaryTableSize = 0; % Size of the populated part of the summary table
         IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
     end
@@ -88,7 +88,7 @@ classdef PROSTAnalyzer < handle
             summary_var_types = {'doublenan',  'string',       'string',       'string',  'doublenan',      'string',      'string',      'doublenan', 'doublenan', 'doublenan',   'doublenan',  'doublenan', 'doublenan', 'string',           'doublenan',       'doublenan', 'doublenan',      'categorical', 'logical',    'doublenan',               'doublenan',        'doublenan',     'doublenan'};
             summary_var_names = {'Dataset_id', 'Dataset_name', 'Article_name', 'Authors', 'Published_year', 'Article_url', 'Dataset_url', 'Age_mean',  'Age_std',   'Height_mean', 'Height_std', 'Mass_mean', 'Mass_std',  'Speed_categories', 'N_participants',  'N_steps',   'N_forceplates',  'Is_shod',     'Has_medial', 'N_participants_included', 'N_steps_included', 'Steps_pp_mean', 'Steps_pp_std'};
             summary_var_units = {'',           '',             '',             '',        '',               '',            '',            'years',     'years',     'm',           'm',          'kg',        'kg',        '',                 '',                '',          '',               '',            '',           '',                        '',                 '',              ''};
-            summary_numCols = numel(summary_var_names);
+            summary_n_cols = numel(summary_var_names);
             obj.IgnoreObject = PROST.PROSTDatasetList(); % List of ignored trials
 
             if nargin < 2 || isempty(toolbox_root)
@@ -100,7 +100,7 @@ classdef PROSTAnalyzer < handle
             if nargin == 0 || isempty(load_list)
                 fprintf("Creating empty PROSTAnalyzer object...\n");
                 obj.DataRecords = struct('Dataset_id', {}, 'Dataset_name', {}, 'Article_data', {}, 'Lab_system', {}, 'Experiment_protocol', {}, 'Data', {});
-                obj.SummaryTable = table('Size', [0 summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
+                obj.SummaryTable = table('Size', [0 summary_n_cols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
                 obj.SummaryTable.Properties.VariableUnits = summary_var_units;
                 dataset_ids = [];
                 return
@@ -129,7 +129,7 @@ classdef PROSTAnalyzer < handle
             
             % Creating summary table
             % Create an empty table for the data with the desired variable names:
-            obj.SummaryTable = table('Size', [n_datasets summary_numCols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
+            obj.SummaryTable = table('Size', [n_datasets summary_n_cols], 'VariableTypes', summary_var_types, 'VariableNames', summary_var_names);
             obj.SummaryTable.Properties.VariableUnits = summary_var_units;
             obj.SummaryTableSize = 0;
 
@@ -144,19 +144,18 @@ classdef PROSTAnalyzer < handle
         % dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right);
         % add_to_ignore(obj, dataset_id, participants, trials, side);
         % clean_data(obj, ignore_list);
-        % create_samples_table(obj);
+        % create_IPD_table(obj);
         % tf = dataset_exists(obj, dataset_id);
         % delete_dataset(obj, dataset_id);
         % delete_from_ignore(obj, dataset_id, participants, trials, side);
-        % delete_samples(obj, flag, varargin);
         % dataset = get_dataset(obj, dataset_id);
         % dataset_name = get_dataset_name(obj, dataset_id);
         % [predictors, names, units, types] = get_predictors(obj, list);
         % [responses, names, units, types] = get_responses(obj, list);
-        % [samples, row_numbers, var_names] = get_samples(obj, var_list, varargin);
+        % [IPD_samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, varargin);
         % tf = has_medial(obj, dataset_id);
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
-        % tf = is_in_samples_table(obj, dataset_id, participant_id, side);
+        % tf = is_in_IPD_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % plot_predictors_vs_responses(obj, predictors_list, responses_list, number_of_axes_in_fig, show, file_type);
@@ -183,16 +182,17 @@ classdef PROSTAnalyzer < handle
     %% PRIVATE METHODS
     methods (Access = private)
         % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side);
-        % add_to_samples_table(obj, dataset_id);
+        % add_to_IPD_table(obj, dataset_id);
         % add_to_summary_table(obj, dataset_id);
         % delete_from_data_records(obj, dataset_id, index);
+        % delete_from_IPD_table(obj, flag, varargin);
         % delete_from_summary_table(obj, index);
         % filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatomical_side);
         % filter_data_by_ignore(obj);
         % filter_data_by_outliers(obj, var_list, method);
         % fit_to_circular_arc(obj, entry_number);
-        % [samples, row_numbers] = get_sample_entry(obj, dataset_id, participant_id, side);
-        % [samples, var_names] = get_sample_var(obj, var_list);
+        % [IPD_samples, row_numbers] = get_IPD_entry(obj, dataset_id, participant_id, side);
+        % [IPD_samples, var_names] = get_IPD_variable(obj, var_list);
         % [summary, entry_number] = get_summary_entry(obj, dataset_id);
         % var = get_summary_var(obj, var_name);
         % tf = is_in_summary_table(obj, dataset_id)
