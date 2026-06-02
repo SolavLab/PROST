@@ -28,7 +28,7 @@ function delete_from_IPD_table(obj, flag, varargin)
     if strcmp(flag, 'r')
         row_numbers = varargin;
     elseif strcmp(flag, 'i')
-        [~, row_numbers] = obj.get_IPD_entry(varargin{:});
+        [~, row_numbers] = obj.get_IPD_samples_by_entry(varargin{:});
     else
         PROST.PROSTError("IPDTable", "InvalidIdentifierFlag", ...
             "%s is not a valid flag for identifying entries. Must be 'r' or 'i'.", flag)

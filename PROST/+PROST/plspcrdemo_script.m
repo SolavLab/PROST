@@ -38,7 +38,7 @@ obj = PROST.PROSTAnalyzer(load_list);
 [features, feature_names, feature_units, feature_types] = obj.get_features(["Age" "Height" "Mass" "Leg_length" "Thigh_length" "Shank_length" "Sex"]);
 % features.Is_shod = categorical(features.Is_shod);
 [labels, label_names, label_units, label_types] = obj.get_labels(["Radius"]);
-sides = obj.get_sample_var("Side");
+sides = obj.get_IPD_samples_by_variable("Side");
 disp([height(features) height(labels) height(sides)])
 
 filter_idx = isoutlier(labels.Radius);

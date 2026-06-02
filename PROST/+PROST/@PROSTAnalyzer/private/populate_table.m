@@ -61,7 +61,7 @@ function populate_table(obj, dataset_id, start_row, anatomical_side)
             end
 
             % Get anthropometric and functional data
-            [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = PROST.PROSTAnalyzer.get_metadata(anthropometric_data, side);
+            [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(anthropometric_data, side);
 
             % Add trial parameters to data entry
             obj.IPDTable(row_num, {'Dataset_id', 'Participant_id', 'Side', 'Anatomical_side'}) = {dataset_id, participant_id, side, anatomical_side};

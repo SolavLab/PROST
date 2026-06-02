@@ -1,6 +1,6 @@
-function [samples, var_names] = get_IPD_variable(obj, var_list)
-%GET_IPD_VARIABLE returns the samples of all variables in var_list from
-% the IPD table. Also returns a list of the existing variable names.
+function [samples, var_names] = get_IPD_samples_by_variable(obj, var_list)
+%GET_IPD_SAMPLES_BY_VARIABLE returns the samples of all variables in var_list 
+% from the IPD table. Also returns a list of the existing variable names.
 % If a name in the list is not a variable in IPD table, ignores it.
 % Returns empty table and empty array if no variable names exist.
 % Input :

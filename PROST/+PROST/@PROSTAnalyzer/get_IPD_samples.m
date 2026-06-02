@@ -33,10 +33,10 @@ function [samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, vara
     row_numbers = 1:obj.IPDTableSize;
     var_names = string(obj.IPDTable.Properties.VariableNames);
     if nargin > 2 && ~isempty(varargin)
-        [~, row_numbers] = obj.get_sample_entry(varargin{:});
+        [~, row_numbers] = obj.get_IPD_samples_by_entry(varargin{:});
     end
     if ~isempty(var_list)
-        [~, var_names] = obj.get_sample_var(var_list);
+        [~, var_names] = obj.get_IPD_samples_by_variable(var_list);
     end
     samples = obj.IPDTable(row_numbers, var_names);
 end

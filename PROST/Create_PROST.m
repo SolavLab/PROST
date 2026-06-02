@@ -61,7 +61,7 @@ ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left"); % Flat step (large\
 PROSTAnalyzer.clean_data(ignore_list);
 
 %% Add to samples table data from datasets
-PROSTAnalyzer.create_samples_table();
+PROSTAnalyzer.create_IPD_table();
 
 %% Save PROST Object
 fprintf("Saving PROSTAnalyzer object...\n");

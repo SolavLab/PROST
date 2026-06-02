@@ -1,6 +1,6 @@
-function [samples, row_numbers] = get_IPD_entry(obj, dataset_id, participant_id, side)
-%GET_IPD_ENTRY returns the samples and row numbers from the IPD table given the 
-% dataset IDs, participant IDs and sides.
+function [samples, row_numbers] = get_IPD_samples_by_entry(obj, dataset_id, participant_id, side)
+%GET_IPD_SAMPLES_BY_ENTRY returns the samples and row numbers from the IPD table 
+% given (dataset ID, participant ID, side) entry.
 % Returns an empty table and empty array if does not exist.
 % Input :
 %   dataset_id - the dataset ID for the requested samples. A positive

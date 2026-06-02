@@ -102,7 +102,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
     % Normalize responses
     if ~isempty(normalizer_name)
-        normalizer = obj.get_samples(normalizer_name);
+        normalizer = obj.get_IPD_samples(normalizer_name);
         normalizer_unit = normalizer.Properties.VariableUnits;
         normalizer = table2array(normalizer);
         normalizer = PROST.utils.convert_units(normalizer, normalizer_unit, response_units);
@@ -116,12 +116,12 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     correlations = PROST.PROSTAnalyzer.compute_correlations(predictors, responses);
 
     % Get sides & dataset IDs for plot colors
-    sides = table2array(obj.get_sample_var("Side"));
+    sides = table2array(obj.get_IPD_samples_by_variable("Side"));
     unique_sides = categories(sides);
     n_sides = numel(unique_sides);
     side_color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT}); % Define colors for sides
 
-    dataset_ids = table2array(obj.get_sample_var("Dataset_id"));
+    dataset_ids = table2array(obj.get_IPD_samples_by_variable("Dataset_id"));
     unique_dataset_ids = unique(dataset_ids)';
     n_dataset_ids = numel(unique_dataset_ids);
 

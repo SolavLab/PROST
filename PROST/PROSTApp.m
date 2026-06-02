@@ -46,7 +46,7 @@ classdef PROSTApp < matlab.apps.AppBase
 
         function loadDataset(app, name)
             app.CurrentDataset = string(name);
-            samples = app.Analyzer.get_samples(name);
+            samples = app.Analyzer.get_IPD_samples(name);
             app.SamplesTable.Data = samples;
             app.Dirty = false;
         end

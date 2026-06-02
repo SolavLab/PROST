@@ -89,7 +89,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
             left_idx = who_to_plot.is_in_list_side(dataset_id, participant_id, "Left");
             right_idx = who_to_plot.is_in_list_side(dataset_id, participant_id, "Right");
 
-            [samples, entry_numbers] = obj.get_sample_entry(dataset_id, participant_id, sides([left_idx right_idx]));
+            [samples, row_numbers] = obj.get_IPD_samples_by_entry(dataset_id, participant_id, sides([left_idx right_idx]));
             if isempty(samples)
                 continue
             end

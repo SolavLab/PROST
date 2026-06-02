@@ -35,12 +35,12 @@ display_names = replace(param_names, "_", " ");
 colors = lines(numel(param_names));
 
 %% Load Data
-radius = table2array(PROSTAnalyzer.get_samples("Radius"));
+radius = table2array(PROSTAnalyzer.get_IPD_samples("Radius"));
 
 predictors = struct();
 for i = 1:numel(param_names)
     predictors.(param_names(i)) = ...
-        table2array(PROSTAnalyzer.get_samples(param_names(i)));
+        table2array(PROSTAnalyzer.get_IPD_samples(param_names(i)));
 end
 
 %% Normalize Data

@@ -96,7 +96,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 
 
     % Get variable
-    var = obj.get_samples(var_name);
+    var = obj.get_IPD_samples(var_name);
     if ~strcmp(var.Properties.VariableTypes, "double")
         throw(PROST.PROSTError("VariableType", "WrongVariableType", ...
                 "The chosen variable must be of numeric type but is of type %s", var.Properties.VariableTypes));
@@ -111,7 +111,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         category_name = "Category";
         category_var = categorical(repmat("All", size(value)));
     else
-        category_var = categorical(table2array(obj.get_samples(category_name)));
+        category_var = categorical(table2array(obj.get_IPD_samples(category_name)));
     end
     category_options = categories(category_var);
     category_labels = replace(category_name + ": " + string(category_options), "_", " ");
@@ -119,7 +119,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 
     % Normalize variable
     if ~isempty(normalizer_name)
-        normalizer = obj.get_samples(normalizer_name);
+        normalizer = obj.get_IPD_samples(normalizer_name);
         if ~strcmp(normalizer.Properties.VariableTypes, "double")
             throw(PROST.PROSTError("SamplesVariable", "WrongVariableType", ...
                 "The chosen normalizer must be of numeric type but is of type %s", var.Properties.VariableTypes));

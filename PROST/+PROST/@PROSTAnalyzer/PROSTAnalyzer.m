@@ -191,8 +191,8 @@ classdef PROSTAnalyzer < handle
         % filter_data_by_ignore(obj);
         % filter_data_by_outliers(obj, var_list, method);
         % fit_to_circular_arc(obj, entry_number);
-        % [IPD_samples, row_numbers] = get_IPD_entry(obj, dataset_id, participant_id, side);
-        % [IPD_samples, var_names] = get_IPD_variable(obj, var_list);
+        % [IPD_samples, row_numbers] = get_IPD_samples_by_entry(obj, dataset_id, participant_id, side);
+        % [IPD_samples, var_names] = get_IPD_samples_by_variable(obj, var_list);
         % [summary, entry_number] = get_summary_entry(obj, dataset_id);
         % var = get_summary_var(obj, var_name);
         % tf = is_in_summary_table(obj, dataset_id)
