@@ -1,10 +1,14 @@
-clearvars -except -regexp ^Dataset_\d+$ good_trials
+%% Initialize script - DO NOT CHANGE
+clearvars -except -regexp ^Dataset_\d+$
 close all
 clc
 
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
 script_folder = fileparts(script_full_path); % Get the folder of the script
 cd(script_folder);
+
+% Define data files folder
+data_path = "..\Data Files";
 
 % Add PROST package root to path
 toolbox_root = split(script_folder, filesep);
@@ -13,103 +17,137 @@ addpath(toolbox_root); % Add PROST package to path
 
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
+% Load dataset for testing
 if ~exist("Dataset_2", "var")
-    load("..\..\Dataset_2.mat");
+    load("../../Dataset_2.mat");
 end
-
-%% Change accordingly to your test
-% What database to test
 Dataset = Dataset_2;
 
-% Database relevant marker names
-ankle_marker_name = "FAL";
-knee_marker_name = "LatVirtualKnee";
-% Database parameters
-step_nums = [1 2]; % number of steps per trial
-db_axis = ["x", "y", "z"]; % lab frame axis: [walking direction, other direction, up]
+% Dataset parameters information
+dataset_ankle_marker_name = "FAL"; % Ankle marker name
+dataset_knee_marker_name = "LatVirtualKnee"; % Knee marker name
+dataset_n_steps = 2; % number of steps per trial
+dataset_db_axis = ["x", "y", "z"]; % lab CS axis: [walking direction, other direction, up]
+dataset_sides_uniform = ["right", "left"]; % side names in uniform format
+dataset_sides_original = ["R_", "L_"]; % side names in original dataset
+cmaps = dictionary("right", "summer", "left", "autumn"); % color maps for plotting sides
 
+%% Input according to your test
 % Which participant to test?
-participants = [24];
+% Define:
+% participants - list of participants to test. Leave empty to test all
+% participants in the dataset.
+% participants = [1 50 100 138];
+prompt = "Which participant to test?\n" + ...
+         "Define a list of participants to test.\n" + ...
+         "Leave empty to test all participants in the dataset.\n";
+participants = input(prompt);
 n_participants = length(participants);
-sides.uniform = ["right", "left"];
-cmaps = dictionary("right", "green", "left", "red");
-sides.processed_original = ["R_", "L_"]; % How are the sides delineated in the database
 
 
-%% Check Shank Frame Transformation
-% close all
-% How many trials to test?
-n_trials = 3;
-trials_test = [15];
-for particpant_num=participants
-    p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Shank Frame");
-    tiledlayout(f, "flow")
+% Which trials to test?
+% Either define:
+% n_steps - the number of steps to test for both uniform format and processed
+% original distributed equally for all steps of a participant for each side.
+% Leave tests_uniform and tests_processed_orig empty.
+% Or:
+% tests_uniform - list of specific step numbers of each side from the
+% uniform format data. Missing steps are ignored. 
+% Example: tests_uniform.right = [1 2]. tests_uniform.left = [1 2]. 
+% tests_processed_orig - list of specific trial numbers and step numbers
+% for each of the trials from the processed original data. If empty, takes the 
+% trials and steps equivalent to the steps chosen previously for the uniform 
+% format data.
+% Example: {1, [1 2]; 2 []}
+% how_to_test_trials = 2;
+% n_steps = 2;
+% tests_uniform.right = [1 2]; % specific step numbers to test from the uniform format
+% tests_uniform.left = [1 2]; % specific step numbers to test from the uniform format
+% tests_processed_orig = {}; % specific trial numbers and step numbers to test
+n_steps = 0;
+tests_uniform = []; % specific step numbers to test from the uniform format
+tests_processed_orig = {}; % specific trial numbers and step numbers to test
+while true
+    prompt = "Which trials to test?\n" + ...
+             "1 - Define the number of steps to test for each side.\n" + ...
+             "    Steps are evenly distributed.\n" + ...
+             "    This is for both uniform format data and processed original data.\n" + ...
+             "2 - Define lists of specific steps and trials to test for the uniform format data\n" + ...
+             "    and the processed original data.\n";
+    how_to_test_trials = input(prompt);
+    if how_to_test_trials == 1
+        prompt = "How mant steps to test for each side?\n" + ...
+                 "If there are less steps for a particular participant, then tests all steps.\n";
+        n_steps = input(prompt);
+        break
+    elseif how_to_test_trials == 2
+        prompt = "Define a list of specific step numbers for each side of the uniform format.\n" + ...
+                 "Missing steps are ignored.\n" + ...
+                 "Example: [1 2 3].\n";
+        fprintf(prompt);
 
-    if isempty(trials_test)
-        total_trials = min(length(Dataset.Data.(p).uniform_data.left.step), length(Dataset.Data.(p).uniform_data.right.step));
-        if n_trials < total_trials
-            trials = round(linspace(1, total_trials, n_trials));
+        % specific step numbers for both sides to test from the uniform format data
+        prompt = dataset_sides_uniform(1) + ":\n";
+        tests_uniform.(dataset_sides_uniform(1)) = input(prompt);
+        prompt = dataset_sides_uniform(2) + ":\n";
+        tests_uniform.(dataset_sides_uniform(2)) = input(prompt);
+
+        % specific trial numbers and step numbers to test from the processed original data
+        prompt = "Define a list of specific trial numbers and step numbers (at most " + dataset_n_steps + " steps) for each of the trials from the processed original data.\n" + ...
+                 "Leave empty to use the  trials and steps equivalent to the steps chosen previously for the uniform format data.\n" + ...
+                 "You can also define trial numbers without step numbers to test all " + dataset_n_steps + " steps.\n" + ...
+                 "Bad quality steps are ignored.\n" + ...
+                 "Example: {1, [1 2]; 2 []; 3, [1]}\n";
+        tests_processed_orig = input(prompt);
+        if size(tests_processed_orig, 2) == 1
+            tests_processed_orig{:, 2} = 1:dataset_n_steps;
         else
-            trials = 1:total_trials;
+            idx = cellfun(@isempty, {tests_processed_orig{:, 2}});
+            tests_processed_orig{idx, 2} = 1:dataset_n_steps;
         end
-    else
-        trials = trials_test;
-    end
-    for t=trials
-        nexttile
-        for side=sides.uniform
-            try
-                trial = Dataset.Data.(p).uniform_data.(side).step(t);
-            catch ME
-                if ME.identifier == 'MATLAB:badsubscript'
-                    continue;
-                end
-            end
-
-            % Time vector
-            time = linspace(0, 100, 101); % Time vector for temporally aligned data to 101 points
-
-            % Get COP in shank coordinate frame
-            shank_cop = PROST.PROSTAnalyzer.cop_to_shank_frame(trial, "lateral");
-
-            % colormap("autumn");
-            scatter(shank_cop.u, shank_cop.w, 30, cmaps(side), 'o', 'filled', DisplayName=side)
-            hold on
-            axis equal
-            title("P" + particpant_num + "T" + num2str(t), replace(trial.source.original_trial, "_", " "))
-
-        end            
-        legend()
+        break
     end
 end
+%% Loop over uniform format data
+if isempty(participants)
+    n_participants = numel(fieldnames(Dataset.Data));
+    participants = 1:n_participants;
+end
 
-%% Loop over uniform data
-% close all
-% How many trials to test?
-n_trials = 3;
-trials_test = [15];
-for particpant_num=participants
-    p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Uniform");
-    tiledlayout(f, "flow")
-    for side=sides.uniform
-       if isempty(trials_test)
-            total_trials = length(Dataset.Data.(p).uniform_data.(side).step);
-            if n_trials < total_trials
-                trials = round(linspace(1, total_trials, n_trials));
-            else 
-                trials = 1:total_trials;
+for particpant_num=participants % all participants
+    participant_name = "participant_" + num2str(particpant_num); % participant name
+    capitalized_participant_name = PROST.utils.capitalize(participant_name); % Capitalized participant name for printing
+    participant_id = Dataset.Data.(participant_name).participant_ID_in_original_structure;
+
+    % Figure settings
+    f_uniform = figure(Name=capitalized_participant_name + " (" + participant_id + ") Uniform Format");
+    t_uniform_outer = tiledlayout(f_uniform, 'TileSpacing', 'tight', 'Padding', 'tight');
+    sgtitle(f_uniform, replace(f_uniform.Name, "_", " "));
+    tile_counter = 0;
+
+    if how_to_test_trials == 1
+        for side=dataset_sides_uniform
+            % Get step numbers to test
+            total_steps = length(Dataset.Data.(participant_name).uniform_data.(side).step);
+            if n_steps < total_steps
+                tests_uniform.(side) = round(linspace(1, total_steps, n_steps));
+            else
+                tests_uniform.(side) = 1:total_steps;
             end
-       else
-           trials = trials_test;
-        end
-        for t=trials
+        end % side
+    end % how_to_test_trials == 1
+
+    % test all sides
+    for side=dataset_sides_uniform
+        capitalized_side = PROST.utils.capitalize(side); % Capitalized side for printing
+
+        % Loop over test trials
+        for step_num=tests_uniform.(side)
+            % Get trial (if exists)
             try
-                trial = Dataset.Data.(p).uniform_data.(side).step(t);
+                step = Dataset.Data.(participant_name).uniform_data.(side).step(step_num);
             catch ME
                 if ME.identifier == 'MATLAB:badsubscript'
-                    % nexttile
                     continue;
                 end
             end
@@ -117,92 +155,229 @@ for particpant_num=participants
             % Time vector
             time = linspace(0, 100, 101); % Time vector for temporally aligned data to 101 points
 
-            % Get COP and ankle, knee trajectories after temporal alignment
-            COP = trial.COP;
-            ankle = trial.Markers.Ankle.lateral;
-            knee = trial.Markers.Knee.lateral;
+            % Data in world CS
+            cop = step.COP;
+            ankle = step.Markers.Ankle.lateral;
+            knee = step.Markers.Knee.lateral;
 
-            % Check ankle-knee trajectories in space.
+            % Data in shank CS
+            shank_cop = PROST.PROSTAnalyzer.convert_to_shank_frame(cop, knee, ankle);
+            shank_ankle = PROST.PROSTAnalyzer.convert_to_shank_frame(ankle, knee, ankle);
+            shank_knee = PROST.PROSTAnalyzer.convert_to_shank_frame(knee, knee, ankle);
+
+            % Inner tile for pair of shank CS and world CS plots
+            tile_counter = tile_counter + 1;
+            t_uniform_inner = tiledlayout(t_uniform_outer, 1, 2, 'Padding', 'tight', 'TileSpacing','tight');
+            t_uniform_inner.Layout.Tile = tile_counter;
+            main_title = sprintf("%s Step %d", capitalized_side, step_num);
+            sub_title = sprintf('Original Trial \"%s\", Step Number %d FP %d', replace(step.source.original_trial, "_", " "), step.source.step_number, step.source.plate_number);
+            title(t_uniform_inner, main_title, sub_title)
+
+
+            % Plot data in world CS
             % Should look like this:
-            % ::::::--=====--::::....         
+            % ::::::--=====--::::....
             % ::::::--=+%@%#*+=-------:::::::.
-            % .::::-:=-*@@%#+==----::::::::.. 
-            % ..::::.=+#@@%*+=-----::::::..   
-            %  .:-:..=*@@@%*===---:-::..      
-            %  ..:-=-+*@@@#++=-----:..        
-            %   .:::=+%@@%*++===-:            
-            %   .:-=-+@@@%*+++-.              
-            %    .--=#@@@%*=..                
-            %    .:=+%@@*:.                   
-            %     :-+@#:                      
-            %     .-+*.                       
-            nexttile
+            % .::::-:=-*@@%#+==----::::::::..
+            % ..::::.=+#@@%*+=-----::::::..
+            %  .:-:..=*@@@%*===---:-::..
+            %  ..:-=-+*@@@#++=-----:..
+            %   .:::=+%@@%*++===-:
+            %   .:-=-+@@@%*+++-.
+            %    .--=#@@@%*=..
+            %    .:=+%@@*:.
+            %     :-+@#:
+            %     .-+*.
+            ax_world = nexttile(t_uniform_inner, 1);
+            colormap(ax_world, cmaps(side));
+            hold(ax_world, 'on');
+            grid(ax_world, "on");
+            axis(ax_world, 'tight');
+            axis(ax_world, 'equal');
+            h = gobjects(3, 1);
             X = [ankle.x; knee.x];
             Y = [ankle.z; knee.z];
-            plot(X, Y, '-k')
-            hold on;
-            axis square;
-            scatter(ankle.x, ankle.z, 30, time, 'square', 'filled')
-            scatter(knee.x, knee.z, 30, time, 'o', 'filled')
-            scatter(COP.x, 0*COP.y, 30, time, '^', 'filled')
-            title(upper(side) + ": Trial " + num2str(t), replace(trial.source.original_trial, "_", " "))
-            xlabel("x [mm]")
-            ylabel("z [mm]")
-            hold off
-        end
-        sgtitle(strrep(f.Name, "_", " "))
-    end
+            plot(ax_world, X, Y, '-k');
+            h(1) = scatter(ax_world, ankle.x, ankle.z, 30, time, 'square', 'filled', DisplayName="Ankle");
+            h(2) = scatter(ax_world,knee.x, knee.z, 30, time, 'o', 'filled', DisplayName="Knee");
+            h(3) = scatter(ax_world, cop.x, 0*cop.y, 30, time, '^', 'filled', DisplayName="CoP");
+            c = colorbar(ax_world, "eastoutside");
+            c.Label.String = 'WA + SS %';
+            title(ax_world, "World CS")
+            xlabel(ax_world, "x [mm]")
+            ylabel(ax_world, "z [mm]")
+            legend(ax_world, h, location='best');
+            hold(ax_world, 'off');
+
+
+            % Plot data in shank CS
+            % Should look like this:
+            %     ...
+            %    .--.
+            %     ..
+            %     ..
+            %     ..
+            %     ..
+            %     ..
+            %     ..
+            %     ..
+            %     ::.
+            %     ...
+            %                     ...
+            %                 .:=*+:.
+            %  ....     .:--+++=-..
+            % .-++++++++++-:..
+            ax_shank = nexttile(t_uniform_inner, 2);
+            colormap(ax_shank, cmaps(side));
+            hold(ax_shank, 'on');
+            grid(ax_shank, "on");
+            axis(ax_shank, 'equal');
+            pbaspect(ax_shank, [1 1 1]);
+            h = gobjects(3, 1);
+            X = [shank_ankle.u; shank_knee.u];
+            Y = [shank_ankle.w; shank_knee.w];
+            plot(ax_shank, X, Y, '-k');
+            h(1) = scatter(ax_shank, shank_ankle.u, shank_ankle.w, 30, time, 'square', 'filled', DisplayName="Ankle");
+            h(2) = scatter(ax_shank, shank_knee.u, shank_knee.w, 30, time, 'o', 'filled', DisplayName="Knee");
+            h(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, 30, time, '^', 'filled', DisplayName="Cop");
+            % c = colorbar(ax_shank, "eastoutside");
+            % c.Label.String = 'WA + SS %';
+            title(ax_shank, "Shank CS");
+            xlabel(ax_shank, "u [mm]");
+            ylabel(ax_shank, "w [mm]");
+            legend(ax_shank, h, location='best');
+            hold(ax_shank, 'off');
+
+            % linkaxes([ax_shank ax_world], 'y');
+        end % trial_num
+    end % side
+end % particpant_num
+
+%% Loop over processed original data
+if isempty(participants)
+    n_participants = numel(fieldnames(Dataset.Data));
+    participants = 1:n_participants;
 end
 
-%% Loop over processed_original data
-% close all
-% How many trials to test?
-n_trials = 3;
-trials_test = [22];
 for particpant_num=participants
-    p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Processed Original");
-    tiledlayout
-    if isempty(trials_test)
-        total_trials = length(Dataset.Data.(p).processed_original_data.trial);
-        if n_trials < total_trials
-            trials = round(linspace(1, total_trials, n_trials));
-        else 
-            trials = 1:total_trials;
-        end
-    else
-       trials = trials_test;
-    end
-    for t=trials
-        trial = Dataset.Data.(p).processed_original_data.trial(t);
-        for step_num=step_nums
-            step_info = trial.("step_" + step_num + "_info");
-            side = step_info.foot;
-            side_prefix = sides.processed_original(strcmp(side, sides.uniform));
-            if strcmp(step_info.step_quality, "bad")
-                disp(step_num + "," + t)
+    participant_name = "participant_" + num2str(particpant_num);
+    capitalized_participant_name = PROST.utils.capitalize(participant_name); % Capitalized participant name for printing
+    participant_id = Dataset.Data.(participant_name).participant_ID_in_original_structure;
+
+    % Figure Settings
+    f_orig = figure(Name=capitalized_participant_name + "(" + participant_id + ") Processed Original");
+    t_orig_outer = tiledlayout(f_orig, 'TileSpacing', 'tight', 'Padding', 'tight');
+    sgtitle(f_orig, replace(f_orig.Name, "_", " "));
+    tile_counter = 0;
+
+    % Get trial numbers of all test trials (if exist)
+    if isempty(tests_processed_orig)
+        test_trials = {};
+        for side=dataset_sides_uniform
+            for s_idx=tests_uniform.(side)
+                try
+                    original_trial = Dataset.Data.(participant_name).uniform_data.(side).step(s_idx).source.original_trial;
+                    processed_original_trials = [Dataset.Data.(participant_name).processed_original_data.trial];
+                    origins = [processed_original_trials.origin];
+                    original_trials =  string([origins.speed_category]) + "_" + string([origins.trial_number]);
+                    trial_num = find(original_trials == original_trial);
+                    step_num = Dataset.Data.(participant_name).uniform_data.(side).step(s_idx).source.step_number;
+                catch ME
+                    if ME.identifier == 'MATLAB:badsubscript'
+                        continue;
+                    else
+                        disp("DEBUG!!!")
+                    end
+                end % try
+                test_trials(end+1, :) = {trial_num, step_num};
+            end % idx=tests_uniform.(side)
+        end % side=dataset_sides_uniform
+    else % isempty(tests_processed_orig)
+        test_trials = tests_processed_orig;
+        for tdx=1:size(test_trials, 1)
+            if isempty(test_trials{tdx, 2})
+                test_trials{tdx, 2} = 1:dataset_n_steps;
             end
-            if isempty(side_prefix)
+        end % trial_num
+    end % isempty(tests_processed_orig)
+
+    for tdx=1:size(test_trials, 1)
+        trial_num = test_trials{tdx, 1};
+        step_nums = test_trials{tdx, 2};
+        if trial_num > numel(Dataset.Data.(participant_name).processed_original_data.trial)
+            continue
+        end
+        trial = Dataset.Data.(participant_name).processed_original_data.trial(trial_num);
+        for step_num=step_nums
+            if ~ismember("step_" + step_num + "_info", (fieldnames(trial)))
                 continue
             end
-            % Time vectors
-            forceplate_time = trial.GRF.time_vector.value; % Time vector for force-plate data
-            trajectory_time = trial.trajectories.time_vector.value; % Time vector for trajectory data
+
+            % Get step info
+            step_info = trial.("step_" + step_num + "_info");
             
+            % Only plot good quality steps
+            if strcmp(step_info.step_quality, "bad")
+                disp(participant_name + " Trial: " + trial_num + " Step: " + step_num + " bad!")
+                continue
+            end
+
+            % Get step parameters
+            side = step_info.foot;
+            side_prefix = dataset_sides_original(strcmp(side, dataset_sides_uniform));
+            capitalized_side = PROST.utils.capitalize(side); % For printing side name
+
             % Indices of step events
             IC_index_grf = step_info.events.IC.forceplate_index;
             IC_index_traj = step_info.events.IC.trajectory_index;
+            IC_time = step_info.events.IC.time;
             OIC_index_grf = step_info.events.OIC.forceplate_index;
             OIC_index_traj = step_info.events.OIC.trajectory_index;
+            OIC_time = step_info.events.OIC.time;
             TO_index_grf = step_info.events.TO.forceplate_index;
             TO_index_traj = step_info.events.TO.trajectory_index;
+            TO_time = step_info.events.TO.time;
     
-            % Get COP and ankle, knee trajectories before temporal alignment
-            COP = trial.COP.("plate_" + step_info.plate);
-            ankle = trial.trajectories.(side_prefix + ankle_marker_name);
-            knee = trial.trajectories.(side_prefix + knee_marker_name);
-    
-            % Check ankle-knee trajectories in space.
+            % Time vectors
+            forceplate_time = trial.GRF.time_vector.value; % Time vector for force-plate data
+            marker_time = trial.trajectories.time_vector.value; % Time vector for marker data
+            
+            % Get processed original data before temporal alignment
+            cop = trial.COP.("plate_" + step_info.plate);
+            cop_unit = trial.COP.unit;
+            grf = trial.GRF.("plate_" + step_info.plate);
+            grf_unit = trial.GRF.unit;
+            ankle = trial.trajectories.(side_prefix + dataset_ankle_marker_name);
+            knee = trial.trajectories.(side_prefix + dataset_knee_marker_name);
+            trajectory_unit = trial.trajectories.unit;
+            wd = trial.walking_direction.value; % walking direction
+
+            % Cut data to IC-OIC segment and unify measurement units
+            cut_cop.x = PROST.utils.convert_units(cop.x(IC_index_grf:OIC_index_grf), cop_unit, "mm");
+            cut_cop.y = PROST.utils.convert_units(cop.y(IC_index_grf:OIC_index_grf), cop_unit, "mm");
+            cut_cop.z = PROST.utils.convert_units(cop.z(IC_index_grf:OIC_index_grf), cop_unit, "mm");
+            cut_ankle.x = PROST.utils.convert_units(ankle.x(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_ankle.y = PROST.utils.convert_units(ankle.y(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_ankle.z = PROST.utils.convert_units(ankle.z(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_knee.x = PROST.utils.convert_units(knee.x(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_knee.y = PROST.utils.convert_units(knee.y(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_knee.z = PROST.utils.convert_units(knee.z(IC_index_traj:OIC_index_traj), trajectory_unit, "mm");
+            cut_grf.x = grf.x(IC_index_grf:TO_index_grf);
+            cut_grf.y = grf.y(IC_index_grf:TO_index_grf);
+            cut_grf.z = grf.z(IC_index_grf:TO_index_grf);
+            cut_forceplate_time = forceplate_time(IC_index_grf:TO_index_grf);
+
+            % Inner tile for triplet of world CS and force plate data
+            % plots
+            tile_counter = tile_counter + 1;
+            t_orig_inner = tiledlayout(t_orig_outer, 2, 2, 'Padding', 'tight', 'TileSpacing','tight');
+            t_orig_inner.Layout.Tile = tile_counter;
+            main_title = sprintf("%s Trial %d", capitalized_side, trial_num);
+            original_trial =  string(trial.origin.speed_category) + " " + string(trial.origin.trial_number);
+            sub_title = sprintf("Original Trial \'%s\', Step Number %d FP %d", original_trial, step_num, step_info.plate);
+            title(t_orig_inner, main_title, sub_title)
+
+            % Plot processed original data before temporal alignment
             % Should look like this:
             % ::::::--=====--::::....         
             % ::::::--=+%@%#*+=-------:::::::.
@@ -216,87 +391,83 @@ for particpant_num=participants
             %    .:=+%@@*:.                   
             %     :-+@#:                      
             %     .-+*.                       
-    
-            nexttile
-            X = [ankle.(db_axis(1)); knee.(db_axis(1))];
-            Y = [ankle.(db_axis(3)); knee.(db_axis(3))];
-            plot(X(:, IC_index_traj:OIC_index_traj), Y(:, IC_index_traj:OIC_index_traj), '-k')
-            hold on
-            axis equal
-            scatter(ankle.(db_axis(1))(IC_index_traj:OIC_index_traj), ankle.(db_axis(3))(IC_index_traj:OIC_index_traj), 30, 'square', 'filled')
-            scatter(knee.(db_axis(1))(IC_index_traj:OIC_index_traj), knee.(db_axis(3))(IC_index_traj:OIC_index_traj), 30, 'o', 'filled')
-            scatter(COP.(db_axis(1))(IC_index_grf:OIC_index_grf), 0*COP.(db_axis(1))(IC_index_grf:OIC_index_grf), 30, '^', 'filled')
-            title(upper(side) + ": Trial " + num2str(t), trial.origin.catagory + " " + trial.origin.trial_number)
-            xlabel("x [mm]")
-            ylabel("z [mm]")
-        end
-    end
-    sgtitle(strrep(f.Name, "_", " "))
-end
+            ax_orig_world = nexttile(t_orig_inner, 1);
+            hold(ax_orig_world, 'on');
+            grid(ax_orig_world, "on");
+            axis(ax_orig_world, 'tight');
+            axis(ax_orig_world, 'equal');
+            h = gobjects(3, 1);
+            X = wd.*[cut_ankle.(dataset_db_axis(1)); cut_knee.(dataset_db_axis(1))];
+            Y = [cut_ankle.(dataset_db_axis(3)); cut_knee.(dataset_db_axis(3))];
+            plot(ax_orig_world, X, Y, '-k');        
+            h(1) = plot(ax_orig_world, wd.*cut_ankle.(dataset_db_axis(1)), cut_ankle.(dataset_db_axis(3)), LineStyle="none", Marker='square', MarkerSize=8, DisplayName="Ankle");
+            h(1).MarkerFaceColor = h(1).Color;
+            h(2) = plot(ax_orig_world, wd.*cut_knee.(dataset_db_axis(1)), cut_knee.(dataset_db_axis(3)), LineStyle="none", Marker='o', MarkerSize=8, DisplayName="Knee");
+            h(2).MarkerFaceColor = h(2).Color;
+            h(3) = plot(ax_orig_world, wd.*cut_cop.(dataset_db_axis(1)), 0.*cut_cop.(dataset_db_axis(1)), LineStyle="none", Marker='^', MarkerSize=8, DisplayName="CoP");
+            h(3).MarkerFaceColor = h(3).Color;
+            t = title(ax_orig_world, "World CS", Units="normalized");
+            t.Position = [t.Position(2) t.Position(1) t.Position(3)];
+            t.Rotation = -90;
+            xlabel(ax_orig_world, "x [mm]");
+            ylabel(ax_orig_world, "z [mm]");
+            legend(ax_orig_world, h, location='best');
+            hold(ax_orig_world, 'off');
+            
+            % Plot force plate data - CoP
+            % Should look like this:                                 
+            %  .:.                                          
+            %  :+=-+:.......   ..                           
+            % .:++*****++***+++=+-::....                    
+            %    ...:===--==++=+********+=::::.             
+            %                     ..:---=++****+++===+=:.   
+            %                             ...-+-+*++++-:.   
+            ax_cop = nexttile(t_orig_inner, 3, [1 2]);
+            hold(ax_cop, 'on');
+            grid(ax_cop, "on");
+            axis(ax_cop, 'tight');
+            axis(ax_cop, 'equal');
+            h = gobjects(3, 1);
+            h(1) = plot(ax_cop, wd.*cut_cop.(dataset_db_axis(1)), cut_cop.(dataset_db_axis(2)),LineStyle="none", Marker='^', MarkerSize=8, DisplayName="CoP");
+            h(1).MarkerFaceColor = h(1).Color;
+            h(2) = plot(ax_cop, wd.*cop.(dataset_db_axis(1))(IC_index_grf), cop.(dataset_db_axis(2))(IC_index_grf), LineStyle="none", Marker='o', MarkerSize=8, DisplayName="IC");
+            h(2).MarkerFaceColor = h(2).Color;
+            h(3) = plot(ax_cop, wd.*cop.(dataset_db_axis(1))(OIC_index_grf), cop.(dataset_db_axis(2))(OIC_index_grf), LineStyle="none", Marker='o', MarkerSize=8, DisplayName="OIC");
+            h(3).MarkerFaceColor = h(3).Color;
+            plot(ax_cop, 0, 0, 'ok', MarkerSize=8);
+            t = title(ax_cop, "CoP", Units="normalized");
+            t.Position = [t.Position(2) t.Position(1) t.Position(3)];
+            t.Rotation = -90;
+            xlabel(ax_cop, dataset_db_axis(1) + " [" + cop_unit + "]");
+            ylabel(ax_cop, dataset_db_axis(2) + " [" + cop_unit + "]");
+            legend(ax_cop, h, location='best');
+            hold(ax_cop, 'off');
 
-%% Loop over Just force plate Data
-close all
-for particpant_num=participants
-    p = "participant_" + num2str(particpant_num);
-    f = figure(Name=p + " Forceplate Data");
-    tiledlayout;
-    if isempty(trials_test)
-        total_trials = length(Dataset.Data.(p).processed_original_data.trial);
-        if n_trials < total_trials
-            trials = round(linspace(1, total_trials, n_trials));
-        else 
-            trials = 1:total_trials;
-        end
-    else
-       trials = trials_test;
-    end
-    for t=trials
-        trial = Dataset.Data.(p).processed_original_data.trial(t);
-        h = [];
-        for step_num=step_nums
-            step_info = trial.("step_" + step_num + "_info");
-            side = step_info.foot;
-            side_prefix = sides.processed_original(strcmp(side, sides.uniform));
-            if strcmp(step_info.step_quality, "bad")
-                disp(p + " Trial: " + t + " Step: " + step_num)
-            end
-            if isempty(side_prefix)
-                continue
-            end
-            % Time vectors
-            forceplate_time = trial.GRF.time_vector.value; % Time vector for force-plate data
-            
-            % Indices of step events
-            IC_index_grf = step_info.events.IC.forceplate_index;
-            OIC_index_grf = step_info.events.OIC.forceplate_index;
-            TO_index_grf = step_info.events.TO.forceplate_index;
-    
-            % Get COP and ankle, knee trajectories before temporal alignment
-            COP = trial.COP.("plate_" + step_info.plate);
-            GRF = trial.GRF.("plate_" + step_info.plate);
-    
-            nexttile;
-            hold on
-            
-            title(upper(side) + ": Trial " + num2str(t), trial.origin.catagory + " " + trial.origin.trial_number);
-            xlabel("time [s]");
-            grid on
-            
-            yyaxis left
-            h = [h; plot(forceplate_time, COP.(db_axis(1)), '-', LineWidth=3, DisplayName="CoP " + db_axis(1))];
-            h = [h; plot(forceplate_time, COP.(db_axis(2)), '--', LineWidth=3, DisplayName="CoP " + db_axis(2))];
-            ylabel("CoP [mm]");
-            
-            yyaxis right
-            h = [h; plot(forceplate_time, GRF.(db_axis(1)), '-', LineWidth=3, DisplayName="GRF " + db_axis(1))];
-            h = [h; plot(forceplate_time, GRF.(db_axis(2)), '--', LineWidth=3, DisplayName="GRF " + db_axis(2))];
-            h = [h; plot(forceplate_time, GRF.(db_axis(3)), '-.', LineWidth=3, DisplayName="GRF " + db_axis(3))];
-            ylabel("GRF [mm]");
-            h = [h; xline(forceplate_time(IC_index_grf), '-k', LineWidth=3, DisplayName="IC")];
-            h = [h; xline(forceplate_time(OIC_index_grf), '--k', LineWidth=3, DisplayName="OIC")];
-            h = [h; xline(forceplate_time(TO_index_grf), '-.k', LineWidth=3, DisplayName="TO")];
-            legend;
-        end
-    end
-    sgtitle(strrep(f.Name, "_", " "));
-end
+            % linkaxes([ax_orig ax_cop], 'x');
+
+            % Plot force plate data - GRF
+            % Should look like this:
+            %
+            %
+            %
+            ax_grf = nexttile(t_orig_inner, 2);
+            hold(ax_grf, 'on');
+            grid(ax_grf, "on");
+            h = gobjects(6, 1);
+            h(1) = plot(ax_grf, cut_forceplate_time, cut_grf.(dataset_db_axis(1)), LineWidth=2, DisplayName="GRF " + dataset_db_axis(1));
+            h(2) = plot(ax_grf, cut_forceplate_time, cut_grf.(dataset_db_axis(2)), LineWidth=2, DisplayName="GRF " + dataset_db_axis(2));
+            h(3) =  plot(ax_grf, cut_forceplate_time, cut_grf.(dataset_db_axis(3)), LineWidth=2, DisplayName="GRF " + dataset_db_axis(3));
+            h(4) = xline(ax_grf, IC_time, '-k', LineWidth=1, DisplayName="IC");
+            h(5) = xline(ax_grf, OIC_time, '-.k', LineWidth=1, DisplayName="OIC");
+            h(6) = xline(ax_grf, TO_time, '--k', LineWidth=1, DisplayName="TO");
+            yline(ax_grf, 0, '-k', LineWidth=1);
+            t = title(ax_grf, "GRF", Units="normalized");
+            t.Position = [t.Position(2) t.Position(1) t.Position(3)];
+            t.Rotation = -90;
+            xlabel(ax_grf, "Time [s]");
+            ylabel(ax_grf, "Force [" + grf_unit + "]");
+            legend(ax_grf, h, location='best');
+            hold(ax_grf, 'off');
+        end % step_num
+    end % tdx
+end % participant_num
