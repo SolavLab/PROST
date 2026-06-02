@@ -1,10 +1,12 @@
 function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts, save_opts, filt_opts)
 %PLOT_PREDICTORS_VS_RESPONSES plots the predictors (anthropometric parameters)
 % v.s. the responses (ROS parameters).
+%
 % Input :
 %   predictors_list - list of anthropometric parameters to plot.
 %   responses_list - list of ROS parameters to plot.
-%   Name-Value pair options:
+%
+% Name-Value pair options :
 %   number_of_axes_in_fig - number of axes per figure to plot.
 %   normalizer_name - variable name by which we normalize the responses.
 %   show - a value denoting whether to show the figures or save them. Specified 
@@ -22,7 +24,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: false.
-%   Options for filtering the response data:
 %   filter - the type of filter to use on the data. Either 'none', 'outlier' or
 %            'winsor'.
 %   filter_options - a struct of filter specific options.
@@ -50,13 +51,14 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         obj
         predictors_list            {mustBeTextOrEmpty} = []
         responses_list             {mustBeTextOrEmpty} = []
-        % opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = []
         opts.normalizer_name       {mustBeTextScalarOrEmpty} = []
     end
-    arguments
-        save_opts.show        (1, 1) matlab.lang.OnOffSwitchState = true
-        save_opts.file_type   (1, 1) string = "fig"
-        save_opts.append      (1, 1) matlab.lang.OnOffSwitchState = false
+     arguments
+        save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
+        save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
+        save_opts.file_type      (1, 1) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
+        save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
+        save_opts.prepare_options = struct([])
     end
     arguments
         filt_opts.filter           = "none"
@@ -64,15 +66,14 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     end
 
     % Prep Input Arguments
-    % if ~isempty(opts.number_of_axes_in_fig) 
-    %     number_of_axes_in_fig = opts.number_of_axes_in_fig; 
-    % else 
-    %     number_of_axes_in_fig = numel(predictors_list);
-    % end
+    normalizer_name = opts.normalizer_name;
+    
     show = save_opts.show;
     file_type = save_opts.file_type;
-    normalizer_name = opts.normalizer_name;
     append = save_opts.append;
+    prepare = save_opts.prepare;
+    prepare_options = save_opts.prepare_options;
+
     filter = filt_opts.filter;
     filter_options = filt_opts.filter_options;
 
@@ -300,9 +301,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         if ~show
             drawnow
             file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
-            prep_options.ShowTextbox="off";
-            prep_options.PaperOrientation = "landscape";
-            PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare="on", prep_options=prep_options);
+            PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
             fprintf("Saved figure...\n")
         end
 

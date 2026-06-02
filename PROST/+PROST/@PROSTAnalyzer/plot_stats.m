@@ -6,6 +6,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 % variable and divided into subgroups based on categorization of a matching
 % categorical variable.
 % Note: Requires the Statistics and Machine Learning Toolbox™.
+%
 % Input :
 %   var_name - the name of the variable to plot the histogram.
 %   normalizer_name - the name of the variable by which to normalize.
@@ -17,7 +18,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               "rayleigh", "exponential", "laplace". This uses the Statistics 
 %               and Machine Learning Toolbox™.
 %
-%   Name-Value pair options:
+% Name-Value pair options :
 %   function_type - the type of function to use for the histogram, KDE 
 %                            and distribution plots. Not all function types 
 %                            apply to all plots. This overrides the histogram 
@@ -58,9 +59,10 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %            Default: true.
 %   prepare_options - if prepare = "on", options for paper preparation (see
 %                     prep_figure_for_publish utils function).
+%   Histogram plot options - histogram parameters as Name-Value pairs. 
+%                            Equivalent to options in the Matlab histogram 
+%                            function.
 %
-%   Options for histogram plot: histogram parameters as Name-Value pairs. 
-%   Equivalent to options in the Matlab histogram function.
 % Output :
 %   fig_data - figure handle for the plot of the histogram and distribution 
 %              estimations.
@@ -97,7 +99,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     file_type = save_opts.file_type;
     append = save_opts.append;
     prepare = save_opts.prepare;
-    prep_options = save_opts.prepare_options;
+    prepare_options = save_opts.prepare_options;
     
     % Normalize distribution names
     if ~isempty(distnames)
@@ -331,9 +333,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     % Save figures
     if ~show
         figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prep_options);
+        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
         if qqplot_flag
-            PROST.utils.save_figure(fig_qq, figure_path, file_type, append);
+            PROST.utils.save_figure(fig_qq, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
         end
         fprintf("Saved figures...\n")
     end

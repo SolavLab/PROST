@@ -2,12 +2,14 @@ function fig = plot_ros(obj, who_to_plot, opts, save_opts)
 %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc of each side for 
 % all participants in who_to_plot. It also plots either the nadir, or circle 
 % center with accompanying circle that matches each ROS arc.
+%
 % Input :
 %   who_to_plot - A PROSTDatasetList object that lists the datasets and
 %                 participants to plot for each side. 
 %                 Default: all participants and all datasets are plotted for
 %                 both left and right sides.
-%   Name-Value pair options:
+%
+% Name-Value pair options :
 %   number_of_axes_in_fig - number of axes per figure to plot. 
 %                           Default: 6.
 %   plot_type - either "nadir" for plotting the nadir point of the 

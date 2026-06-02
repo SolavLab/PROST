@@ -1,10 +1,12 @@
 function save_figure(fig, file_path, opts, prep_opts)
 % SAVE_FIGURE saves the figure in the specified format.
+%
 % Input :
 %   fig - handle of the figure to save.
 %   file_path - path to the figures directory. Leave empty to choose a path from
 %               the folder selection dialog box.
-%   Name-Value pair options:
+%
+% Name-Value pair options :
 %   file_type - the file type to save. Default: "pdf".
 %   append - whether to append this figure to an existing file with the same 
 %            name in the file path. Specified as 'on' or 'off', or as numeric or 
@@ -23,7 +25,8 @@ function save_figure(fig, file_path, opts, prep_opts)
 %   prep_options - a struct containing the Name-Value pair options publication 
 %                  preparation of the figures. The format is: 
 %                  prep_options.name=value.
-% Example:
+%
+% Example :
 %   save_figure(f, "C:/path/to/folder", file_type="pdf", append=true)
 %   save_figure(f, "C:/path/to/folder", file_type="png")
 %   save_figure(f, [], file_type="png")
@@ -32,19 +35,21 @@ function save_figure(fig, file_path, opts, prep_opts)
     arguments
         fig
         file_path       {mustBeScalarOrEmpty(file_path)} = []
-        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
-        opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
-        opts.prepare    (1, 1) matlab.lang.OnOffSwitchState = true
     end
     arguments
-        prep_opts.prep_options    struct = struct([])
+        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
+        opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
+    end
+    arguments
+        prep_opts.prepare          (1, 1) matlab.lang.OnOffSwitchState = true
+        prep_opts.prepare_options  struct = struct([])
     end
 
    % Prepare input arguments
    file_type = convertCharsToStrings(opts.file_type);
    append = logical(opts.append);
-   prep = logical(opts.prepare);
-   prep_options = prep_opts.prep_options;
+   prepare = logical(prep_opts.prepare);
+   prep_options = prep_opts.prepare_options;
 
    % Choose file path when none is provided
    if isempty(file_path)
@@ -85,7 +90,7 @@ function save_figure(fig, file_path, opts, prep_opts)
     end
 
     % Prepare figure for publish
-    if prep
+    if prepare
         name_value = {};
         if ~isempty(prep_options)
             name_value= namedargs2cell(prep_options);

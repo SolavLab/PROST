@@ -1,5 +1,7 @@
-function save_all_open_figures(figures_folder, sub_folders, opts)
+function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
 % SAVE_ALL_OPEN_FIGURES saves all open figures in the specified format.
+%
+% Input :
 %   figures_path - path to the figures directory.
 %   sub_folders - list of sub-folder names to save each figure inside the file
 %                 path. If left empty, the function chooses a sub-folder for
@@ -10,15 +12,28 @@ function save_all_open_figures(figures_folder, sub_folders, opts)
 %                 contain ":", saves the remaining figures in the figures folder.
 %                 To save the figures in the figures folder directly without
 %                 sub-folders, set to ".".
+%
+% Name-Value pair options :   
 %   file_type - the file type to save. Default: "pdf".
-%   append - if show = 'off', whether to append this figure to an existing file
-%            with the same name in the file path. Specified as 'on' or 'off', or 
-%            as numeric or logical 1 (true) or 0 (false). A value of 'on' is 
-%            equivalent to true, and 'off' is equivalent to false. 
+%   append - whether to append this figure to an existing file with the same 
+%            name in the file path. Specified as 'on' or 'off', or as numeric or 
+%            logical 1 (true) or 0 (false). A value of 'on' is equivalent to 
+%            true, and 'off' is equivalent to false. 
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: false.
-% Example:
+%   prepare - whether to prepare the figure for publication by setting size and 
+%          fonts. Specified as 'on' or 'off', or as numeric or logical 1 (true) 
+%          or 0 (false). A value of 'on' is equivalent to true, and 'off' is 
+%          equivalent to false. 
+%               - 'on' - prepare figure for publication.
+%               - 'off' - keep settings as-is.
+%          Default: 'on'.
+%   prep_options - a struct containing the Name-Value pair options publication 
+%                  preparation of the figures. The format is: 
+%                  prep_options.name=value.
+%
+% Example :
 %   save_all_open_figures("C:/path/to/folder", file_type="pdf", append=true)
 %   save_all_open_figures("C:/path/to/folder", file_type="png")
 %   save_all_open_figures("C:/path/to/folder", file_type="fig")
@@ -26,8 +41,14 @@ function save_all_open_figures(figures_folder, sub_folders, opts)
     arguments
         figures_folder  (1, 1) string
         sub_folders     {mustBeTextOrEmpty(sub_folders)} = []
-        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "gif" "pdf" "emf" "eps"])} = "pdf"
+    end
+    arguments
+        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
         opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
+    end
+    arguments
+        prep_opts.prepare          (1, 1) matlab.lang.OnOffSwitchState = true
+        prep_opts.prepare_options  struct = struct([])
     end
 
     % Prepare input arguments    

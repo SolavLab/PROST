@@ -1,4 +1,4 @@
-function fig = plot_cop(obj, who_to_plot, opts)
+function fig = plot_cop(obj, who_to_plot, opts, save_opts)
 %PLOT_COP plots the both the shank CS and lab CS COP data, ankle and 
 % knee trajectories for each trial in who_to_plot. 
 % Notice: here we can choose the anatomical side to use for the shank CS and 
@@ -6,13 +6,15 @@ function fig = plot_cop(obj, who_to_plot, opts)
 % used in the PROST database for all other plots and analyses since we are 
 % taking the data directly from the data records. Leave empty to use the default 
 % "lateral".
+%
 % Input :
 %   who_to_plot - A PROSTDatasetList object that lists the datasets, 
 %                 participants and trials to plot for each side. 
 %                 Default: the entire database in the data records is plotted 
 %                 for both left and right sides (not recommended unless the 
 %                 database is small).
-%   Name-Value pair options:
+%
+% Name-Value pair options :
 %   number_of_axes_in_fig - number of axes per figure to plot. Default: 6.
 %   show - a value denoting whether to show the figures or save them. Specified 
 %          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
@@ -33,6 +35,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
 %                     trajectories and calculation of the shank CS. 
 %                     Choose between: 'lateral', 'medial' and 'mean'. 
 %                     Default: 'lateral'.
+%
 % Output :
 %   fig - array of figure handles of all the created plots.
 
@@ -40,19 +43,18 @@ function fig = plot_cop(obj, who_to_plot, opts)
         obj 
         who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
-        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
-        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
         opts.anatomical_side       {mustBeTextScalar, mustBeMember(opts.anatomical_side, ["lateral" "medial" "mean"])} = "lateral"
     end
+      arguments
+        save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
+        save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
+        save_opts.file_type      (1, 1) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
+        save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
+        save_opts.prepare_options = struct([])
+    end
+
 
     % Prep Input Arguments
-    number_of_axes_in_fig = opts.number_of_axes_in_fig;
-    show = opts.show;
-    file_type = opts.file_type;
-    append = opts.append;
-    anatomical_side = opts.anatomical_side;
-
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
         dataset_ids = [obj.DataRecords.Dataset_id];
@@ -60,6 +62,15 @@ function fig = plot_cop(obj, who_to_plot, opts)
             who_to_plot.add_to_list(dataset_id);
         end
     end
+
+    number_of_axes_in_fig = opts.number_of_axes_in_fig;
+    anatomical_side = opts.anatomical_side;
+
+    show = save_opts.show;
+    file_type = save_opts.file_type;
+    append = save_opts.append;
+    prepare = save_opts.prepare;
+    prepare_options = save_opts.prepare_options;
 
     % Prep Output Arguments
     fig = gobjects(0);
@@ -252,8 +263,7 @@ function fig = plot_cop(obj, who_to_plot, opts)
                     if ~show
                         drawnow
                         file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/COP Plots");
-                        prep_options.ShowTextbox="off";
-                        PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare="on", prep_options=prep_options);
+                        PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
                         fprintf("Saved figure...\n")
                     end
                     
