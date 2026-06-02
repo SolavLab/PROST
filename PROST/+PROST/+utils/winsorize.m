@@ -20,7 +20,7 @@ function A_new = winsorize(A, p)
 %   A_new - the Winsorized data in the same size and format as A.
     
     arguments
-        A (1, :) double
+        A 
         p (1, 2) double {mustBeGreaterThanOrEqual(p, 0), mustBeLessThanOrEqual(p, 100)}
     end
 

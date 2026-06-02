@@ -9,7 +9,7 @@ function tf = participant_exists(obj, dataset_id, participant_id)
 %                    integer number.
 % Output :
 %   tf - true (logical 1) if the participant exists in the dataset and
-%        false (logical 1) otherwise.
+%        false (logical 0) otherwise.
 
     if ~obj.dataset_exists(dataset_id)
         throw(PROST.PROSTError("DataRecords", "MissingDataset", ...

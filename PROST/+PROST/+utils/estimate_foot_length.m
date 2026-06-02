@@ -1,12 +1,12 @@
 function foot_length = estimate_foot_length(steps)
-%ESTIMATE_FOOT_LENGTH estimates the foor length from the COP.
-%   Based o:n Lugade & Kaufman, 2019; Han, Paik & Im, 2019:
+%ESTIMATE_FOOT_LENGTH estimates the foot length from the COP.
+%   Based on: Lugade & Kaufman, 2019; Han, Paik & Im, 2019:
 %   COP excursion in the anterior-posterior direction covers approximately 
 %   83% of the foot length.
 %   Input :
 %       steps - the steps measurements for all trials of the given foot. 
 %               A N x 1 struct array containing the step info of the N 
-%               trials. This is the uniform interpolated data so x is 
+%               trials. This is the standardized interpolated data so x is 
 %               the walking direction.
 %   Output :
 %       foot_length - the estimated foot length in [m]

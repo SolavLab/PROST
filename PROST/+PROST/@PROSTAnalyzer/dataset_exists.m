@@ -5,7 +5,7 @@ function tf = dataset_exists(obj, dataset_id)
 %   dataset_id - the ID of the dataset to check. A positive integer
 %                number.
 % Output :
-%   tf - true (logical 1) if the dataset exists and false (logical 1)
+%   tf - true (logical 1) if the dataset exists and false (logical 0)
 %        otherwise.
 
     if isscalar(dataset_id) && isnumeric(dataset_id) && dataset_id > 0 && dataset_id == floor(dataset_id)

@@ -27,5 +27,5 @@ function tf = is_in_IPD_table(obj, dataset_id, participant_id, side)
     participant_rows = ismember(obj.IPDTable.Participant_id, participant_id);
     dataset_rows = ismember(obj.IPDTable.Dataset_id, dataset_id);
     row_numbers = find(dataset_rows & participant_rows & side_rows, 1, 'first');
-    tf = isempty(row_numbers);
+    tf = ~isempty(row_numbers);
 end

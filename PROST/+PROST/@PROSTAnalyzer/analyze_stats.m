@@ -6,8 +6,8 @@ function out = analyze_stats(value, distnames, opts)
 % (ksdensity).
 %
 % USAGE:
-%   out = analyze_category(value, distnames)
-%   out = analyze_category(value, distnames, opts)
+%   out = analyze_stats(value, distnames)
+%   out = analyze_stats(value, distnames, opts)
 %
 % INPUT:
 %   value     : numeric vector
