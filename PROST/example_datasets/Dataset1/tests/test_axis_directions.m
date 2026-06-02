@@ -25,12 +25,12 @@ addpath(toolbox_root); % Add PROST package to path
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %%
-for p=15
+for p=6%1:16
     participant_data=load(fullfile(data_path, "Participant" + p + "\Raw_Data.mat"));
     participant_data = participant_data.("Subject" + string(p) + "_raw");
     
     available_speeds = [];
-    for speed=2%[1 15 2 25 3 35 4]
+    for speed=35%[1 15 2 25 3 35 4]
         if length(fieldnames(participant_data.("V" + speed))) > 1
             available_speeds = [available_speeds speed];
         end
@@ -56,6 +56,7 @@ for p=15
             ax1 = subplot(3, 5, 1);
             plt = plot(ax1, time, fp_left_grf.x);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("x [N]")
             title("GRF", "Left")
@@ -65,6 +66,7 @@ for p=15
             ax6 = subplot(3, 5, 6);
             plt = plot(ax6, time, fp_left_grf.y);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("y [N]")
             grid on
@@ -73,6 +75,7 @@ for p=15
             ax11 = subplot(3, 5, 11);
             plt = plot(ax11, time, fp_left_grf.z);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("z [N]")
             grid on
@@ -81,6 +84,7 @@ for p=15
             ax2 = subplot(3, 5, 2);
             plt = plot(ax2, time, fp_right_grf.x);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("x [N]")
             title("GRF", "Right")
@@ -90,6 +94,7 @@ for p=15
             ax7 = subplot(3, 5, 7);
             plt = plot(ax7, time, fp_right_grf.y);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("y [N]")
             grid on
@@ -98,6 +103,7 @@ for p=15
             ax12 = subplot(3, 5, 12);
             plt = plot(ax12, time, fp_right_grf.z);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time)));
             xlabel("time [s]")
             ylabel("z [N]")
             grid on
@@ -131,24 +137,28 @@ for p=15
             title("COP", "Left")
             grid on
             hold on
-            plt = plot(ax3, time(~isoutlier(fp1_cop.x)), fp1_cop.x(~isoutlier(fp1_cop.x)));
-            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp1_cop.x)));
             plt = plot(ax3, time(~isoutlier(fp3_cop.x)), fp3_cop.x(~isoutlier(fp3_cop.x)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp3_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 3 + 0.*time(~isoutlier(fp3_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp3_cop.x)))));
             plt = plot(ax3, time(~isoutlier(fp5_cop.x)), fp5_cop.x(~isoutlier(fp5_cop.x)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp5_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 5 + 0.*time(~isoutlier(fp5_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp5_cop.x)))));
             
             ax8 = subplot(3, 5, 8);
             xlabel("time [s]")
             ylabel("y [mm]")
             grid on
             hold on
-            plt = plot(ax8, time(~isoutlier(fp1_cop.y)), fp1_cop.y(~isoutlier(fp1_cop.y)));
-            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp1_cop.y)));
             plt = plot(ax8, time(~isoutlier(fp3_cop.y)), fp3_cop.y(~isoutlier(fp3_cop.y)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp3_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 3 + 0.*time(~isoutlier(fp3_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp3_cop.y)))));
             plt = plot(ax8, time(~isoutlier(fp5_cop.y)), fp5_cop.y(~isoutlier(fp5_cop.y)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp5_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 5 + 0.*time(~isoutlier(fp5_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp5_cop.y)))));
     
             ax4 = subplot(3, 5, 4);
             xlabel("time [s]")
@@ -158,10 +168,12 @@ for p=15
             hold on
             plt = plot(ax4, time(~isoutlier(fp2_cop.x)), fp2_cop.x(~isoutlier(fp2_cop.x)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp2_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 2 + 0.*time(~isoutlier(fp2_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp2_cop.x)))));
             plt = plot(ax4, time(~isoutlier(fp4_cop.x)), fp4_cop.x(~isoutlier(fp4_cop.x)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp4_cop.x)));
-            plt = plot(ax4, time(~isoutlier(fp6_cop.x)), fp6_cop.x(~isoutlier(fp6_cop.x)));
-            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp6_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 4 + 0.*time(~isoutlier(fp4_cop.x)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp4_cop.x)))));
 
             ax9 = subplot(3, 5, 9);
             xlabel("time [s]")
@@ -170,10 +182,12 @@ for p=15
             hold on
             plt = plot(ax9, time(~isoutlier(fp2_cop.y)), fp2_cop.y(~isoutlier(fp2_cop.y)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp2_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 2 + 0.*time(~isoutlier(fp2_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp2_cop.y)))));
             plt = plot(ax9, time(~isoutlier(fp4_cop.y)), fp4_cop.y(~isoutlier(fp4_cop.y)));
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp4_cop.y)));
-            plt = plot(ax9, time(~isoutlier(fp6_cop.y)), fp6_cop.y(~isoutlier(fp6_cop.y)));
-            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*time(~isoutlier(fp6_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('FP', 4 + 0.*time(~isoutlier(fp4_cop.y)));
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(time(~isoutlier(fp4_cop.y)))));
 
             % PSIS Trajectory
             traj_data = participant_data.("V" + available_speed).Trajectories{t, 2};
@@ -191,6 +205,8 @@ for p=15
             hold on
             plt = plot(ax5, trajectories.x);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*trajectories.x);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(trajectories.x)));
+
 
             ax10 = subplot(3, 5, 10);
             xlabel("samples")
@@ -199,6 +215,8 @@ for p=15
             hold on
             plt = plot(ax10, trajectories.y);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*trajectories.y);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(trajectories.y)));
+
     
             ax15 = subplot(3, 5, 15);
             xlabel("samples")
@@ -207,6 +225,8 @@ for p=15
             hold on
             plt = plot(ax15, trajectories.z);
             plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Trial number', trial_counter + 0.*trajectories.z);
+            plt.DataTipTemplate.DataTipRows(end+1) = dataTipTextRow('Speed Category', "V" + available_speed + strings(size(trajectories.z)));
+
         end
     end
 end

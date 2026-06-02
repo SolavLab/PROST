@@ -3,8 +3,8 @@
 %  Created by Dani Feal
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
-%
-clearvars -except -regexp ^Dataset_\d+$
+
+clearvars -except -regexp ^Dataset_(?!1$)\d+$
 close all
 clc
 
@@ -50,25 +50,25 @@ keys = ["Right Lateral Ankle"; ...
         "Right Lateral Knee"; ...
         "Right Medial Knee"; ...
         "Right ASIS"; ...
-        "Right PSIS"; ...
+        "Right Walking Direction Marker"; ...
         "Left Lateral Ankle"; ...
         "Left Medial Ankle"; ...
         "Left Lateral Knee"; ...
         "Left Medial Knee"; ...
         "Left ASIS"; ...
-        "Left PSIS"];
-values = {{"RLAX", "RLAY", "RLAZ", 32, 33, 34}; ...
-          {"RMAX", "RMAY", "RMAZ", 35, 36, 37}; .....
-          {"RLKX", "RLKY", "RLKZ", 23, 24, 25}; ...
-          {"RMKX", "RMKY", "RMKZ", 26, 27, 28}; ...
-          {"RASISX", "RASISY", "RASISZ", 14, 15, 16}; ...
-          {"RPSISX", "RPSISY", "RPSISZ", 8, 9, 10}; ...
-          {"LLAX", "LLAY", "LLAZ", 59, 60, 61}; ...
-          {"LMAX", "LMAY", "LMAZ", 62, 63, 64}; ...
-          {"LLKX", "LLKY", "LLKZ", 50, 51, 52}; ...
-          {"LMKX", "LMKY", "LMKZ", 53, 54, 55}; ...
-          {"LASISX", "LASISY", "LASISZ", 17, 18, 19}; ...
-          {"LPSISX", "LPSISY", "LPSISZ", 11, 12, 13}};
+        "Left Walking Direction Marker"];
+values = {{"RLA", "RLAX", "RLAY", "RLAZ"}; ...
+          {"RMA", "RMAX", "RMAY", "RMAZ"}; .....
+          {"RLK", "RLKX", "RLKY", "RLKZ"}; ...
+          {"RMK", "RMKX", "RMKY", "RMKZ"}; ...
+          {"RASIS", "RASISX", "RASISY", "RASISZ"}; ...
+          {"RPSIS", "RPSISX", "RPSISY", "RPSISZ"}; ...
+          {"LLA", "LLAX", "LLAY", "LLAZ"}; ...
+          {"LMA", "LMAX", "LMAY", "LMAZ"}; ...
+          {"LLK", "LLKX", "LLKY", "LLKZ"}; ...
+          {"LMK", "LMKX", "LMKY", "LMKZ"}; ...
+          {"LASIS", "LASISX", "LASISY", "LASISZ"}; ...
+          {"LPSIS", "LPSISX", "LPSISY", "LPSISZ"}};
 Markers_guide.reference_guide = dictionary(keys, values);
 Dataset_1.Markers_guide = Markers_guide;
 
@@ -128,7 +128,7 @@ n_participants = 16;
 markers_guide = Dataset_1.Markers_guide;
 for participant_number=1:n_participants
     % Initialize counters
-    trials_counter = 0;
+    trial_number = 0;
     left_steps_counter = 0;
     right_steps_counter = 0;
 
@@ -148,83 +148,37 @@ for participant_number=1:n_participants
     %                                    ---------
     % Dataset_1 / Data / participant_# / metadata :
     %                                    ---------
-    % Age
-    Dataset_1.Data.(participant_name).metadata.Age.value = double(metadata_array(4));
-    Dataset_1.Data.(participant_name).metadata.Age.unit = "years";
-    Dataset_1.Data.(participant_name).metadata.Age.method = "provided";
-
-    % Sex
-    Dataset_1.Data.(participant_name).metadata.Sex.value = metadata_array(6);
-    Dataset_1.Data.(participant_name).metadata.Sex.unit = "Male/Female";
-    Dataset_1.Data.(participant_name).metadata.Sex.method = "provided";
-
-    % Height
-    Dataset_1.Data.(participant_name).metadata.Height.value = double(metadata_array(9));
-    Dataset_1.Data.(participant_name).metadata.Height.unit = "m";
-    Dataset_1.Data.(participant_name).metadata.Height.method = "provided";
-
-    % Mass
-    Dataset_1.Data.(participant_name).metadata.Mass.value = double(metadata_array(13));
-    Dataset_1.Data.(participant_name).metadata.Mass.unit = "kg";
-    Dataset_1.Data.(participant_name).metadata.Mass.method = "provided";
-
-    % Is_shod
-    Dataset_1.Data.(participant_name).metadata.Is_shod.value = "Yes";
-    Dataset_1.Data.(participant_name).metadata.Is_shod.unit = "Yes/No";
-    Dataset_1.Data.(participant_name).metadata.Is_shod.method = "provided";
-
-    % Calculate leg length, thigh length and shank length
-    [right_leg_length, left_leg_length, right_thigh_length, left_thigh_length, right_shank_length, left_shank_length] = get_lengths(participant_raw_data, Dataset_1.Markers_guide); % [m]
-
-    % Leg length - distance between anterior superior iliac spine (ASIS) and lateral ankle (LA)
-    Dataset_1.Data.(participant_name).metadata.Leg_length.right = right_leg_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Leg_length.left = left_leg_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Leg_length.unit = "m";
-    Dataset_1.Data.(participant_name).metadata.Leg_length.method = "calculated by median distance between ASIS and lateral ankle markers.";
-
-    % Thigh length - distance between lateral knee (LK) and anterior superior iliac spine (ASIS)
-    Dataset_1.Data.(participant_name).metadata.Thigh_length.right = right_thigh_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Thigh_length.left = left_thigh_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Thigh_length.unit = "m";
-    Dataset_1.Data.(participant_name).metadata.Thigh_length.method = "calculated by median distance between ASIS and lateral knee markers.";
-
-    % Shank length - distance between lateral knee (LK) and lateral ankle (LA)
-    Dataset_1.Data.(participant_name).metadata.Shank_length.right = right_shank_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Shank_length.left = left_shank_length; % [m]
-    Dataset_1.Data.(participant_name).metadata.Shank_length.unit = "m";
-    Dataset_1.Data.(participant_name).metadata.Shank_length.method = "calculated by median distance between lateral knee and lateral ankle markers.";
+    metadata = read_participant_characteristics(metadata_array, participant_raw_data, markers_guide);
+    Dataset_1.Data.(participant_name).metadata = metadata;
 
     %                                                   ---------------------
     % Dataset_2 / Data / participant_# / uniform_data / Right,Left / step(#)
     %                                                   ---------------------
-    % Prepping uniform data database
+    % Prepping uniform data
     Dataset_1.Data.(participant_name).uniform_data.right.step = [];
     Dataset_1.Data.(participant_name).uniform_data.left.step = [];
+
+    % Get available speed categories
+    available_speed_categories = get_available_speed_categories(participant_raw_data);
 
     %                                    -----------------
     % Dataset_1 / Data / participant_# / processed_original_data
     %                                    -----------------
-    % Get available speeds
-    available_speeds = zeros(1, 7);
-    counter = 0;
-    for speed_category=[1 15 2 25 3 35 4]
-        if length(fieldnames(participant_raw_data.("V" + speed_category))) > 1
-            counter = counter + 1;
-            available_speeds(counter) = speed_category;
-        end
-    end
-    available_speeds = available_speeds(1:counter);
-
     % Run of the available speeds for this participant:
-    for speed_category=available_speeds
+    for speed_category=available_speed_categories
         % Get data
-        COP_data = participant_raw_data.("V" + speed_category).COP;
-        marker_data = participant_raw_data.("V" + speed_category).Trajectories;
-        GRF_data = participant_raw_data.("V" + speed_category).GRF;
-        available_num_trials = length(COP_data);
+        COP_data = participant_raw_data.(speed_category).COP;
+        marker_data = participant_raw_data.(speed_category).Trajectories;
+        GRF_data = participant_raw_data.(speed_category).GRF;
+        available_trials = length(COP_data);
 
-        for num_trial=1:available_num_trials
-            trials_counter = trials_counter + 1;
+        for available_trial_number=1:available_trials
+            trial_number = trial_number + 1;
+            
+            % Read single trial data
+            single_trial_COP_data = COP_data{available_trial_number, 2};
+            single_trial_GRF_data = GRF_data{available_trial_number, 2};
+            single_trial_marker_data = marker_data{available_trial_number, 2};
 
             % ------------------------------------------------------------------------------------
             %                            processed_original_data
@@ -232,132 +186,62 @@ for participant_number=1:n_participants
             %                                                              -----------------
             % Dataset_1 / Data / participant_# / processed_original_data / trial(#) / origin
             %                                                              -----------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).origin.speed_catagory = "V" + speed_category;
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).origin.trial_number = num_trial;
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).origin.speed_category = speed_category;
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).origin.trial_number = available_trial_number;
             %                                                              -----------------------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / walking_direction
             %                                                              -----------------------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).walking_direction = "+y in COP and tragectories data. +x in GRF data";
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction = "+y in COP and tragectories data. +x in GRF data";
 
             %                                                              ----------------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / first_foot
             %                                                              ----------------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).first_foot = "right";
-
-            single_trial_COP_data = COP_data{num_trial, 2};
-            single_trial_GRF_data = GRF_data{num_trial, 2};
-            single_trial_marker_data = marker_data{num_trial, 2};
-
-            %                                                              ----------------
-            % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / Time
-            %                                                              ----------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).Time.value = single_trial_COP_data.Time;
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).Time.unit = "second";
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).Sample_freq.value = 1/(single_trial_COP_data.Time(2) - single_trial_COP_data.Time(1));
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).Sample_freq.unit = "Hz";
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).first_foot = "right";
 
             %                                                              ---------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / GRF
             %                                                              ---------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Left.x = single_trial_GRF_data.L_GRF_X; % walking direction
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Left.y = single_trial_GRF_data.L_GRF_Y; % not reliable, weird sometimes, pointing outside
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Left.z = single_trial_GRF_data.L_GRF_Z; % up
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Right.x = single_trial_GRF_data.R_GRF_X; % walking direction
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Right.y = single_trial_GRF_data.R_GRF_Y; % not reliable, weird sometimes, pointing outside
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.Right.z = single_trial_GRF_data.R_GRF_Z; % up
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.unit = "N";
+            n_forceplates = Dataset_1.Lab_system.num_forceplates;
+            GRF = save_grf_data(single_trial_GRF_data, n_forceplates);
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).GRF = GRF;
+
+            %                                                              ---------------
+            % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / COP
+            %                                                              ---------------
+            COP = save_cop_data(single_trial_COP_data, GRF);
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).COP = COP;
 
             %                                                              -----------------------
-            % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / COP, events
-            %                                                              -----------------------
-            % We will only get the data from force plated 2 3 4 & 5 and number them 1,2,3,4
-            % this is because force plates 1 and 6 are (almost) always empty
-            forceplate_counter = 0;
-            for force_plate=[2 3 4 5]
-                forceplate_counter = forceplate_counter + 1;
-
-                % Get COP data
-                % cop is given in meters. notice we multiplied by 1000 to convert to mm.
-                x_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_X"), "m", "mm"); % [mm]
-                y_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_Y"), "m", "mm"); % [mm]
-                z_cop = PROST.utils.convert_units(single_trial_COP_data.("FP" + force_plate + "_Z"), "m", "mm"); % [mm]
-
-                % Process the COP data to get rid of wrong points
-                if rem(forceplate_counter, 2) == 0 % left foot
-                    x_cop(isnan(single_trial_GRF_data.L_GRF_Z)) = nan;
-                    y_cop(isnan(single_trial_GRF_data.L_GRF_Z)) = nan;
-                    z_cop(isnan(single_trial_GRF_data.L_GRF_Z)) = nan;
-                else % right foot
-                    x_cop(isnan(single_trial_GRF_data.R_GRF_Z)) = nan;
-                    y_cop(isnan(single_trial_GRF_data.R_GRF_Z)) = nan;
-                    z_cop(isnan(single_trial_GRF_data.R_GRF_Z)) = nan;
-                end
-                getrid = isoutlier(x_cop) | isoutlier(y_cop);
-                x_cop(getrid) = nan;
-                y_cop(getrid) = nan;
-                z_cop(getrid) = nan;
-
-                % Save the COP
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(forceplate_counter).x = x_cop;
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(forceplate_counter).y = y_cop;
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(forceplate_counter).z = z_cop;
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.unit = "mm";
-
-                % Find the event indices and times
-                COP_indices = 1:length(x_cop);
-                COP_indices = COP_indices(~isnan(x_cop));
-
-                % save IC
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + forceplate_counter).index = COP_indices(1);
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + forceplate_counter).time = single_trial_COP_data.Time(COP_indices(1)); % [sec]
-
-                % save TO
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("TO" + forceplate_counter).index = COP_indices(end);
-                Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("TO" + forceplate_counter).time = single_trial_COP_data.Time(COP_indices(end)); % [sec]
+            % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / step_x_info
+            %                                                              --------------- -------           
+            % Keep in mind force plates 1 and 6 are (almost) always empty so 
+            % data is largely noise so we only save forceplates 2, 3, 4 ,5.
+            n_steps = 4;
+            relevant_forceplates = [2 3 4 5];
+            steps_info = save_step_data(COP, n_steps, relevant_forceplates);
+            for step_number = 1:n_steps
+                Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).("step_" + step_number + "_info") = ...
+                    steps_info(step_number);
             end
 
-            %                                                                          ---------------
-            % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / events / method
-            %                                                                          ---------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.method = "Calculated using the COP (since it has already taken into account the unreliable values in the edges)," + ...
-                " by finding the first and last index and time for which the COP is not NaN.";
             %                                                              ------------------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / trajectories
             %                                                              ------------------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).trajectories.value = single_trial_marker_data;
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).trajectories.unit = "mm";
+            trajectories = save_marker_data(single_trial_marker_data);
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).trajectories = trajectories;
 
             %                                                              ----------------
             % Dataset_1 / Data / participant_# / processed_original_data / trial(#) / speed
             %                                                              ----------------
-            IC1_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC1.index;
-            IC2_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC2.index;
-            IC3_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC3.index;
-            IC4_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC4.index;
-
-            IC1_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC1.time;
-            IC2_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC2.time;
-            IC3_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC3.time;
-            IC4_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.IC4.time;
-
-            psis.x = (single_trial_marker_data.(Markers_guide.reference_guide{"Right PSIS"}{1}) + single_trial_marker_data.(Markers_guide.reference_guide{"Left PSIS"}{1})) / 2;
-            psis.y = (single_trial_marker_data.(Markers_guide.reference_guide{"Right PSIS"}{2}) + single_trial_marker_data.(Markers_guide.reference_guide{"Right PSIS"}{2})) / 2;
-
-            distance = [vecnorm([psis.x(IC3_index); psis.y(IC3_index)] - [psis.x(IC1_index); psis.y(IC1_index)]); ... % [mm]
-                vecnorm([psis.x(IC4_index); psis.y(IC4_index)] - [psis.x(IC2_index); psis.y(IC2_index)])];    % [mm]
-            distance = PROST.utils.convert_units(distance, "mm", "m");
-            speed = distance ./ [(IC3_time - IC1_time); (IC4_time - IC2_time)];
-            mean_speed = mean(speed); % [m/s]
-
-            speed_structure.value = PROST.utils.convert_units(PROST.utils.convert_units(mean_speed, "m", "km"), "hour", "second");
-            speed_structure.unit="km/hour";
-            speed_structure.method= ...
-            "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
-            "Then calculated the mean speed of both feet.\n" + ...
-            "Converted from [m/sec] to [km/hour]";
-            speed_structure.speed_category = "V" + speed_category;
-
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).speed = speed_structure;
+            speed = calculate_speed(single_trial_marker_data, steps_info, markers_guide);
+            speed_km_per_hr = PROST.utils.convert_units(PROST.utils.convert_units(speed, "m", "km"), "hour", "second");
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).speed.value = speed_km_per_hr;
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).speed.unit = "km/hour";
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).speed.method = ...
+                "For each foot, calculated the distance traveled divided by the time between two consecutive foot strikes of that foot.\n" + ...
+                "Then calculated the mean speed of both feet.\n" + ...
+                "Converted from [m/sec] to [km/hr]";
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).speed.speed_category = speed_category;
 
             % -----------------------------------------------------------------------------------
             %                            uniform_data
@@ -396,56 +280,63 @@ for participant_number=1:n_participants
             % Saving data of 3 steps
             % We have the data of 4 steps per trial but since OIC isn't known,
             % we use the IC time of the subsequent step.
-            for step_number=1:3
-                % Get event indices and times
-                IC_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + step_number).index;
-                IC_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + step_number).time;
-                TO_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("TO" + step_number).index;
-                TO_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("TO" + step_number).time;
-                OIC_index = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + (step_number + 1)).index;
-                OIC_time = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).events.("IC" + (step_number + 1)).time;
-                
-                if OIC_index < IC_index
+            for step_number=1:(n_steps - 1)
+                % Skip bad steps
+                if steps_info(step_number).step_quality == "bad"
                     continue
                 end
-                if rem(step_number, 2) == 0
+
+                % Get forceplate number
+                fp_number = steps_info(step_number).plate;
+                
+                % Get foot
+                foot = steps_info(step_number).foot;
+
+                if steps_info(step_number).foot == "left"
                     left_steps_counter = left_steps_counter + 1;
                     relevant_index = left_steps_counter;
-                    side = "left";
-                    foot = "Left";
+                    foot_capitalized = PROST.utils.capitalize(foot);
                 else
                     right_steps_counter = right_steps_counter + 1;
                     relevant_index = right_steps_counter;
-                    side = "right";
-                    foot = "Right";
+                    foot_capitalized = PROST.utils.capitalize(foot);
                 end
                 
+
+                % Get event indices and times
+                IC_index = steps_info(step_number).events.IC.index;
+                IC_time = steps_info(step_number).events.IC.time;
+                TO_index = steps_info(step_number).events.TO.index;
+                TO_time = steps_info(step_number).events.TO.time;
+                OIC_index = steps_info(step_number).events.OIC.index;
+                OIC_time = steps_info(step_number).events.OIC.time;
+
                 %                                                                          -------
                 % Dataset_1 / Data / participant_# / uniform_data / right,left / step(#) / source
                 %                                                                          -------
                 %                                                                               ---------------
                 %                                                                              / original_trial
                 %                                                                               ---------------
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_trial = "V" + speed_category + "_" + num_trial;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_trial = speed_category + "_" + available_trial_number;
                 %                                                                               ------------
                 %                                                                              / step_number
                 %                                                                               ------------
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.step_number = step_number;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.step_number = step_number;
                 %                                                                               -------------
                 %                                                                              / Plate_number
                 %                                                                               -------------
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.plate_number = step_number + 1;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.plate_number = step_number + 1;
 
                 % original IC,OIC,and TO: index and time
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.forceplate_index = IC_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.forceplate_index = OIC_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.forceplate_index = TO_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.trajectory_index = IC_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.trajectory_index = OIC_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.trajectory_index = TO_index;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_IC.time = IC_time;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_OIC.time = OIC_time;
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).source.original_TO.time = TO_time;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_IC.forceplate_index = IC_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_OIC.forceplate_index = OIC_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_TO.forceplate_index = TO_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_IC.trajectory_index = IC_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_OIC.trajectory_index = OIC_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_TO.trajectory_index = TO_index;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_IC.time = IC_time;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_OIC.time = OIC_time;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).source.original_TO.time = TO_time;
                 % --------------------------------------------------------------
 
                 % Size of temporal alignment. We want 101 points so data is in
@@ -458,39 +349,37 @@ for participant_number=1:n_participants
 
                 % transform the original y to be x now (so x will be the walking direction)
                 % and the original x to be the new -y (so the z direction will still point up)
-                one_step_COP.x = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(step_number).y;
-                one_step_COP.y = -Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(step_number).x;
+                one_step_COP.x = PROST.utils.convert_units(COP.("plate_" + fp_number).y, COP.unit, "mm");
+                one_step_COP.y = -PROST.utils.convert_units(COP.("plate_" + fp_number).x, COP.unit, "mm");
                 % one_step_COP.z = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(step_number).z;
 
                 % cut the COP data from IC to OIC (weight acceptance + single support) and interpolate it to 101 points
-                original_indices = 1:length(one_step_COP.x);
-                original_indices = original_indices(~isnan(one_step_COP.x));
                 interpolated_COP.x = interp1(IC_index:OIC_index, one_step_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.y = interp1(IC_index:OIC_index, one_step_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.z = zeros(size(interpolated_COP.x));
                 interpolated_COP.unit = "mm";
                 interpolated_COP.temporal_alignment = "Initial contact to opposite initial contact.";
 
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).COP = interpolated_COP;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).COP = interpolated_COP;
 
                 %                                                                          ----------------------------
                 % Dataset_1 / Data / participant_# / uniform_data / Right,Left / step(#) / GRF   -  temporally aligned
                 %                                                                          ----------------------------
 
                 % the original x axis stays as x as this is the walking direction
-                one_step_GRF.x = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.(foot).x;
+                one_step_GRF.x = GRF.(foot_capitalized).x;
 
                 % the original z axis stays as z as this is the direction pointing up
-                one_step_GRF.z = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.(foot).z;
+                one_step_GRF.z = GRF.(foot_capitalized).z;
 
                 % y on the other hand, was always pointing inwards in the original data.
                 % in the other hand in order to comply with the right hand rule
                 %                          Z * X = Y
                 % and with the directions of the x axis and z axis
-                % the y axis should be pointing to the Left!
+                % the y axis should be pointing to the left.
                 % so for steps 1 and 3 (right foot), the GRF should stay the same
                 % but for steps 2 and 4 (left foot), the direction of the GRF needs to be flipped.
-                one_step_GRF.y = (-1)^(step_number + 1) .* Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).GRF.(foot).y;
+                one_step_GRF.y = (-1)^(step_number + 1) .* GRF.(foot_capitalized).y;
 
                 % cut the GRF data from IC to TO and interpolate it to 101 points :
                 interpolated_GRF.x = interp1(IC_index:TO_index, one_step_GRF.x(IC_index:TO_index), linspace(IC_index, TO_index, n_temporal_alignment));
@@ -503,7 +392,7 @@ for participant_number=1:n_participants
                 interpolated_GRF.OIC.time = round((n_temporal_alignment - 1)*(OIC_index - IC_index)/(TO_index - IC_index));
                 interpolated_GRF.OIC.index = interpolated_GRF.OIC.time + 1;
 
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).GRF = interpolated_GRF;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).GRF = interpolated_GRF;
 
                 %                                                                          --------------------------------
                 % Dataset_1 / Data / participant_# / uniform_data / Right,Left / step(#) / Markers   -  temporally aligned
@@ -513,22 +402,22 @@ for participant_number=1:n_participants
                 %                    and of the medial and lateral knee markers
                 % and the mean between the medial and lateral markers (for the center of the ankle and the knee)
                 % get the markers data
-                trajectories = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).trajectories;
+                
                 % For the ankle
-                one_step_Markers.Ankle.lateral.x = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Ankle"}{2});
-                one_step_Markers.Ankle.lateral.y = -trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Ankle"}{1});
-                one_step_Markers.Ankle.lateral.z = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Ankle"}{3});
-                one_step_Markers.Ankle.medial.x = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Ankle"}{2});
-                one_step_Markers.Ankle.medial.y = -trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Ankle"}{1});
-                one_step_Markers.Ankle.medial.z = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Ankle"}{3});
+                one_step_Markers.Ankle.lateral.x = trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Ankle"}{1}).y;
+                one_step_Markers.Ankle.lateral.y = -trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Ankle"}{1}).x;
+                one_step_Markers.Ankle.lateral.z = trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Ankle"}{1}).z;
+                one_step_Markers.Ankle.medial.x = trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Ankle"}{1}).y;
+                one_step_Markers.Ankle.medial.y = -trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Ankle"}{1}).x;
+                one_step_Markers.Ankle.medial.z = trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Ankle"}{1}).z;
 
                 % For the knee
-                one_step_Markers.Knee.lateral.x = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Knee"}{2});
-                one_step_Markers.Knee.lateral.y = -trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Knee"}{1});
-                one_step_Markers.Knee.lateral.z = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Lateral Knee"}{3});
-                one_step_Markers.Knee.medial.x = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Knee"}{2});
-                one_step_Markers.Knee.medial.y = -trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Knee"}{1});
-                one_step_Markers.Knee.medial.z = trajectories.value.(Dataset_1.Markers_guide.reference_guide{foot + " Medial Knee"}{3});
+                one_step_Markers.Knee.lateral.x = trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Knee"}{1}).y;
+                one_step_Markers.Knee.lateral.y = -trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Knee"}{1}).x;
+                one_step_Markers.Knee.lateral.z = trajectories.(markers_guide.reference_guide{foot_capitalized + " Lateral Knee"}{1}).z;
+                one_step_Markers.Knee.medial.x = trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Knee"}{1}).y;
+                one_step_Markers.Knee.medial.y = -trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Knee"}{1}).x;
+                one_step_Markers.Knee.medial.z = trajectories.(markers_guide.reference_guide{foot_capitalized + " Medial Knee"}{1}).z;
 
                 % Cut the ankle markers data from IC to OIC and interpolate in to 101 points
                 interpolated_Markers.Ankle.lateral.x = interp1(IC_index:OIC_index, one_step_Markers.Ankle.lateral.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
@@ -558,19 +447,19 @@ for participant_number=1:n_participants
 
                 interpolated_Markers.unit = "mm";
                 interpolated_Markers.temporal_alignment = "Initial contact to opposite initial contact.";
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).Markers = interpolated_Markers;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).Markers = interpolated_Markers;
 
                 %                                                                       ------
                 % Dataset_1 / Data / participant_# / uniform_data / Right,Left / step(#) / speed
                 %                                                                       ------
-                Dataset_1.Data.(participant_name).uniform_data.(side).step(relevant_index).speed = ...
-                    Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).speed;
+                Dataset_1.Data.(participant_name).uniform_data.(foot).step(relevant_index).speed = ...
+                    Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).speed;
             end
         end
     end
 
     % Add up total number of trials
-    Dataset_1.Experiment_protocol.num_trials = Dataset_1.Experiment_protocol.num_trials + trials_counter;
+    Dataset_1.Experiment_protocol.num_trials = Dataset_1.Experiment_protocol.num_trials + trial_number;
 end
 Dataset_1.Experiment_protocol.num_steps = Dataset_1.Experiment_protocol.num_trials .* 3;
 
@@ -580,7 +469,31 @@ save("..\Dataset_1.mat","Dataset_1")
 %% ----------------------------
 %  Auxiliary Functions
 % -----------------------------
-function [median_right_leg_length, median_left_leg_length, median_right_thigh_length, median_left_thigh_length, median_right_shank_length, median_left_shank_length] = get_lengths(participant_data, markers_guide)
+function available_speed_categories = get_available_speed_categories(participant_raw_data)
+%GET_AVAILABLE_SPEED_CATEGORIES returns the list of speed categories that are
+% available and were measured for the participant.
+% Input :
+%   participant_raw_data - the raw data of trial measurements
+% Output :
+%   available_speed_categories - list of available speed categories.
+
+    available_speed_categories = strings(1, 7);
+    counter = 0;
+    for speed_category=("V" + [1 15 2 25 3 35 4])
+        if length(fieldnames(participant_raw_data.(speed_category))) > 1
+            counter = counter + 1;
+            available_speed_categories(counter) = speed_category;
+        end
+    end
+    available_speed_categories = available_speed_categories(1:counter);
+end
+
+function [median_right_leg_length, ...
+          median_left_leg_length, ...
+          median_right_thigh_length, ...
+          median_left_thigh_length, ...
+          median_right_shank_length, ...
+          median_left_shank_length] = get_lengths(participant_raw_data, markers_guide)
 %GET_LENGTHS gives the lengths of the leg, thigh and shank of each side by
 % calculating the median distance between the relevant markers for all
 % trials.
@@ -588,35 +501,25 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
 %   participant_data - the raw data struct object of the participant.
 %   markers_guide - the reference guide to the marker names.
 
-    relevant_markers = markers_guide.reference_guide;
-
     % get available speeds
-    available_speeds = zeros(1, 7);
-    counter = 0;
-    for speed_category=[1 15 2 25 3 35 4]
-        if length(fieldnames(participant_data.("V" + speed_category))) > 1
-            counter = counter + 1;
-            available_speeds(counter) = speed_category;
-        end
-    end
-    available_speeds = available_speeds(1:counter);
-
+    available_speed_categories = get_available_speed_categories(participant_raw_data);
+    
     % run on all the available speeds:
     trials_counter = 0;
-    right_leg_lengths_vector = zeros(1, length(available_speeds)*10);
-    left_leg_lengths_vector = zeros(1, length(available_speeds)*10);
-    right_thigh_lengths_vector = zeros(1, length(available_speeds)*10);
-    left_thigh_lengths_vector = zeros(1, length(available_speeds)*10);
-    right_shank_lengths_vector = zeros(1, length(available_speeds)*10);
-    left_shank_lengths_vector = zeros(1, length(available_speeds)*10);
-    for speed_category=available_speeds
-        trajectories_data = participant_data.("V" + speed_category).Trajectories;
-        available_num_trials = length(trajectories_data);
+    right_leg_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    left_leg_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    right_thigh_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    left_thigh_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    right_shank_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    left_shank_lengths_vector = zeros(1, length(available_speed_categories)*10);
+    for speed_category=available_speed_categories
+        marker_data = participant_raw_data.(speed_category).Trajectories;
+        available_num_trials = length(marker_data);
         for num_trial=1:available_num_trials
             trials_counter = trials_counter + 1;
 
             % get the data of this single trial:
-            single_trial_trajectories_data = trajectories_data{num_trial, 2};
+            single_trial_marker_data = marker_data{num_trial, 2};
 
             % calculate the lengths:
             % left_ankle  -  left lateral ankle
@@ -625,31 +528,31 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
             % right_ankle -  right lateral ankle
             % right_knee  -  right lateral knee
             % right_asis  -  right ASIS
-            right_asis = [single_trial_trajectories_data.(relevant_markers{"Right ASIS"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right ASIS"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right ASIS"}{3})'];
-            left_asis = [single_trial_trajectories_data.(relevant_markers{"Left ASIS"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left ASIS"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left ASIS"}{3})'];
-            right_ankle = [single_trial_trajectories_data.(relevant_markers{"Right Lateral Ankle"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right Lateral Ankle"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right Lateral Ankle"}{3})'];
-            left_ankle = [single_trial_trajectories_data.(relevant_markers{"Left Lateral Ankle"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left Lateral Ankle"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left Lateral Ankle"}{3})'];
-            right_knee = [single_trial_trajectories_data.(relevant_markers{"Right Lateral Knee"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right Lateral Knee"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Right Lateral Knee"}{3})'];
-            left_knee = [single_trial_trajectories_data.(relevant_markers{"Left Lateral Knee"}{1})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left Lateral Knee"}{2})'; ...
-                single_trial_trajectories_data.(relevant_markers{"Left Lateral Knee"}{3})'];
+            right_asis = [single_trial_marker_data.(markers_guide.reference_guide{"Right ASIS"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right ASIS"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right ASIS"}{4})'];
+            left_asis = [single_trial_marker_data.(markers_guide.reference_guide{"Left ASIS"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left ASIS"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left ASIS"}{4})'];
+            right_ankle = [single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Ankle"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Ankle"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Ankle"}{4})'];
+            left_ankle = [single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Ankle"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Ankle"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Ankle"}{4})'];
+            right_knee = [single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Knee"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Knee"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Right Lateral Knee"}{4})'];
+            left_knee = [single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Knee"}{2})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Knee"}{3})'; ...
+                single_trial_marker_data.(markers_guide.reference_guide{"Left Lateral Knee"}{4})'];
 
-            right_leg_length = PROST.utils.convert_units(vecnorm(right_asis - right_ankle), "mm", "m");
-            left_leg_length = PROST.utils.convert_units(vecnorm(left_asis - left_ankle), "mm", "m");
-            right_thigh_length = PROST.utils.convert_units(vecnorm(right_asis - right_knee), "mm", "m");
-            left_thigh_length = PROST.utils.convert_units(vecnorm(left_asis - left_knee), "mm", "m");
-            right_shank_length = PROST.utils.convert_units(vecnorm(right_knee - right_ankle), "mm", "m");
-            left_shank_length = PROST.utils.convert_units(vecnorm(left_knee - left_ankle), "mm", "m");
+            right_leg_length = vecnorm(right_asis - right_ankle);
+            left_leg_length = vecnorm(left_asis - left_ankle);
+            right_thigh_length = vecnorm(right_asis - right_knee);
+            left_thigh_length = vecnorm(left_asis - left_knee);
+            right_shank_length = vecnorm(right_knee - right_ankle);
+            left_shank_length = vecnorm(left_knee - left_ankle);
 
             % save medians
             right_leg_lengths_vector(trials_counter) = median(right_leg_length);
@@ -669,10 +572,288 @@ function [median_right_leg_length, median_left_leg_length, median_right_thigh_le
     left_shank_lengths_vector = left_shank_lengths_vector(1:trials_counter);
 
     % calculate median of all trials
-    median_right_leg_length = median(right_leg_lengths_vector);
-    median_left_leg_length = median(left_leg_lengths_vector);
-    median_right_thigh_length = median(right_thigh_lengths_vector);
-    median_left_thigh_length = median(left_thigh_lengths_vector);
-    median_right_shank_length = median(right_shank_lengths_vector);
-    median_left_shank_length = median(left_shank_lengths_vector);
+    median_right_leg_length = PROST.utils.convert_units(median(right_leg_lengths_vector), "mm", "m");
+    median_left_leg_length = PROST.utils.convert_units(median(left_leg_lengths_vector), "mm", "m");
+    median_right_thigh_length = PROST.utils.convert_units(median(right_thigh_lengths_vector), "mm", "m");
+    median_left_thigh_length = PROST.utils.convert_units(median(left_thigh_lengths_vector), "mm", "m");
+    median_right_shank_length = PROST.utils.convert_units(median(right_shank_lengths_vector), "mm", "m");
+    median_left_shank_length = PROST.utils.convert_units(median(left_shank_lengths_vector), "mm", "m");
+end
+
+function metadata = read_participant_characteristics(metadata_array, participant_raw_data, markers_guide)
+%READ_PARTICIPANT_CHARACTERISTICS reads anthropometric data from the data files 
+% of the participant. Also gets the trial data and calculates missing data from 
+% it (leg length, shank length, thigh length) by computing medians of all trials.
+% Input :
+%   metadata_array - participant metadata (anthropometric data).
+%   participant_raw_data - the participant's raw data of all trials for 
+%                          calculating missing data.
+%   markers_guide - the reference guide for all the important markers.
+% Output :
+%   metadata - the anthropometric data of the participant.
+
+    metadata.Age.value = double(metadata_array(4));
+    metadata.Age.unit = "years";
+    metadata.Age.method = "provided";
+
+    % Sex
+    metadata.Sex.value = metadata_array(6);
+    metadata.Sex.unit = "Male/Female";
+    metadata.Sex.method = "provided";
+
+    % Height
+    metadata.Height.value = double(metadata_array(9));
+    metadata.Height.unit = "m";
+    metadata.Height.method = "provided";
+
+    % Mass
+    metadata.Mass.value = double(metadata_array(13));
+    metadata.Mass.unit = "kg";
+    metadata.Mass.method = "provided";
+
+    % Is_shod
+    metadata.Is_shod.value = "Yes";
+    metadata.Is_shod.unit = "Yes/No";
+    metadata.Is_shod.method = "provided";
+
+    % Calculate leg length, thigh length and shank length
+    [right_leg_length, left_leg_length, right_thigh_length, left_thigh_length, right_shank_length, left_shank_length] = get_lengths(participant_raw_data, markers_guide); % [m]
+
+    % Leg length - distance between anterior superior iliac spine (ASIS) and lateral ankle (LA)
+    metadata.Leg_length.right = right_leg_length; % [m]
+    metadata.Leg_length.left = left_leg_length; % [m]
+    metadata.Leg_length.unit = "m";
+    metadata.Leg_length.method = "calculated by median distance between ASIS and lateral ankle markers.";
+
+    % Thigh length - distance between lateral knee (LK) and anterior superior iliac spine (ASIS)
+    metadata.Thigh_length.right = right_thigh_length; % [m]
+    metadata.Thigh_length.left = left_thigh_length; % [m]
+    metadata.Thigh_length.unit = "m";
+    metadata.Thigh_length.method = "calculated by median distance between ASIS and lateral knee markers.";
+
+    % Shank length - distance between lateral knee (LK) and lateral ankle (LA)
+    metadata.Shank_length.right = right_shank_length; % [m]
+    metadata.Shank_length.left = left_shank_length; % [m]
+    metadata.Shank_length.unit = "m";
+    metadata.Shank_length.method = "calculated by median distance between lateral knee and lateral ankle markers.";
+end
+
+
+function GRF = save_grf_data(single_trial_GRF_data, n_forceplates)
+    GRF.Left.x = single_trial_GRF_data.L_GRF_X; % walking direction
+    GRF.Left.y = single_trial_GRF_data.L_GRF_Y; % always points medially for some reason
+    GRF.Left.z = single_trial_GRF_data.L_GRF_Z; % up
+    GRF.Right.x = single_trial_GRF_data.R_GRF_X; % walking direction
+    GRF.Right.y = single_trial_GRF_data.R_GRF_Y; % always points medially for some reason
+    GRF.Right.z = single_trial_GRF_data.R_GRF_Z; % up
+    GRF.sampling_freq.value = 200;
+    GRF.sampling_freq.unit = "Hz";
+    GRF.time_vector.value = single_trial_GRF_data.Time;
+    GRF.time_vector.unit = "second";
+    GRF.n_forceplates = n_forceplates;
+    GRF.right_forceplates = [1 2 4];
+    GRF.left_forceplates = [3 5 6];
+    GRF.n_samples = length(single_trial_GRF_data.Time);
+    GRF.unit = "N";
+end
+
+function COP = save_cop_data(single_trial_COP_data, GRF)
+    [left_activation_index, left_deactivation_index] = find_forceplate_activation_deactivation(GRF.Left.z);
+    [right_activation_index, right_deactivation_index] = find_forceplate_activation_deactivation(GRF.Right.z);
+    for fp_num=1:GRF.n_forceplates
+        % Get COP data
+        % cop is given in meters. notice we multiplied by 1000 to convert to mm.
+        x_cop = single_trial_COP_data.("FP" + fp_num + "_X"); % [mm]
+        y_cop = single_trial_COP_data.("FP" + fp_num + "_Y"); % [mm]
+        z_cop = single_trial_COP_data.("FP" + fp_num + "_Z"); % [mm]
+
+        % Process the COP data to get rid of noisy points and save step
+        % foot
+        if ismember(fp_num, GRF.left_forceplates) % left foot
+            non_active_idx = true(1, length(x_cop));
+            if fp_num == GRF.left_forceplates(1)
+                non_active_idx(left_activation_index(1):left_deactivation_index(1)) = false;
+            else
+                non_active_idx(left_activation_index(2):left_deactivation_index(2)) = false;
+            end
+            x_cop(non_active_idx) = nan;
+            y_cop(non_active_idx) = nan;
+            z_cop(non_active_idx) = nan;
+        else % right foot ismember(fp_num, GRF.right_forceplates)
+            non_active_idx = true(1, length(x_cop));
+            if fp_num == GRF.right_forceplates(2)
+                non_active_idx(right_activation_index(1):right_deactivation_index(1)) = false;
+            else
+                non_active_idx(right_activation_index(2):right_deactivation_index(2)) = false;
+            end
+            x_cop(non_active_idx) = nan;
+            y_cop(non_active_idx) = nan;
+            z_cop(non_active_idx) = nan;
+        end
+        getrid = isoutlier(x_cop) | isoutlier(y_cop);
+        x_cop(getrid) = nan;
+        y_cop(getrid) = nan;
+        z_cop(getrid) = nan;
+
+        % Save the COP
+        COP.("plate_" + fp_num).x = x_cop;
+        COP.("plate_" + fp_num).y = y_cop;
+        COP.("plate_" + fp_num).z = z_cop;
+        COP.sampling_freq.value = 200;
+        COP.sampling_freq.unit = "Hz";
+        COP.time_vector.value = single_trial_COP_data.Time;
+        COP.time_vector.unit = "second";
+        COP.n_forceplates = 6;
+        COP.right_forceplates = GRF.right_forceplates;
+        COP.left_forceplates = GRF.left_forceplates;
+        COP.n_samples = length(single_trial_COP_data.Time);
+        COP.unit = "m";
+    end
+end
+
+function [activation_index, deactivation_index] = find_forceplate_activation_deactivation(Fz)
+    % Initialize activation deactivation indices
+    activation_index = zeros(1, 2);
+    deactivation_index = zeros(1, 2);
+    
+    % Clean up GRF data for noise
+    start_idx = find(~isnan(Fz), 1, "first");
+    end_idx = find(isnan(Fz(start_idx:end)), 1, "first") + start_idx - 2;
+    while ~isempty(end_idx) && ~isempty(start_idx) && end_idx > start_idx
+        if end_idx - start_idx + 1 < 100
+            Fz(start_idx:end_idx) = nan;
+        end
+        start_idx = find(~isnan(Fz(end_idx+1:end)), 1, "first") + end_idx;
+        end_idx = find(isnan(Fz(start_idx:end)), 1, "first") + start_idx - 2;
+    end
+
+    % Find activation and deactivation of first plate of the same foot
+    start_idx = find(~isnan(Fz), 1, "first");
+    end_idx = find(isnan(Fz(start_idx:end)), 1, "first") + start_idx - 2;
+    
+    if ~isempty(start_idx)
+        activation_index(1) = start_idx;
+    end
+    if ~isempty(end_idx)
+        deactivation_index(1) = end_idx;
+    end
+
+    % Find activation and deactivation of second plate of the same foot
+    end_idx = find(~isnan(Fz), 1,"last");
+    start_idx = find(isnan(Fz(1:end_idx)), 1, "last") + 1;
+    if ~isempty(start_idx)
+        activation_index(2) = start_idx;
+    end
+    if ~isempty(end_idx)
+        deactivation_index(2) = end_idx;
+    end
+end
+
+function steps_info = save_step_data(COP, n_steps, relevant_forceplates)
+    % Keep in mind force plates 1 and 6 are (almost) always empty so
+    % data is largely noise so we only save forceplates 2, 3, 4 ,5.
+    % relevant_forceplates = [2 3 4 5];
+    % steps_with_oic_event = [2 3 4];
+    steps_info(n_steps) = struct;
+    for step_number=1:n_steps
+        % Initial step quality is assumed to be good
+        steps_info(step_number).step_quality = "good";
+
+        % Force plate
+        fp_num = relevant_forceplates(step_number);
+        steps_info(step_number).plate = fp_num;
+
+        % Step foot
+        if ismember(fp_num, COP.right_forceplates)
+            steps_info(step_number).foot = "right";
+        else
+            steps_info(step_number).foot = "left";
+        end
+
+        % Get COP data
+        y_cop = COP.("plate_" + fp_num).y;
+
+        % Find the event indices and times
+        COP_first_event_time = nan;
+        COP_first_event_index = find(~isnan(y_cop), 1, "first");
+        if ~isempty(COP_first_event_index)
+            COP_first_event_time = COP.time_vector.value(COP_first_event_index);
+        else
+            % Re-categorize as bad step if no measurement indices are
+            % found
+            COP_first_event_index = nan;
+            steps_info(step_number).step_quality = "bad";
+            steps_info(step_number).foot = "bad";
+            steps_info(step_number).plate = NaN;
+        end
+
+        COP_last_event_time = nan;
+        COP_last_event_index = find(~isnan(y_cop), 1, "last");
+        if ~isempty(COP_last_event_index)
+            COP_last_event_time = COP.time_vector.value(COP_last_event_index);
+        else
+            COP_last_event_index = nan;
+            steps_info(step_number).step_quality = "bad";
+            steps_info(step_number).foot = "bad";
+            steps_info(step_number).plate = NaN;
+        end
+
+        % save IC
+        steps_info(step_number).events.IC.index = COP_first_event_index;
+        steps_info(step_number).events.IC.time = COP_first_event_time;
+
+        % save OIC
+        % First initialize current OIC event
+        steps_info(step_number).events.OIC.index = nan;
+        steps_info(step_number).events.OIC.time = nan;
+
+        % Then save current IC event as OIC of previous step
+        if step_number > 1
+            steps_info(step_number - 1).events.OIC.index = steps_info(step_number).events.IC.index;
+            steps_info(step_number - 1).events.OIC.time = steps_info(step_number).events.IC.time;
+        end
+
+        % save TO
+        steps_info(step_number).events.TO.index = COP_last_event_index;
+        steps_info(step_number).events.TO.time = COP_last_event_time; % [sec]
+    end
+end
+
+function mean_speed = calculate_speed(single_trial_marker_data, steps_info, markers_guide)
+    right_IC = [steps_info(1).events.IC steps_info(3).events.IC];
+    left_IC = [steps_info(2).events.IC steps_info(4).events.IC];
+
+    psis.x = (single_trial_marker_data.(markers_guide.reference_guide{"Right Walking Direction Marker"}{2}) + single_trial_marker_data.(markers_guide.reference_guide{"Left Walking Direction Marker"}{2})) / 2;
+    psis.y = (single_trial_marker_data.(markers_guide.reference_guide{"Right Walking Direction Marker"}{3}) + single_trial_marker_data.(markers_guide.reference_guide{"Right Walking Direction Marker"}{3})) / 2;
+
+    distance = [ ...
+        vecnorm([psis.x(right_IC(2).index); psis.y(right_IC(2).index)] - ...
+                [psis.x(right_IC(1).index); psis.y(right_IC(1).index)]); ... % [mm]
+        vecnorm([psis.x(left_IC(2).index); psis.y(left_IC(2).index)] - ...
+                [psis.x(left_IC(1).index); psis.y(left_IC(1).index)])];    % [mm]
+
+    distance = PROST.utils.convert_units(distance, "mm", "m");
+    speed = distance ./ [(right_IC(2).time - right_IC(1).time); (left_IC(2).time - left_IC(1).time)];
+    mean_speed = mean(speed); % [m/s]
+end
+
+function trajectories = save_marker_data(single_trial_marker_data)
+    marker_names = single_trial_marker_data.Properties.VariableNames;
+    marker_names(1) = [];
+    marker_names = cellfun(@(x) x(1:end-1), marker_names, UniformOutput=false);
+
+    for marker_name = string(marker_names)
+        trajectories.(marker_name).x = single_trial_marker_data.(marker_name + "X")';
+        trajectories.(marker_name).y = single_trial_marker_data.(marker_name + "Y")';
+        trajectories.(marker_name).z = single_trial_marker_data.(marker_name + "Z")';
+    end
+
+    
+    trajectories.unit = "mm";
+    trajectories.sampling_freq.value = 200;
+    trajectories.sampling_freq.unit = "Hz";
+    trajectories.time_vector.value = single_trial_marker_data.Time;
+    trajectories.time_vector.unit = "second";
+    trajectories.n_samples = length(single_trial_marker_data.Time);
+    trajectories.n_markers = length(marker_names);
 end
