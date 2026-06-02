@@ -3,7 +3,7 @@
 %  Created by Chen Reichsbouscher, 11.12.2025
 % -------------------------------------------------------------------
 %
-clearvars -except -regexp ^Dataset_\d+$ good_trials raw_data all_metadata
+clearvars -except -regexp ^Dataset_(?!4$)\d+$ good_trials raw_data all_metadata
 close all
 clc
 
@@ -25,9 +25,9 @@ addpath(fullfile(toolbox_root, "lib-ext", "ezc3d_matlab"));
 %% -----------------------------
 %  General Database info:
 % ------------------------------
-%       -------------
+%             -------------
 % Dataset_4 / article_data :
-%       -------------
+%             -------------
 article_data.article_name = "A full-body motion capture gait dataset of 138 able-bodied adults across the life span and 50 stroke survivors";
 article_data.authors = "Tamaya Van Criekinge, Wim Saeys, Steven Truijen, Luc Vereeck, Lizeth H. Sloot & Ann Hallemans";
 article_data.link_to_paper = "https://doi.org/10.1038/s41597-023-02767-y";
@@ -1182,8 +1182,8 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.Ankle.lateral.y = interp1(IC_index:OIC_index, interpolated_Markers.Ankle.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_Markers.Ankle.lateral.z = interp1(IC_index:OIC_index, interpolated_Markers.Ankle.lateral.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     
-    % We don't have medial markers so the mean equals the lateral
-    interpolated_Markers.Ankle.mean = interpolated_Markers.Ankle.lateral;
+    % We don't have medial markers so the mean is empty
+    interpolated_Markers.Ankle.mean = [];
 
     if any(isnan(interpolated_Markers.Ankle.lateral.x) | ...
             isnan(interpolated_Markers.Ankle.lateral.y) | ...
@@ -1196,8 +1196,8 @@ function interpolated_Markers = interpolate_trajectories(trajectories, step_info
     interpolated_Markers.Knee.lateral.y = interp1(IC_index:OIC_index, interpolated_Markers.Knee.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_Markers.Knee.lateral.z = interp1(IC_index:OIC_index, interpolated_Markers.Knee.lateral.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
    
-    % Calculate mean knee marker from medial and lateral
-    interpolated_Markers.Knee.mean = interpolated_Markers.Knee.lateral;
+    % We don't have medial markers so the mean is empty
+    interpolated_Markers.Knee.mean = [];
 
     if any(isnan(interpolated_Markers.Knee.lateral.x) | ...
            isnan(interpolated_Markers.Knee.lateral.y) | ...
@@ -1394,13 +1394,13 @@ function good_markers_trials = get_good_markers_trials(raw_data, reference_guide
         if n_samples == size(data, 3) && n_markers == size(data, 2) && 3 == size(data, 1)
             if n_markers ~= expected_n_markers
                 if ~all(ismember(important_markers, marker_names))
-                    warning('TrialQuality:MissingMarkers', "P%d (%s) ST: missing important markers.", p, participant_ID)
+                    warning('TrialQuality:MissingMarkers', "P%d (%s): missing important markers in standing trial.", p, participant_ID)
                     disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
                     continue
                 end
             end
         else
-            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) ST: c3d parameter size mismatch.", p, participant_ID)
+            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s): c3d parameter size mismatch in standing trial.", p, participant_ID)
             disp("P" + p + " (" + participant_ID + ") Entire participant excluded!")
         end
 
@@ -1428,7 +1428,7 @@ function good_markers_trials = get_good_markers_trials(raw_data, reference_guide
                 if n_markers ~= 191
                     if ~all(ismember(important_markers, marker_names))
                         num_excluded = num_excluded + 1;
-                        warning('TrialQuality:MissingMarkers', "P%d (%s) %d: missing important markers.", p, participant_ID, trial_num)
+                        warning('TrialQuality:MissingMarkers', "P%d (%s) %d: missing important markers in walking trial.", p, participant_ID, trial_num)
                         continue
                     end
                 end
@@ -1437,7 +1437,7 @@ function good_markers_trials = get_good_markers_trials(raw_data, reference_guide
                 good_markers_trials(p).trial(idx).index = t;
                 trials_counter = trials_counter + 1;
             else
-                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) %d: c3d parameter size mismatch.", p, participant_ID, trial_num)
+                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) %d: c3d parameter size mismatch in walking trial.", p, participant_ID, trial_num)
             end
 
         end

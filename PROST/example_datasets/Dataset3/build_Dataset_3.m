@@ -2,7 +2,7 @@
 %  build a matlab structure containing the third dataset data
 %  Created by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
-clearvars -except -regexp ^Dataset_\d+$
+clearvars -except -regexp ^Dataset_(?!3$)\d+$
 close all
 clc
 
@@ -680,15 +680,15 @@ for participant_number = 1:n_participants
             one_step_Markers.Ankle.lateral.y = interp1(IC_index:OIC_index, one_step_Markers.Ankle.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
             one_step_Markers.Ankle.lateral.z = interp1(IC_index:OIC_index, one_step_Markers.Ankle.lateral.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
 
-                % We don't have medial markers so the mean equals the lateral
-            one_step_Markers.Ankle.mean = one_step_Markers.Ankle.lateral;
+                    % We don't have medial markers so the mean is empty
+            one_step_Markers.Ankle.mean = [];
 
             one_step_Markers.Knee.lateral.x = interp1(IC_index:OIC_index, one_step_Markers.Knee.lateral.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
             one_step_Markers.Knee.lateral.y = interp1(IC_index:OIC_index, one_step_Markers.Knee.lateral.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
             one_step_Markers.Knee.lateral.z = interp1(IC_index:OIC_index, one_step_Markers.Knee.lateral.z(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
             
-                % We don't have medial markers so mean equals the lateral
-            one_step_Markers.Knee.mean = one_step_Markers.Knee.lateral;
+                    % We don't have medial markers so the mean is empty
+            one_step_Markers.Knee.mean = [];
 
             one_step_Markers.unit = "mm";
             one_step_Markers.temporal_alignment = "Initial contact to opposite initial contact.";

@@ -4,7 +4,7 @@
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
 %
-clearvars -except -regexp ^Dataset_\d+$ raw_data
+clearvars -except -regexp ^Dataset_(?!2$)\d+$ raw_data
 close all
 clc
 
@@ -1203,12 +1203,12 @@ function good_trials = get_good_markers_trials(raw_data, reference_guide, expect
             if n_markers ~= expected_n_markers
                 if ~all(ismember(important_markers, marker_names))
                     num_excluded = num_excluded + 1;
-                    warning('TrialQuality:MissingMarkers', "P%d (%s) ST: missing important markers.", p, participant_ID)
+                    warning('TrialQuality:MissingMarkers', "P%d (%s): missing important markers in standing trial.", p, participant_ID)
                     continue
                 end
             end
         else
-            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) ST: c3d parameter size mismatch.", p, participant_ID)
+            warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s): c3d parameter size mismatch in standing trial.", p, participant_ID)
         end
 
         % Check that all important markers exist in the walking trials
@@ -1233,7 +1233,7 @@ function good_trials = get_good_markers_trials(raw_data, reference_guide, expect
                 if n_markers ~= 52
                     if ~all(ismember(important_markers, marker_names))
                         num_excluded = num_excluded + 1;
-                        warning('TrialQuality:MissingMarkers', "P%d (%s) C%d 0%d: missing important markers.", p, participant_ID, condition_num, trial_num)
+                        warning('TrialQuality:MissingMarkers', "P%d (%s) C%d 0%d: missing important markers in walking trial.", p, participant_ID, condition_num, trial_num)
                         continue
                     end
                 end
@@ -1243,7 +1243,7 @@ function good_trials = get_good_markers_trials(raw_data, reference_guide, expect
                 good_trials(p).trial(idx).index = t;
                 trials_counter = trials_counter + 1;
             else
-                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) C%d 0%d: c3d parameter size mismatch.", p, participant_ID, condition_num, trial_num)
+                warning('TrialQuality:C3dParameterSizeMismatch', "P%d (%s) C%d 0%d: c3d parameter size mismatch in walking trial.", p, participant_ID, condition_num, trial_num)
             end
 
         end
