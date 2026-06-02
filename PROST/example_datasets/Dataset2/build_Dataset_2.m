@@ -600,20 +600,20 @@ function steps_info = save_steps_info(event_data, forceplate_data, marker_data, 
         % initial contact
         steps_info(step_number).events.IC.time = event_data.times(base_IC_index + shift_index);
         steps_info(step_number).events.IC.time = round(round_by*(steps_info(step_number).events.IC.time))/round_by;
-        [~, steps_info(step_number).events.IC.forceplate_index] = min(abs(steps_info(step_number).events.IC.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.IC.trajectory_index] = min(abs(steps_info(step_number).events.IC.time - marker_data.time_vector));
+        steps_info(step_number).events.IC.forceplate_index = find_index_from_value(forceplate_data.time_vector, steps_info(step_number).events.IC.time);
+        steps_info(step_number).events.IC.trajectory_index = find_index_from_value(marker_data.time_vector, steps_info(step_number).events.IC.time);
 
         % opposite initial contact
         steps_info(step_number).events.OIC.time = event_data.times(base_OIC_index + shift_index);
         steps_info(step_number).events.OIC.time = round(round_by*(steps_info(step_number).events.OIC.time))/round_by;
-        [~, steps_info(step_number).events.OIC.forceplate_index] = min(abs(steps_info(step_number).events.OIC.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.OIC.trajectory_index] = min(abs(steps_info(step_number).events.OIC.time - marker_data.time_vector));
+        steps_info(step_number).events.OIC.forceplate_index = PROST.utils.find_index_from_value(forceplate_data.time_vector, steps_info(step_number).events.OIC.time);
+        steps_info(step_number).events.OIC.trajectory_index = PROST.utils.find_index_from_value(marker_data.time_vector, steps_info(step_number).events.OIC.time);
 
         % toe off
         steps_info(step_number).events.TO.time = event_data.times(base_TO_index + shift_index);
         steps_info(step_number).events.TO.time = round(round_by*(steps_info(step_number).events.TO.time))/round_by;
-        [~, steps_info(step_number).events.TO.forceplate_index] = min(abs(steps_info(step_number).events.TO.time - forceplate_data.time_vector));
-        [~, steps_info(step_number).events.TO.trajectory_index] = min(abs(steps_info(step_number).events.TO.time - marker_data.time_vector));
+        steps_info(step_number).events.TO.forceplate_index = PROST.utils.find_index_from_value(forceplate_data.time_vector, steps_info(step_number).events.TO.time);
+        steps_info(step_number).events.TO.trajectory_index = PROST.utils.find_index_from_value(marker_data.time_vector, steps_info(step_number).events.TO.time);
 
         % foot
         feet(step_number) = lower(event_data.feet(base_IC_index + shift_index));
@@ -657,8 +657,8 @@ function steps_info = check_step(steps_info, forceplate_data, feet)
 
     % Check which step belongs to which plate
     for fp_num=plates
-        [~, step_number_IC] = min(abs(times_IC - fp_times(fp_num, 1)));
-        [~, step_number_TO] = min(abs(times_TO - fp_times(fp_num, 2)));
+        step_number_IC = PROST.utils.find_index_from_value(times_IC, fp_times(fp_num, 1));
+        step_number_TO = PROST.utils.find_index_from_value(times_TO, fp_times(fp_num, 2));
 
         if step_number_IC == step_number_TO 
             step_IC_time = steps_info(step_number_IC).events.IC.time;
@@ -766,7 +766,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             else
                 % change the IC of this good step:
                 new_forceplate_IC_index = IC_index + added_IC - 1;
-                [~, new_trajectory_IC_index] = min(abs(forceplate_data.time_vector(new_forceplate_IC_index) - marker_data.time_vector));
+                new_trajectory_IC_index = PROST.utils.find_index_from_value(marker_data.time_vector, forceplate_data.time_vector(new_forceplate_IC_index));
                 steps_info(step_num).events.IC.forceplate_index = new_forceplate_IC_index;
                 steps_info(step_num).events.IC.time = forceplate_data.time_vector(new_forceplate_IC_index);
                 steps_info(step_num).events.IC.trajectory_index = new_trajectory_IC_index;
@@ -794,7 +794,7 @@ function steps_info = fix_event_times(steps_info, forceplate_data, marker_data)
             else
                 % change the IC of this good step:
                 new_forceplate_TO_index = OIC_index + added_OIC - 1;
-                [~, new_trajectory_TO_index] = min(abs(forceplate_data.time_vector(new_forceplate_TO_index) - marker_data.time_vector));
+                new_trajectory_TO_index = PROST.utils.find_index_from_value(marker_data.time_vector, forceplate_data.time_vector(new_forceplate_TO_index));
                 steps_info(step_num).events.TO.forceplate_index = new_forceplate_TO_index;
                 steps_info(step_num).events.TO.time = forceplate_data.time_vector(new_forceplate_TO_index);
                 steps_info(step_num).events.TO.trajectory_index = new_trajectory_TO_index;
@@ -956,8 +956,8 @@ function speed = calculate_speed(trajectories, events, walking_marker_name)
         end
         time_start = strikes(1);
         time_end = strikes(2);
-        [~, index_start] = min(abs(time_start - trajectories.time_vector.value));
-        [~, index_end] = min(abs(time_end - trajectories.time_vector.value));
+        index_start = PROST.utils.find_index_from_value(trajectories.time_vector.value, time_start);
+        index_end = PROST.utils.find_index_from_value(trajectories.time_vector.value, time_end);
 
         % we chose to calculate the distance using the marker for the walking
         % direction (the SXS marker)

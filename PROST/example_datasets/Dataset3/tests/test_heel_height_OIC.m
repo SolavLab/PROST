@@ -103,7 +103,7 @@ for threshold_shift=[0 0.02 0.025 0.03 0.035 0.04]
             % Toe off
             step_info.events.TO.time = grf_times_vector(end);
             step_info.events.TO.forceplate_index = n_grf_samples;
-            [~, step_info.events.TO.trajectory_index] = min(abs(step_info.events.TO.time - markers_times_vector));
+            step_info.events.TO.trajectory_index = PROST.utils.find_index_from_value(markers_times_vector, step_info.events.TO.time);
            
             % Heel Height
             heel_idx = strmatch("Y" + other_foot + "Heel", s.MarkerVarName, 'exact');
@@ -133,7 +133,7 @@ for threshold_shift=[0 0.02 0.025 0.03 0.035 0.04]
             end
     
             step_info.events.OIC.time = markers_times_vector(OIC_index_traj);
-            [~, step_info.events.OIC.forceplate_index] = PROST.utils.find_index_from_value(grf_times_vector, step_info.events.OIC.time);
+            step_info.events.OIC.forceplate_index = PROST.utils.find_index_from_value(grf_times_vector, step_info.events.OIC.time);
             step_info.events.OIC.trajectory_index = OIC_index_traj;
     
             IC_time = step_info.events.IC.time;

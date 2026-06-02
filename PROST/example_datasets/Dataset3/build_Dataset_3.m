@@ -333,7 +333,7 @@ for participant_number = 1:n_participants
         step_info.events.TO.time = forceplate_time_vector(end);
         step_info.events.TO.time = round(round_by*(step_info.events.TO.time))/round_by;
         step_info.events.TO.forceplate_index = n_grf_samples;
-        [~, step_info.events.TO.trajectory_index] = PROST.utils.find_index_from_value(trajectory_time_vector, step_info.events.TO.time);
+        step_info.events.TO.trajectory_index = PROST.utils.find_index_from_value(trajectory_time_vector, step_info.events.TO.time);
         
         if ~(mod(step_info.events.TO.forceplate_index, 1) == 0) || ~(mod(step_info.events.TO.trajectory_index, 1) == 0)
             error("TO index not an integer.\n" + ...
@@ -378,7 +378,7 @@ for participant_number = 1:n_participants
         % Add OIC to step info event
         step_info.events.OIC.time = trajectory_time_vector(OIC_index_traj);
         step_info.events.OIC.time = round(round_by*(step_info.events.OIC.time))/round_by;
-        [~, step_info.events.OIC.forceplate_index] = PROST.utils.find_index_from_value(forceplate_time_vector, step_info.events.OIC.time);
+        step_info.events.OIC.forceplate_index = PROST.utils.find_index_from_value(forceplate_time_vector, step_info.events.OIC.time);
         step_info.events.OIC.trajectory_index = OIC_index_traj;
         if ~(mod(step_info.events.OIC.forceplate_index, 1) == 0) || ~(mod(step_info.events.OIC.trajectory_index, 1) == 0)
             error("OIC index not an integer.\n" + ...
@@ -456,7 +456,7 @@ for participant_number = 1:n_participants
                 IC_new_time = forceplate_time_vector(new_forceplate_IC);
                 IC_new_time = round(round_by*(IC_new_time))/round_by;
                 Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.events.IC.time = IC_new_time;
-                [~, new_trajectory_IC] = PROST.utils.find_index_from_value(trajectory_time_vector, IC_new_time);
+                new_trajectory_IC = PROST.utils.find_index_from_value(trajectory_time_vector, IC_new_time);
                 Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).step_1_info.events.IC.trajectory_index = new_trajectory_IC;
             end
             if ~(mod(step_info.events.IC.forceplate_index, 1) == 0) || ~(mod(step_info.events.IC.trajectory_index, 1) == 0)
