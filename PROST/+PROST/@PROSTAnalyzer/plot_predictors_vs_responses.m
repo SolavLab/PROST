@@ -1,4 +1,4 @@
-function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts, filt_opts)
+function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts, save_opts, filt_opts)
 %PLOT_PREDICTORS_VS_RESPONSES plots the predictors (anthropometric parameters)
 % v.s. the responses (ROS parameters).
 % Input :
@@ -52,9 +52,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         responses_list             {mustBeTextOrEmpty} = []
         % opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = []
         opts.normalizer_name       {mustBeTextScalarOrEmpty} = []
-        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
-        opts.file_type             (1, 1) string = "fig"
-        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
+    end
+    arguments
+        save_opts.show        (1, 1) matlab.lang.OnOffSwitchState = true
+        save_opts.file_type   (1, 1) string = "fig"
+        save_opts.append      (1, 1) matlab.lang.OnOffSwitchState = false
+    end
+    arguments
         filt_opts.filter           = "none"
         filt_opts.filter_options   = struct([])
     end
@@ -65,10 +69,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     % else 
     %     number_of_axes_in_fig = numel(predictors_list);
     % end
-    show = opts.show;
-    file_type = opts.file_type;
+    show = save_opts.show;
+    file_type = save_opts.file_type;
     normalizer_name = opts.normalizer_name;
-    append = opts.append;
+    append = save_opts.append;
     filter = filt_opts.filter;
     filter_options = filt_opts.filter_options;
 

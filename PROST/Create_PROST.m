@@ -51,12 +51,8 @@ ignore_list = PROST.PROSTDatasetList();
 ignore_list.add_to_list(Dataset_1_ID, 3, 63, "Left"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 5, 69, "Left"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 5, 138, "Right"); % Mislabeled markers or axes
-ignore_list.add_to_list(Dataset_1_ID, 15, [], "Left"); % Mislabeled markers or axes
-ignore_list.add_to_list(Dataset_1_ID, 15, [], "Right"); % Mislabeled markers or axes
-ignore_list.add_to_list(Dataset_1_ID, 14); % something weird is going on with this participant
-% ignore_list.add_to_list(Dataset_1_ID, [3 5 14 15 16], [], "Left");
-% ignore_list.add_to_list(Dataset_1_ID, [5 14 15 16], [], "Right");
-% ignore_list.add_to_list(Dataset_2_ID, [31], [], "Left");
+ignore_list.add_to_list(Dataset_1_ID, 15); % Mislabeled markers or axes
+ignore_list.add_to_list(Dataset_1_ID, 14); % Markers behave weirdly due to large ankle medial-lateral swaying.
 ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left"); % Flat step (large\negative outlier radius)
 PROSTAnalyzer.clean_data(ignore_list);
 

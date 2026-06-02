@@ -80,7 +80,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     arguments
         save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
         save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
-        save_opts.file_type      {mustBeTextScalar, mustBeMember(save_opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        save_opts.file_type      (1, 1) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
         save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
         save_opts.prepare_options = struct([])
     end

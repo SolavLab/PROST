@@ -1,250 +1,182 @@
-clearvars -except DB_1 DB_2 DB_3
+clearvars -except -regexp ^Dataset_\d+$
 close all
 clc
 
-% setup
+%% Setup
 script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
-script_path = fileparts(script_full_path); % Get the folder of the script
-toolbox_root = extractBefore(script_path, "+"); % Get the folder of the PROST toolbox root
-addpath(toolbox_root); % Add PROST package to path
-dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_datasets
-cd(toolbox_root); % Change to folder of current script
-set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+script_folder = fileparts(script_full_path); % Get the folder of the script
+cd(script_folder); % Change to folder of current script
 
-%% Load data
-db_list = ["DB_1", "example_datasets/DB_1.mat"; "DB_3", "example_datasets/DB_3.mat"];
-% db_list = ["DB_3", "./DB3/DB_3.mat"];
+toolbox_root = split(script_folder, filesep);
+toolbox_root = fullfile(toolbox_root{1:end-2});
+addpath(toolbox_root); % Add PROST package to path
+
+dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_datasets
+
+set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
+warning('off', 'backtrace')
+
+%% Load Datasets
+db_list = ["Dataset_1", fullfile(dataset_dir, "Dataset_1.mat"); ...
+           "Dataset_2", fullfile(dataset_dir, "Dataset_2.mat"); ...
+           "Dataset_3", fullfile(dataset_dir, "Dataset_3.mat"); ...
+           "Dataset_4", fullfile(dataset_dir, "Dataset_4.mat")];
 
 var_names = db_list(:, 1);
-dataset_paths = split(db_list(:, 2), "/");
-if iscolumn(dataset_paths)
-    dataset_paths = dataset_paths';
-end
-build_names = replace("build_database_" + dataset_paths(:, end), "mat", "m");
-dataset_paths(:, end) = build_names(:);
 for index = 1:length(var_names)
     if ~exist(var_names(index), "var")
-        disp("Building " + var_names(index) + "...")
-        dataset_file = join(dataset_paths(index, :), "/");
-        run(dataset_file)
+        load(db_list(index, 2))
     end
 end
 
-clearvars -except DB_1 DB_2 DB_3
-close all
-
-%% Load and ignore lists
-load_list = {DB_1, "DB_1"; DB_3, "DB_3"};
-ignore_list = {"DB_1", [3 5 14 15 16], [5 14 15 16];...
-               "DB_3", 23, 23};
-% load_list = {DB_3, "DB_3"};
-% ignore_list = {};
+%% Create Load List
+%   load_list - a cell array where each row contains pairs of dataset name and 
+%               path to the dataset. Example:
+%               {"Dataset 1 Name", "path/to/Dataset1.mat"; "Dataset 2 Name", "path/to/Dataset2.mat"}
+load_list = {Dataset_1, "Dataset 1"; ...
+             Dataset_2, "Dataset 2"; ... 
+             Dataset_3, "Dataset 3"};
+n_datasets = size(load_list, 1);
 
 %% Create ROS analysis object
-[obj, ~] = PROST.PROSTAnalyzer();
+[PROSTAnalyzer1, dataset_ids1] = PROST.PROSTAnalyzer(load_list, toolbox_root);
+Dataset_1_ID = dataset_ids1(1);
+Dataset_2_ID = dataset_ids1(2);
+Dataset_3_ID = dataset_ids1(3);
 
-%% Test Add Dataset Elements
-assert(isempty(obj.DataRecords))
+% [PROSTAnalyzer2, dataset_ids2] = PROST.PROSTAnalyzer();
+[PROSTAnalyzer2, dataset_ids2] = PROST.PROSTAnalyzer({}, toolbox_root);
 
-DB_1_ID = obj.add_to_data_records("DB_1", DB_1);
-assert(isscalar(obj.DataRecords))
-assert(obj.DataRecords(1).Dataset_id == DB_1_ID)
-assert(obj.DataRecords(1).Dataset_name == "DB_1")
-assert(isequaln(obj.DataRecords(1).Article_data, DB_1.Article_data))
-assert(isequaln(obj.DataRecords(1).Experiment_explained, DB_1.Experiment_explained))
-assert(isequaln(obj.DataRecords(1).Lab_explained, DB_1.Lab_explained))
-assert(length(obj.DataRecords(1).Data) == 16)
-for p=1:16
-    assert(obj.DataRecords(1).Data(p).Participant_id == p)
-    assert(obj.DataRecords(1).Data(p).Participant_name == "participant_" + p)
-    assert(isequaln(obj.DataRecords(1).Data(p).Anthropometric_data, DB_1.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(1).Data(p).Uniform_data, DB_1.Data.("participant_" + p).uniform_data))
+%% Test Preloaded PROSTAnalyzer Object
+for idx=1:length(dataset_ids1)
+    dataset_id = dataset_ids1(idx);
+    dataset_to_load_name = load_list{idx, 2};
+    dataset_to_load = load_list{idx, 1};
+    test_loaded_dataset(PROSTAnalyzer1, dataset_to_load_name, dataset_to_load, dataset_id)
+    test_summary_table(PROSTAnalyzer1, dataset_to_load_name, dataset_to_load, dataset_id)
 end
 
-DB_3_ID = obj.add_to_data_records("DB_3", DB_3);
-assert(length(obj.DataRecords) == 2)
-assert(obj.DataRecords(2).Dataset_id == DB_3_ID)
-assert(obj.DataRecords(2).Dataset_name == "DB_3")
-assert(isequaln(obj.DataRecords(2).Article_data, DB_3.Article_data))
-assert(isequaln(obj.DataRecords(2).Experiment_explained, DB_3.Experiment_explained))
-assert(isequaln(obj.DataRecords(2).Lab_explained, DB_3.Lab_explained))
-assert(length(obj.DataRecords(2).Data) == 50)
-for p=1:50
-    assert(obj.DataRecords(2).Data(p).Participant_id == p)
-    assert(obj.DataRecords(2).Data(p).Participant_name == "participant_" + p)
-    assert(isequaln(obj.DataRecords(2).Data(p).Anthropometric_data, DB_3.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(2).Data(p).Uniform_data, DB_3.Data.("participant_" + p).uniform_data))
-end
+%% Test empty PROSTAnalyzer Object
+assert(isempty(PROSTAnalyzer2.DataRecords))
+assert(isempty(PROSTAnalyzer2.SummaryTable))
+assert(PROSTAnalyzer2.SummaryTableSize == 0)
 
-assert(isempty(obj.SummaryTable))
-assert(obj.SummaryTableSize == 0)
+%% Test Empty IPD Table
+assert(isempty(PROSTAnalyzer2.IPDTable))
+assert(PROSTAnalyzer2.IPDTableSize == 0)
+assert(isempty(PROSTAnalyzer1.IPDTable))
+assert(PROSTAnalyzer1.IPDTableSize == 0)
 
-obj.add_to_summary_table(DB_1_ID);
-assert(height(obj.SummaryTable) == 1)
-assert(obj.SummaryTableSize == 1)
-assert(obj.SummaryTable.Dataset_id(1) == DB_1_ID)
-assert(obj.SummaryTable.Dataset_name(1) == "DB_1")
-assert(obj.SummaryTable.Article_name(1) == DB_1.Article_data.article_name)
-assert(obj.SummaryTable.Authors(1) == DB_1.Article_data.authors)
-assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
-assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
-assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.N_participants(1) == DB_1.Experiment_explained.num_participants)
-assert(obj.SummaryTable.N_forceplates(1) == DB_1.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
-for side=["left" "right"]
-    steps = DB_1.Data.participant_1.uniform_data.(side).step;
-    if ~isempty(steps)
-        assert(obj.SummaryTable.Has_medial(1) == ~isempty(steps(1).Markers.Ankle.medial))
-    end
-end
-
-obj.add_to_summary_table(DB_3_ID);
-assert(height(obj.SummaryTable) == 2)
-assert(obj.SummaryTableSize == 2)
-assert(obj.SummaryTable.Dataset_id(2) == DB_3_ID)
-assert(obj.SummaryTable.Dataset_name(2) == "DB_3")
-assert(obj.SummaryTable.Article_name(2) == DB_3.Article_data.article_name)
-assert(obj.SummaryTable.Authors(2) == DB_3.Article_data.authors)
-assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
-assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
-assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.N_participants(2) == DB_3.Experiment_explained.num_participants)
-assert(obj.SummaryTable.N_forceplates(2) == DB_3.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
-for side=["left" "right"]
-    steps = DB_3.Data.participant_1.uniform_data.(side).step;
-    if ~isempty(steps)
-        assert(obj.SummaryTable.Has_medial(2) == ~isempty(steps(1).Markers.Ankle.medial))
-    end
-end
-
-assert(isempty(obj.SamplesTable))
-assert(obj.SamplesTableSize == 0)
-
-obj.add_to_samples_table(DB_1_ID);
-assert(height(obj.SamplesTable) == obj.NUM_SIDES*16)
-sides_counter = 0;
-for p=1:16
-    for side=["left" "right"]
-        steps = DB_1.Data.("participant_" + p).uniform_data.(side).step;
-        sides_counter = sides_counter + ~isempty(steps);
-    end
-end
-assert(obj.SamplesTableSize == sides_counter)
-
-obj.add_to_samples_table(DB_3_ID);
-assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
-for p=1:50
-    for side=["left" "right"]
-        steps = DB_3.Data.("participant_" + p).uniform_data.(side).step;
-        sides_counter = sides_counter + ~isempty(steps);
-    end
-end
-assert(obj.SamplesTableSize == sides_counter)
-
-
-%% Test Delete Dataset
-obj.delete_dataset(DB_1_ID);
-obj.delete_dataset(DB_3_ID);
-
-assert(isempty(obj.DataRecords))
-assert(numEntries(obj.DataRecordsIDLookup) == 0)
-assert(isempty(obj.SummaryTable))
-assert(obj.SummaryTableSize == 0)
-assert(all(ismissing(obj.SamplesTable, {false, missing}), 'all'))
-assert(obj.SamplesTableSize == 0)
 %% Test Add Dataset
-assert(isempty(obj.DataRecords))
-assert(numEntries(obj.DataRecordsIDLookup) == 0)
-assert(isempty(obj.SummaryTable))
-assert(obj.SummaryTableSize == 0)
-assert(all(ismissing(obj.SamplesTable, {false, missing}), 'all') || isempty(obj.SamplesTable))
-assert(obj.SamplesTableSize == 0)
+Dataset_4_ID_1 = test_add_dataset(PROSTAnalyzer1, "Dataset 4", Dataset_4);
+Dataset_4_ID_2 = test_add_dataset(PROSTAnalyzer2, "Dataset 4", Dataset_4);
 
-DB_1_ID = obj.add_dataset("DB_1", DB_1);
-assert(isscalar(obj.DataRecords))
-assert(obj.DataRecords(1).Dataset_id == DB_1_ID)
-assert(obj.DataRecords(1).Dataset_name == "DB_1")
-assert(isequaln(obj.DataRecords(1).Article_data, DB_1.Article_data))
-assert(isequaln(obj.DataRecords(1).Experiment_explained, DB_1.Experiment_explained))
-assert(isequaln(obj.DataRecords(1).Lab_explained, DB_1.Lab_explained))
-assert(length(obj.DataRecords(1).Data) == 16)
-for p=1:16
-    assert(obj.DataRecords(1).Data(p).Participant_id == p)
-    assert(obj.DataRecords(1).Data(p).Participant_name == "participant_" + p)
-    assert(isequaln(obj.DataRecords(1).Data(p).Anthropometric_data, DB_1.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(1).Data(p).Uniform_data, DB_1.Data.("participant_" + p).uniform_data))
+%% Helper Functions:
+function dataset_id = test_add_dataset(PROSTAnalyzer, dataset_to_load_name, dataset_to_load)
+    dataset_id = PROSTAnalyzer.add_dataset(dataset_to_load_name, dataset_to_load);
+    test_loaded_dataset(PROSTAnalyzer, dataset_to_load_name, dataset_to_load, dataset_id)
+    test_summary_table(PROSTAnalyzer, dataset_to_load_name, dataset_to_load, dataset_id)
 end
-assert(height(obj.SummaryTable) == 1)
-assert(obj.SummaryTableSize == 1)
-assert(obj.SummaryTable.Dataset_id(1) == DB_1_ID)
-assert(obj.SummaryTable.Dataset_name(1) == "DB_1")
-assert(obj.SummaryTable.Article_name(1) == DB_1.Article_data.article_name)
-assert(obj.SummaryTable.Authors(1) == DB_1.Article_data.authors)
-assert(obj.SummaryTable.Published_year(1) == DB_1.Article_data.published_year)
-assert(obj.SummaryTable.Article_url(1) == DB_1.Article_data.link_to_paper)
-assert(obj.SummaryTable.Dataset_url(1) == DB_1.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories{1}, DB_1.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.N_participants(1) == DB_1.Experiment_explained.num_participants)
-assert(obj.SummaryTable.N_forceplates(1) == DB_1.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(1) == DB_1.Data.participant_1.metadata.Is_shod.value)
-for side=["left" "right"]
-    steps = DB_1.Data.participant_1.uniform_data.(side).step;
-    if ~isempty(steps)
-        assert(obj.SummaryTable.Has_medial(1) == ~isempty(steps(1).Markers.Ankle.medial))
-    end
-end
-assert(height(obj.SamplesTable) == obj.NUM_SIDES*16)
-sides_counter = 0;
-for p=1:16
-    for side=["left" "right"]
-        steps = DB_1.Data.("participant_" + p).uniform_data.(side).step;
-        sides_counter = sides_counter + ~isempty(steps);
-    end
-end
-assert(obj.SamplesTableSize == sides_counter)
 
-DB_3_ID = obj.add_dataset("DB_3", DB_3);
-assert(length(obj.DataRecords) == 2)
-assert(obj.DataRecords(2).Dataset_id == DB_3_ID)
-assert(obj.DataRecords(2).Dataset_name == "DB_3")
-assert(isequaln(obj.DataRecords(2).Article_data, DB_3.Article_data))
-assert(isequaln(obj.DataRecords(2).Experiment_explained, DB_3.Experiment_explained))
-assert(isequaln(obj.DataRecords(2).Lab_explained, DB_3.Lab_explained))
-assert(length(obj.DataRecords(2).Data) == 50)
-for p=1:50
-    assert(obj.DataRecords(2).Data(p).Participant_id == p)
-    assert(obj.DataRecords(2).Data(p).Participant_name == "participant_" + p)
-    assert(isequaln(obj.DataRecords(2).Data(p).Anthropometric_data, DB_3.Data.("participant_" + p).metadata))
-    assert(isequaln(obj.DataRecords(2).Data(p).Uniform_data, DB_3.Data.("participant_" + p).uniform_data))
+function test_loaded_dataset(PROSTAnalyzer, dataset_to_load_name, dataset_to_load, dataset_id)
+   assert(PROSTAnalyzer.get_dataset_name(dataset_id) == dataset_to_load_name)
+   dataset = PROSTAnalyzer.get_dataset(dataset_id);
+   assert(dataset.Dataset_id == dataset_id)
+   assert(dataset.Dataset_name == dataset_to_load_name)
+   assert(isequal(dataset.Article_data , dataset_to_load.Article_data))
+   assert(isequal(dataset.Lab_system , dataset_to_load.Lab_system))
+   assert(isequal(dataset.Experiment_protocol , dataset_to_load.Experiment_protocol))
+
+   % Asserting Data filed
+   participants = string(fieldnames(dataset_to_load.Data));
+   assert(numel(dataset.Data) == numel(participants))
+   for p_idx=1:numel(participants)
+        participant = participants(p_idx);
+        participant_name = dataset_to_load.Data.(participant).participant_ID_in_original_structure;
+        assert(dataset.Data(p_idx).Participant_id == p_idx)      
+        assert(dataset.Data(p_idx).Participant_name == participant_name)
+        assert(isequal(dataset.Data(p_idx).Anthropometric_data, dataset_to_load.Data.(participant).metadata))
+        clean_uniform_data = remove_field_recursive(dataset.Data(p_idx).Uniform_data, "Is_included");
+        clean_uniform_data = remove_field_recursive(clean_uniform_data, "Shank_cop");
+        assert(isequaln(clean_uniform_data, dataset_to_load.Data.(participant).uniform_data))
+   end
+   disp("LOAD DATASET TEST PASSED!")
 end
-assert(height(obj.SummaryTable) == 2)
-assert(obj.SummaryTableSize == 2)
-assert(obj.SummaryTable.Dataset_id(2) == DB_3_ID)
-assert(obj.SummaryTable.Dataset_name(2) == "DB_3")
-assert(obj.SummaryTable.Article_name(2) == DB_3.Article_data.article_name)
-assert(obj.SummaryTable.Authors(2) == DB_3.Article_data.authors)
-assert(obj.SummaryTable.Published_year(2) == DB_3.Article_data.published_year)
-assert(obj.SummaryTable.Article_url(2) == DB_3.Article_data.link_to_paper)
-assert(obj.SummaryTable.Dataset_url(2) == DB_3.Article_data.link_to_dataset)
-assert(isequaln(obj.SummaryTable.Speed_categories{2}, DB_3.Experiment_explained.speed_categories))
-assert(obj.SummaryTable.N_participants(2) == DB_3.Experiment_explained.num_participants)
-assert(obj.SummaryTable.N_forceplates(2) == DB_3.Lab_explained.num_forceplates)
-assert(obj.SummaryTable.Is_shod(2) == DB_3.Data.participant_1.metadata.Is_shod.value)
-for side=["left" "right"]
-    steps = DB_3.Data.participant_1.uniform_data.(side).step;
-    if ~isempty(steps)
-        assert(obj.SummaryTable.Has_medial(2) == ~isempty(steps(1).Markers.Ankle.medial))
+
+function s = remove_field_recursive(s, field_name)
+    if isstruct(s)
+        % Remove field from current level
+        if isfield(s, field_name)
+            s = rmfield(s, field_name);
+        end
+
+        % Recurse into all remaining fields
+        fields = fieldnames(s);
+        for i = 1:numel(s)
+            for j = 1:numel(fields)
+                f = fields{j};
+                if isstruct(s(i).(f))
+                    s(i).(f) = remove_field_recursive(s(i).(f), field_name);
+                end
+            end
+        end
     end
 end
-assert(height(obj.SamplesTable) == obj.NUM_SIDES*16 + obj.NUM_SIDES*50)
-for p=1:50
-    for side=["left" "right"]
-        steps = DB_3.Data.("participant_" + p).uniform_data.(side).step;
-        sides_counter = sides_counter + ~isempty(steps);
+
+function test_summary_table(PROSTAnalyzer, dataset_to_load_name, dataset_to_load, dataset_id)
+    row_number = find(PROSTAnalyzer.SummaryTable.Dataset_id == dataset_id);
+    assert(isscalar(row_number))
+    assert(PROSTAnalyzer.SummaryTable.Dataset_name(row_number) == dataset_to_load_name)
+    assert(PROSTAnalyzer.SummaryTable.Article_name(row_number) == dataset_to_load.Article_data.article_name)
+    assert(PROSTAnalyzer.SummaryTable.Authors(row_number) == dataset_to_load.Article_data.authors)
+    assert(PROSTAnalyzer.SummaryTable.Published_year(row_number) == dataset_to_load.Article_data.published_year)
+    assert(PROSTAnalyzer.SummaryTable.Article_url(row_number) == dataset_to_load.Article_data.link_to_paper)
+    assert(PROSTAnalyzer.SummaryTable.Dataset_url(row_number) == dataset_to_load.Article_data.link_to_dataset)
+
+    [mean, std] = calc_metadata_mean_std(dataset_to_load, "Age");
+    assert(PROSTAnalyzer.SummaryTable.Age_mean(row_number) == mean)
+    assert(PROSTAnalyzer.SummaryTable.Age_std(row_number) == std)
+    [mean, std] = calc_metadata_mean_std(dataset_to_load, "Height");
+    assert(PROSTAnalyzer.SummaryTable.Height_mean(row_number) == mean)
+    assert(PROSTAnalyzer.SummaryTable.Height_std(row_number) == std)
+    [mean, std] = calc_metadata_mean_std(dataset_to_load, "Mass");
+    assert(PROSTAnalyzer.SummaryTable.Mass_mean(row_number) == mean)
+    assert(PROSTAnalyzer.SummaryTable.Mass_std(row_number) == std)
+
+    assert(PROSTAnalyzer.SummaryTable.Speed_categories(row_number) == dataset_to_load.Experiment_protocol.speed_categories)
+    assert(PROSTAnalyzer.SummaryTable.N_participants(row_number) == dataset_to_load.Experiment_protocol.num_participants)
+    assert(PROSTAnalyzer.SummaryTable.N_steps(row_number) == dataset_to_load.Experiment_protocol.num_steps)
+    assert(PROSTAnalyzer.SummaryTable.N_forceplates(row_number) == dataset_to_load.Lab_system.num_forceplates)
+
+    dataset_shod_situation = dataset_to_load.Data.participant_1.metadata.Is_shod.value;
+    dataset_has_medial = false;
+    participants = string(fieldnames(dataset_to_load.Data));
+    for idx=1:numel(participants)
+        if ~isempty(dataset_to_load.Data.(participants(idx)).uniform_data.right.step)
+            dataset_has_medial = ~isempty(dataset_to_load.Data.(participants(idx)).uniform_data.right.step(1).Markers.Ankle.medial);
+            break
+        else
+            dataset_has_medial = ~isempty(dataset_to_load.Data.(participants(idx)).uniform_data.left.step(1).Markers.Ankle.medial);
+            break
+        end         
     end
+    assert(PROSTAnalyzer.SummaryTable.Is_shod(row_number) == dataset_shod_situation)
+    assert(PROSTAnalyzer.SummaryTable.Has_medial(row_number) == dataset_has_medial)
+    disp("SUMMARY TABLE TEST PASSED!")
 end
-assert(obj.SamplesTableSize == sides_counter)
+
+function [val_mean, val_std] = calc_metadata_mean_std(dataset_to_load, field_name)
+    participants = string(fieldnames(dataset_to_load.Data));
+    values = [];
+    for p_idx=1:numel(participants)
+        field = dataset_to_load.Data.(participants(p_idx)).metadata.(field_name);
+        if isfield(field, "value")
+            values = [values field.value];
+        else
+            values = [values field.right field.left];
+        end
+    end
+
+    val_mean = mean(values);
+    val_std = std(values);
+end

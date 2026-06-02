@@ -37,14 +37,11 @@ function fig = plot_ros(obj, who_to_plot, opts, save_opts)
         who_to_plot                {mustBeScalarOrEmpty, mustBeAOrEmpty(who_to_plot, "PROST.PROSTDatasetList")} = []
         opts.plot_type             {mustBeTextScalar, mustBeMember(opts.plot_type, ["circle" "nadir"])} = "circle"
         opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = 6
-        opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
-        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
     end
     arguments
         save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
         save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
-        save_opts.file_type      {mustBeTextScalar, mustBeMember(save_opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        save_opts.file_type      (1, 1) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
         save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
         save_opts.prepare_options = struct([])
     end
