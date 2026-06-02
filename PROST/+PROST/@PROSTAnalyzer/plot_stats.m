@@ -1,4 +1,4 @@
-function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, category_name, distnames, opts, hist_opts)
+function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, category_name, distnames, opts, save_opts, hist_opts)
 %PLOT_STATS analyzes the statistics of the given variable from the sample data, 
 % estimating its distribution and plotting it compared to a histogram, the KDE 
 % and a set of predetermined distributions. Also can create a QQ-plot compared 
@@ -47,9 +47,19 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: false.
-%   Options for histogram plot:
-%   histogram parameters as Name-Value pairs. Equivalent to options
-%   in the Matlab histogram function.
+%   prepare - if show = 'off', whether to prepare figures for publication when
+%             saving. This sets figure size and fonts according to preset
+%             values. Specified as 'on' or 'off', or as numeric or logical 1 
+%             (true) or 0 (false). A value of 'on' is equivalent to true, and 
+%             'off' is equivalent to false. 
+%               - 'on' - prepare for publication.
+%               - 'off' - save the figure without preparing for publication.
+%            Default: true.
+%   prepare_options - if prepare = "on", options for paper preparation (see
+%                     prep_figure_for_publish utils function).
+%
+%   Options for histogram plot: histogram parameters as Name-Value pairs. 
+%   Equivalent to options in the Matlab histogram function.
 % Output :
 %   fig_data - figure handle for the plot of the histogram and distribution 
 %              estimations.
@@ -64,25 +74,30 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         category_name           {mustBeTextScalarOrEmpty} = []
         distnames               (1, :) {mustBeValidDistributionOrEmpty(distnames)} = []
         opts.function_type      {mustBeTextScalar, mustBeMember(opts.function_type, ["pdf" "cdf" "icdf" "survivor" "cumhazard" "count" "probability" "countdensity" "cumcount" "percentage"])} = "count"
-        opts.show               (1, 1) matlab.lang.OnOffSwitchState =  true
-        opts.file_type          {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
-        opts.append             (1, 1) matlab.lang.OnOffSwitchState = false
         opts.qq_plot            (1, 1) logical = false
-        opts.width_pt           (1, 1) double = 480
-        opts.height_pt          (1, 1) double = 622
+    end
+    arguments
+        save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
+        save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
+        save_opts.file_type      {mustBeTextScalar, mustBeMember(save_opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
+        save_opts.prepare_options = struct([])
+    end
+    arguments
         hist_opts.?matlab.graphics.chart.primitive.Histogram
         hist_opts.DisplayName   {mustBeTextScalar} = "Histogram"
     end
 
     % Prep Input Arguments
     function_type = opts.function_type;
-    show = opts.show;
-    file_type = opts.file_type;
-    append = opts.append;
     qq_plot = opts.qq_plot;
-    width_pt = opts.width_pt;
-    height_pt = opts.height_pt;
 
+    show = save_opts.show;
+    file_type = save_opts.file_type;
+    append = save_opts.append;
+    prepare = save_opts.prepare;
+    prep_options = save_opts.prepare_options;
+    
     % Normalize distribution names
     if ~isempty(distnames)
         distnames = convertCharsToStrings(distnames); 
@@ -315,9 +330,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     % Save figures
     if ~show
         figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.PROSTAnalyzer.save_figure(fig_data, figure_path, file_type, append);
+        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prep_options);
         if qqplot_flag
-            PROST.PROSTAnalyzer.save_figure(fig_qq, figure_path, file_type, append);
+            PROST.utils.save_figure(fig_qq, figure_path, file_type, append);
         end
         fprintf("Saved figures...\n")
     end

@@ -53,7 +53,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         % opts.number_of_axes_in_fig {mustBeScalarOrEmpty, mustBeInteger} = []
         opts.normalizer_name       {mustBeTextScalarOrEmpty} = []
         opts.show                  (1, 1) matlab.lang.OnOffSwitchState = true
-        opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        opts.file_type             (1, 1) string = "fig"
         opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
         filt_opts.filter           = "none"
         filt_opts.filter_options   = struct([])
@@ -305,7 +305,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         if ~show
             drawnow
             file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
-            PROST.PROSTAnalyzer.save_figure(fig(fig_counter), file_path, file_type, append);
+            prep_options.ShowTextbox="off";
+            prep_options.PaperOrientation = "landscape";
+            PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare="on", prep_options=prep_options);
             fprintf("Saved figure...\n")
         end
 

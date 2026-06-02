@@ -25,7 +25,7 @@ function save_all_open_figures(figures_folder, sub_folders, opts)
 
     arguments
         figures_folder  (1, 1) string
-        sub_folders     (1, :) string = []
+        sub_folders     {mustBeTextOrEmpty(sub_folders)} = []
         opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "gif" "pdf" "emf" "eps"])} = "pdf"
         opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
     end
@@ -72,52 +72,17 @@ function save_all_open_figures(figures_folder, sub_folders, opts)
         file_path = fullfile(figures_folder, sub_folder);
 
         PROST.utils.save_figure(f, file_path, file_type=file_type, append=append, prepare=false)
-        % % Ensure output folder exists
-        % if ~isfolder(output_folder)
-        %     mkdir(output_folder);
-        % end
-        %
-        % % Create a valid filename (replace spaces etc.)
-        % base_name = matlab.lang.makeValidName(f.Name);
-        % if isempty(base_name)
-        %     base_name = sprintf('Figure%d', f.Number);
-        % end
-        %
-        % % Full file path
-        % file_path = fullfile(output_folder, base_name + "." + file_type);
-        % if ~append && isfile(file_name)
-        %     letters = ['a':'z'];
-        %     for j = 1:numel(letters)
-        %         candidate_name = sprintf('%s_%s.%s', base_name, letters(j), file_type);
-        %         candidate_path = fullfile(file_path, candidate_name);
-        %         if ~isfile(candidate_path)
-        %             file_name = candidate_path;
-        %             break
-        %         end
-        %     end
-        %
-        %     % Safeguard
-        %     if isfile(file_name)
-        %         error('No available filename suffix remaining.')
-        %     end
-        % end
-
-        % Save based on file type
-        % if strcmpi(file_type, "fig")
-        %         savefig(f, file_path);
-        % else
-        %     ex_opts = {'Resolution', 300};
-        %     switch file_type
-        %         case "pdf"
-        %             ex_opts = [ex_opts, 'ContentType', 'vector', 'Append', append];
-        %         case "gif"
-        %             ex_opts = [ex_opts, 'Append', append];
-        %         case {"emf" "esp"}
-        %             ex_opts = [ex_opts, 'ContentType', 'vector'];
-        %     end
-        %     exportgraphics(f, file_path, ex_opts{:});
-        % end
     end
 
     fprintf("All figures saved.\n");
+end
+
+% ------------ Helper functions for validation
+function mustBeTextOrEmpty(value)
+%MUSTBETEXTOREMPTY Validate that value is a text vector or an empty
+% array.
+    if isempty(value)
+        return
+    end   
+    mustBeText(value);
 end

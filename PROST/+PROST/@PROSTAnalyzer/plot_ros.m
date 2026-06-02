@@ -1,4 +1,4 @@
-function fig = plot_ros(obj, who_to_plot, opts)
+function fig = plot_ros(obj, who_to_plot, opts, save_opts)
 %PLOT_ROS plots the shank frame CoP data and the fitted ROS arc of each side for 
 % all participants in who_to_plot. It also plots either the nadir, or circle 
 % center with accompanying circle that matches each ROS arc.
@@ -9,7 +9,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
 %                 both left and right sides.
 %   Name-Value pair options:
 %   number_of_axes_in_fig - number of axes per figure to plot. 
-%                                    Default: 6.
+%                           Default: 6.
 %   plot_type - either "nadir" for plotting the nadir point of the 
 %                        circle matching the ROS arc, "circle" for the circle 
 %                        center point and the circle itself.
@@ -41,13 +41,23 @@ function fig = plot_ros(obj, who_to_plot, opts)
         opts.file_type             {mustBeTextScalar, mustBeMember(opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
         opts.append                (1, 1) matlab.lang.OnOffSwitchState = false
     end
+    arguments
+        save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
+        save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
+        save_opts.file_type      {mustBeTextScalar, mustBeMember(save_opts.file_type, ["fig" "pdf" "png" "gif" "jpg" "jpeg" "tif" "tiff" "emf" "eps"])} = "fig"
+        save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
+        save_opts.prepare_options = struct([])
+    end
 
     % Prep Input Arguments
     number_of_axes_in_fig = opts.number_of_axes_in_fig;
     plot_type = opts.plot_type;
-    show = opts.show;
-    file_type = opts.file_type;
-    append = opts.append;
+
+    show = save_opts.show;
+    file_type = save_opts.file_type;
+    append = save_opts.append;
+    prepare = save_opts.prepare;
+    prep_options = save_opts.prepare_options;
     
     if isempty(who_to_plot)
         who_to_plot = PROST.PROSTDatasetList();
@@ -238,7 +248,7 @@ function fig = plot_ros(obj, who_to_plot, opts)
                 if ~show
                     drawnow
                     figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/ROS Plots");
-                    PROST.utils.save_figure(fig(fig_counter), figure_path, file_type=file_type, append=append);
+                    PROST.utils.save_figure(fig(fig_counter), figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prep_options);
                     fprintf("Saved figure...\n")
                 end
                 

@@ -239,7 +239,8 @@ function fig = plot_cop(obj, who_to_plot, opts)
                     if ~show
                         drawnow
                         file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/COP Plots");
-                        PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append);
+                        prep_options.ShowTextbox="off";
+                        PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare="on", prep_options=prep_options);
                         fprintf("Saved figure...\n")
                     end
                     
