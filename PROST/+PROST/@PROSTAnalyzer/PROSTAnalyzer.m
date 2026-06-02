@@ -14,8 +14,8 @@ classdef PROSTAnalyzer < handle
         NUM_SIDES = 2; % Number of possible sides ("left", "right").
 
         % Some constants for graphics so everything looks uniform
-        COLOR_RIGHT_BRIGHT = [0 0.9 0]; % greenish bright
-        COLOR_LEFT_BRIGHT = [0.9 0 0]; % reddish bright
+        COLOR_RIGHT_BRIGHT = [0 1 0]; % greenish bright
+        COLOR_LEFT_BRIGHT = [1 0 0]; % reddish bright
         COLOR_RIGHT_DARK = [0 0.5 0.0]; % greenish dark
         COLOR_LEFT_DARK = [0.5, 0.0, 0.0]; % reddish dark
         COLORMAP_RIGHT = "summer";
@@ -27,9 +27,9 @@ classdef PROSTAnalyzer < handle
         COLOR_DEFAULT_GREEN = [0.4660 0.6740 0.1880];
         COLOR_DEFAULT_LIGHTBLUE = [0.3010 0.7450 0.9330];
         COLOR_DEFAULT_RED = [0.6350 0.0780 0.1840];
-        MARKER_CENTER = 's';
-        MARKER_NADIR = 's';
-        MARKER_ANKLE = '+';
+        MARKER_CENTER = 'square';
+        MARKER_NADIR = 'square';
+        MARKER_ANKLE = 'hexagram';
         MARKER_DOT = '.';
         MARKER_SQUARE = 's';
         MARKER_TRIANGLE_UP = '^';
@@ -37,16 +37,18 @@ classdef PROSTAnalyzer < handle
         MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 5;
         MARKER_SIZE_SCATTER = 50;
-        MARKER_FACE_ALPHA = 0.6;
-        LINE_WIDTH = 2;
+        MARKER_ALPHA = 0.5;
+        MARKER_LINE_WIDTH = 1;
+        LINE_WIDTH = 1.5;
         LINE_STYLE_SOLID = "-";
         LINE_STYLE_DASHED = "--";
         LINE_STYLE_DOTTED = ":";
         LINE_STYLE_DASHED_DOTTED = "-.";
         LINE_STYLES = ["-" "--" ":" "-."];
         LINE_COLOR = "black";
-        FONT_SIZE = 14;
-        FONT_SIZE_TEXT = 14;
+        LINE_ALPHA = 0.6;
+        FONT_SIZE = 12;
+        FONT_SIZE_TEXT = 12;
         FONT_WEIGHT = "normal";
         FONT_WEIGHT_TEXT = "bold";
         FONT_NAME = "Times New Roman";
@@ -189,7 +191,6 @@ classdef PROSTAnalyzer < handle
         % delete_from_summary_table(obj, index);
         % filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatomical_side);
         % filter_data_by_ignore(obj);
-        % filter_data_by_outliers(obj, var_list, method);
         % fit_to_circular_arc(obj, entry_number);
         % [IPD_samples, row_numbers] = get_IPD_samples_by_entry(obj, dataset_id, participant_id, side);
         % [IPD_samples, var_names] = get_IPD_samples_by_variable(obj, var_list);

@@ -16,6 +16,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               Options are "normal", "halfnormal", "lognormal", "gamma",
 %               "rayleigh", "exponential", "laplace". This uses the Statistics 
 %               and Machine Learning Toolbox™.
+%
 %   Name-Value pair options:
 %   function_type - the type of function to use for the histogram, KDE 
 %                            and distribution plots. Not all function types 
@@ -27,7 +28,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %                            For KDEs: "pdf", "cdf", "icdf", "survivor", 
 %                                      "cumhazard".
 %                            For distribution functions: "pdf", "cdf", "icdf".                   
-%                            Default: "count" (only plots histogram with bin counts).
+%                            Default: "count".
 %   qq_plot - whether to plot QQ-plots compared to each distribution. 
 %                      Either logical 1 (true) to plot the QQ or logical 0 
 %                      (false) otherwise.
@@ -234,7 +235,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                 xlabel(ax_data, value_name + " [" + value_units + "]")
             end
             ylabel(ax_data, function_type_map(function_type))
-            legend(ax_data);
+            legend(ax_data, Location='best');
         end
 
         if qqplot_flag

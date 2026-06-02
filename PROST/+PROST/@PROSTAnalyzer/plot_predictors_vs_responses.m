@@ -97,8 +97,9 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
     categorical_predictors = predictors(:, ~idx_numeric_predictor);
     categorical_predictor_names = predictor_names(~idx_numeric_predictor);
-    categorical_predictor_units = predictor_units(~idx_numeric_predictor);
     n_categorical_predictors = numel(categorical_predictor_names);
+    % categorical_predictor_units = strings(1, n_categorical_predictors); %predictor_units(~idx_numeric_predictor);
+
 
     % Normalize responses
     if ~isempty(normalizer_name)
@@ -219,8 +220,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         for p_idx=1:n_categorical_predictors
             % Get predictor data
             x = categorical(categorical_predictors{:, p_idx});
-            x_unit = categorical_predictor_units(p_idx);
-            x_label = replace(categorical_predictor_names(p_idx) + " [" + x_unit + "]", "_", " ");
+            x_label = replace(categorical_predictor_names(p_idx), "_", " ");
 
             % Create new figure for new set of axes
             if axes_counter == 0
@@ -278,15 +278,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
         % Save figure and create legend
         % Dummy plots for legend in last axes
-        % ax1 = axes(Position=ax.Position, Visible="off");
-        % ax1.FontUnits = "points";
-        % ax1.FontSize = obj.FONT_SIZE;
-        % ax1.FontName = obj.FONT_NAME;
-        % ax1.TitleFontWeight = obj.FONT_WEIGHT;
-        % ax1.FontWeight = obj.FONT_WEIGHT;
-        % hold(ax1, "on")
-        % grid(ax1, "on")
-
         h_gscatter = gscatter(ax, nan(1, n_dataset_ids), nan(1, n_dataset_ids), unique_dataset_ids, 'k', obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
         for i_dataset=1:n_dataset_ids
             dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
