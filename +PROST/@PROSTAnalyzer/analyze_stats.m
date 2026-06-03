@@ -94,8 +94,8 @@ function out = analyze_stats(value, distnames, opts)
 
     for di = 1:numel(distnames)
         name = distnames(di);
-        name_capitalized = allowed_distnames(strcmp(allowed_distnames_lower, name));
-        name_capitalized = (name_capitalized);
+        name = allowed_distnames_lower(strcmp(allowed_distnames_lower, name));
+        name_capitalized = PROST.utils.capitalize(name);
         key  = matlab.lang.makeValidName(char(name));
 
         switch name
@@ -142,7 +142,7 @@ function out = analyze_stats(value, distnames, opts)
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
                     'chi2', chi2 ...
                 );
-                rows = [rows; llrow(name_capitalized, LL, AIC, BIC)];
+                rows = [rows; llrow("Laplace", LL, AIC, BIC)];
 
             case cellstr(allowed_distnames_lower)
                 % Check support
@@ -172,9 +172,6 @@ function out = analyze_stats(value, distnames, opts)
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
                 chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
                 
-                name_capitalized = allowed_distnames(strcmp(allowed_distnames_lower, name));
-                name_capitalized = PROST.utils.capitalize(name_capitalized);
-
                 fits.(key) = struct( ...
                     'name', name_capitalized, 'type', 'toolbox', 'pd', pd, ...
                     'params', cell2struct(num2cell(pd.ParameterValues(:)'),  ...
@@ -207,6 +204,7 @@ end
 
 function row = llrow(name, LL, AIC, BIC)
 %LLROW builds row for ranking tables
+    name = PROST.utils.capitalize(name);
     row = struct('Distribution', string(name), 'LogLik', LL, 'AIC', AIC, 'BIC', BIC);
 end
 
