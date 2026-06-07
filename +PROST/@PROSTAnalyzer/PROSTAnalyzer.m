@@ -1,10 +1,23 @@
 classdef PROSTAnalyzer < handle
-    %PROSTAnalyzer Is a class that analyzes the ROS of all the datasets 
-    % together:
-    %  - calculating the ROS.
-    %  - analyzing participant ROS compared to metadata info.
-    %  - calculating PCA.
+    % PROSTAnalyzer serves as the central interface for data access, 
+    % integration, and analysis. The class imports each standardized dataset 
+    % and stores it in the DataRecords structure that preserves the 
+    % hierarchical organization of datasets and participants.
+    %
+    % PROSTAnalyzer maintains two primary analysis tables: 
+    % (i) SummaryTable - a dataset-level summary table describing cohort 
+    %                    characteristics.
+    % (ii) IPDTable - a leg-level analysis table that pools anthropometrics, 
+    %                 footwear condition, and ROS-derived circular arc 
+    %                 parameters for each participant leg. This forms the basis 
+    %                 for all subsequent statistical analyses and 
+    %                 visualizations.
+    %
+    % The main functionalities of PROSTAnalyzer include:
+    %  - Calculating the ROS.
+    %  - Analyzing participant ROS compared to anthropometrics info.
     %  - Plotting analysis data.
+    %  - Analyzing statistics of the ROS across datasets.
     % ---------------------------------------------------------------------
     
     %% __________________________
