@@ -91,9 +91,6 @@ function prep_figure_for_publish(fig, opts)
         end
         ax(k).Title.Visible = "off";
         ax(k).Subtitle.Visible = "off";
-
-        % Shorten Y label
-        ax(k).YLabel.String = shortenLabel(ax(k).YLabel.String, 10);
     end
 
     % Remove titles
@@ -101,6 +98,13 @@ function prep_figure_for_publish(fig, opts)
     for k = 1:numel(tl)
         tl(k).Title.Visible = "off";
         tl(k).Subtitle.Visible = "off";
+    end
+
+    if tl.GridSize(1) >= 2 && tl.GridSize(2) >= 3
+        for k = 1:numel(ax)
+            % Shorten Y label
+            ax(k).YLabel.String = shortenLabel(ax(k).YLabel.String, 10);
+        end
     end
 end
 
