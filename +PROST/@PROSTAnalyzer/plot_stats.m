@@ -333,9 +333,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     % Save figures
     if ~show
         figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
+        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options);
         if qqplot_flag
-            PROST.utils.save_figure(fig_qq, figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
+            PROST.utils.save_figure(fig_qq, figure_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options);
         end
         fprintf("Saved figures...\n")
     end

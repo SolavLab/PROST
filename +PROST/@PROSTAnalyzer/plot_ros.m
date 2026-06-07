@@ -237,7 +237,7 @@ function fig = plot_ros(obj, who_to_plot, opts, save_opts)
                 if ~show
                     drawnow
                     figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/ROS Plots");
-                    PROST.utils.save_figure(fig(fig_counter), figure_path, file_type=file_type, append=append, prepare=prepare, prep_options=prep_options);
+                    PROST.utils.save_figure(fig(fig_counter), figure_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prep_options);
                     fprintf("Saved figure...\n")
                 end
                 

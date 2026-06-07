@@ -301,7 +301,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         if ~show
             drawnow
             file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Predictors vs Responses");
-            PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare=prepare, prep_options=prepare_options);
+            PROST.utils.save_figure(fig(fig_counter), file_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options);
             fprintf("Saved figure...\n")
         end
 
