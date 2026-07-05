@@ -126,12 +126,15 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 
     % Get categorizing variable
     if isempty(category_name)
+        category_var = categorical(repmat("NA", size(value)));
         category_name = "Category";
-        category_var = categorical(repmat("All", size(value)));
+        category_options = categories(category_var);
+        category_titles = "";
     else
         category_var = categorical(table2array(obj.get_IPD_samples(category_name)));
+        category_options = categories(category_var);
+        category_titles = replace(category_name + ": " + string(category_options), "_", " ");
     end
-    category_options = categories(category_var);
     category_labels = replace(category_name + ": " + string(category_options), "_", " ");
     n_categories = numel(category_options);
 
@@ -187,7 +190,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end 
 
     fprintf("Plotting Statistics...\n");
-    % Plot settings
+    % Figure settings
     function_type_map = dictionary("count", "Count of Observations", ...
                              "probability", "Relative Probability", ...
                              "percentage", "Relative Percentage", ...
@@ -199,22 +202,28 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                              "survivor", "Survivor Function", ...
                              "cumhazard", "Cumulative Hazard Function");
     
+    fig_name = "Stat Plots: " + value_name;
+    if ~strcmp(category_name, "Category")
+        fig_name = fig_name + " (By " + category_name + ")";
+    end
+    fig_name = fig_name + " - ";
+    
     if dataplot_flag % hist_flag || kde_flag || dist_flag
-        fig_data = figure(Name="Stat Plots: " + value_name + " Distribution Estimation", Visible=show);
+        fig_data = figure(Name=fig_name + " Distribution", Visible=show);
         tl_data = tiledlayout(TileSpacing="compact", Padding="compact");
         sgtitle(fig_data, replace(fig_data.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         colororder(fig_data, "gem12");
     end
 
     if qqplot_flag
-        fig_qq = figure(Name="Stat Plots: " + value_name + " QQ Plot", Visible=show);
+        fig_qq = figure(Name=fig_name + " QQ", Visible=show);  
         tl_qq = tiledlayout(TileSpacing="compact", Padding="compact");
         sgtitle(fig_qq, replace(fig_qq.Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         colororder(fig_qq, "gem12");
     end
 
     % Plot for each category
-    stats = [];
+    stats = struct;
     for cat_idx=1:n_categories
         value_i = value(category_var == category_options{cat_idx});
         x = linspace(min(value_i), max(value_i), 1000);
@@ -229,7 +238,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             ax_data.FontWeight = obj.FONT_WEIGHT;
             hold(ax_data, "on");
             grid(ax_data, "on");
-            title(ax_data, category_labels(cat_idx))
+            title(ax_data, category_titles(cat_idx))
 
             if function_type == "icdf"
                 xlabel(ax_data, "probability")
@@ -246,7 +255,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             n_rows = ceil(num_axes / n_cols);
             tl_qq_inner = tiledlayout(tl_qq, n_rows, n_cols, 'Padding', 'tight', 'TileSpacing','tight');
             tl_qq_inner.Layout.Tile = cat_idx;
-            title(tl_qq_inner, category_labels(cat_idx), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
+            title(tl_qq_inner, category_titles(cat_idx), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
 
         if hist_flag
@@ -259,12 +268,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         % Analyze Statistics
         property_cell = namedargs2cell(analyze_stats_opts);
         stats_i = PROST.PROSTAnalyzer.analyze_stats(value_i, distnames, property_cell{:});
-        stats_i.category = category_labels(cat_idx);
-        stats = [stats; stats_i];
-        txt = sprintf(PROST.utils.pretty_print(stats_i.summary));
-        txt = strip(splitlines(txt));
-        txt = " " + txt(txt~="" & ~startsWith(txt, "-"));
-        txt = join(txt, newline);
+        stats_i.(category_name) = string(category_options{cat_idx});
+        stats.(matlab.lang.makeValidName(category_labels(cat_idx))) = stats_i;
+        txt = sprintf(" n = %d", stats_i.summary.n);
         text(ax_data, 0.01, 1, txt, ...
             Units="normalized", ...
             FontSize=obj.FONT_SIZE_TEXT, ...
@@ -324,7 +330,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                         end
                         
                         grid(ax_qq, "on")
-                        title("")
+                        ax_qq.Title.Visible = "off";
                     end % if qq_flag
             end % for distname=distnames
         end % if dist_flag

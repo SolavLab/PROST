@@ -141,16 +141,19 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                     fig_counter = fig_counter + 1;
                     fig_name = "COP Plots: Lab CS & shank CS";
                     fig(fig_counter) = figure(Name=fig_name, Visible=show);
-                    n_cols = ceil(sqrt(number_of_axes_in_fig));
-                    n_rows = ceil(number_of_axes_in_fig / n_cols);
-                    tOuter = tiledlayout(fig(fig_counter), n_rows, 2*n_cols, TileSpacing="compact", Padding="compact");
+                    % n_cols = ceil(sqrt(number_of_axes_in_fig));
+                    % n_rows = ceil(number_of_axes_in_fig / n_cols);
+                    % tOuter = tiledlayout(fig(fig_counter), n_rows, 2*n_cols, TileSpacing="compact", Padding="compact");
+                    tOuter = tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
                     sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME);
                 end
 
                 % Inner tile for pair of Ankle-Knee Trajectories and COPs in
                 % World and Shank Frames
-                tInner = tOuter; %tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="none", Padding="none");
-                % tInner.Layout.Tile = axes_counter + 1;
+                % tInner = tOuter;
+                tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="none", Padding="none");
+                tInner.Layout.Tile = axes_counter + 1;
+                title(tInner, erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME);
 
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
@@ -180,7 +183,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 %     :-+@#:
                 %     .-+*.
                 ax_lab = nexttile(tInner);
-                title(ax_lab, "Laboratory CS", erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME);
+                title(ax_lab, "Laboratory CS", FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME);
 
                 % Set axis parameters
                 ax_lab.FontUnits = "points";
@@ -190,8 +193,6 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 ax_lab.FontWeight = obj.FONT_WEIGHT;
                 hold(ax_lab, 'on');
                 grid(ax_lab, "on");
-                % axis(ax_lab, 'equal');
-                % daspect(ax_lab,[1 1 1])
                 
                 X = [ankle.x; knee.x];
                 Y = [ankle.z; knee.z];
@@ -200,7 +201,6 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 h_lab(1) = scatter(ax_lab, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_lab(2) = scatter(ax_lab, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_lab(3) = scatter(ax_lab, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
-                % title(ax_lab, "Laboratory CS")
                 xlabel(ax_lab, "x [mm]")
                 ylabel(ax_lab, "z [mm]")
 
@@ -227,7 +227,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 %  ....     .:--+++=-..
                 % .-++++++++++-:..
                 ax_shank = nexttile(tInner);
-                title(ax_shank, "Shank CS", erase(dataset_name, "_") + " P" + participant_id + ": Step " + num2str(step_number) + " " + capitalized_side, FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
+                title(ax_shank, "Shank CS", FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
 
                 ax_shank.FontUnits = "points";
                 ax_shank.FontSize = obj.FONT_SIZE;
@@ -236,8 +236,6 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 ax_shank.FontWeight = obj.FONT_WEIGHT;
                 hold(ax_shank, 'on');
                 grid(ax_shank, "on");
-                % axis(ax_shank, 'equal');
-                % daspect(ax_shank,[1 1 1])
 
                 X = [shank_ankle.u; shank_knee.u];
                 Y = [shank_ankle.w; shank_knee.w];
@@ -246,20 +244,22 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 h_shank(1) = scatter(ax_shank, shank_ankle.u, shank_ankle.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_shank(2) = scatter(ax_shank, shank_knee.u, shank_knee.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_shank(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
-                % title(ax_shank, "Shank CS")
                 xlabel(ax_shank, "u [mm]")
                 ylabel(ax_shank, "w [mm]")
                 legend(ax_shank, h_shank, Location="best");
                 cb = colorbar(ax_shank, 'eastoutside');
                 cb.Label.String = "% IC to OIC";
 
-                enforce_equal_height(ax_lab, ax_shank)
-
                 % Update axis counter
                 axes_counter = axes_counter + 1;
 
                 % Save figure
                 if axes_counter == number_of_axes_in_fig || (participant_id == participants(end) && s_idx == length(step_numbers))
+                    tl = tOuter.Children;
+                    for k = numel(tl):-1:1
+                        ax = findall(tl(k), 'Type', 'Axes');
+                        enforce_equal_height(ax(2), ax(1))
+                    end
                     if ~show
                         drawnow
                         file_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/COP Plots");
@@ -290,31 +290,36 @@ function enforce_equal_height(ax1, ax2)
 % "zoomed-in" similarly. Also forces same grid sizes for comparison of data 
 % units.
 
-    axis(ax1, "tight")
-    axis(ax2, "tight")
+    % 1. lock metric scaling
+    % axis(ax1, 'tight');
+    % axis(ax2, 'tight');
+    daspect(ax1, [1 1 1])
+    daspect(ax2, [1 1 1])
 
-    lims1_x = xlim(ax1);
-    lims1_z = ylim(ax1);
-    lims2_x = xlim(ax2);
-    lims2_z = ylim(ax2);
+    % ensure limits are computed from data first
+    drawnow;
 
-    % span1_x = lims1_x(2) - lims1_x(1);
-    span1_z = lims1_z(2) - lims1_z(1);
+    % 2. extract limits AFTER equal scaling
+    x1 = xlim(ax1); y1 = ylim(ax1);
+    x2 = xlim(ax2); y2 = ylim(ax2);
 
-    % span2_x = lims2_x(2) - lims2_x(1);
-    span2_z = lims2_z(2) - lims2_z(1);
+    % 3. enforce SAME data-unit height in *mm-space sense*
+    %    (this is what makes vertical grid count comparable)
+    span1 = diff(y1);
+    span2 = diff(y2);
 
-    target_scale = max(span1_z, span2_z);
-    expand_to_scale = @(ax) set(ax, ...
-        'YLim', min(ax.YLim) + [0 1] * target_scale);
-    
-    expand_to_scale(ax1);
-    expand_to_scale(ax2);
+    targetSpan = max(span1, span2);   % preserve all data
+    % 4. align baseline (different values allowed)
+    base1 = y1(1);
+    base2 = y2(1);
 
-    xlim(ax1, lims1_x);
-    xlim(ax2, lims2_x);
+    % 5. PAD ONLY UPWARD (key requirement)
+    daspect(ax1, [1 1 1]);
+    daspect(ax2, [1 1 1]);
+    ylim(ax1, [base1, base1 + targetSpan]);
+    ylim(ax2, [base2, base2 + targetSpan]);
 
-    daspect(ax1,[1 1 1])
-    daspect(ax2,[1 1 1])
-
+    % 6. re-lock aspect after limit change
+    % daspect(ax1, [1 1 1]);
+    % daspect(ax2, [1 1 1]);
 end

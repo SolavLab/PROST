@@ -3,8 +3,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 % v.s. the responses (ROS parameters).
 %
 % Input :
-%   predictors_list - list of anthropometric parameters to plot.
-%   responses_list - list of ROS parameters to plot.
+%   predictors_list - list of anthropometric parameters to plot. Leave empty to 
+%                     plot all predictors.
+%   responses_list - list of ROS parameters to plot. Leave empty to plot all 
+%                    responses.
 %
 % Name-Value pair options :
 %   number_of_axes_in_fig - number of axes per figure to plot.
@@ -85,6 +87,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     predictor_names = string(predictors.Properties.VariableNames);
     predictor_units = string(predictors.Properties.VariableUnits);
     predictor_types = string(predictors.Properties.VariableTypes);
+    n_predictors = numel(predictor_names);
 
     responses = obj.get_responses(responses_list);
     response_names = string(responses.Properties.VariableNames);
@@ -126,6 +129,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
     unique_sides = categories(sides);
     n_sides = numel(unique_sides);
     side_color = dictionary(["right" "left"], {obj.COLOR_RIGHT_BRIGHT obj.COLOR_LEFT_BRIGHT}); % Define colors for sides
+    violin_directions = dictionary(["right" "left"], ["positive" "negative"]); % Define violin plot directions for sides
 
     dataset_ids = table2array(obj.get_IPD_samples_by_variable("Dataset_id"));
     unique_dataset_ids = unique(dataset_ids)';
@@ -141,12 +145,17 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         y = responses{:, r_idx};
         y_unit = response_units(r_idx);
         y_label = replace(response_labels(r_idx) + " [" + y_unit + "]", "_", " ");
+        y_median = median(y);
+        [~, y_iqr] = iqr(y);
 
         % Create new figure for new set of axes
         fig_counter = fig_counter + 1;
         fig_name = "Predictors vs Responses: " + response_labels(r_idx);
         fig(fig_counter)  = figure(Name=fig_name, Visible=show);
-        tl = tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
+        n_axes = n_predictors;
+        n_cols = ceil(sqrt(n_predictors));
+        n_rows = ceil(n_axes / n_cols);
+        tl = tiledlayout(fig(fig_counter), n_rows, n_cols, TileSpacing="compact", Padding="compact");
         title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
 
         % Plotting numeric data
@@ -173,7 +182,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end
 
             % Plot predictors vs responses for both sides
-            h_gscatter = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), obj.MARKER_SIZE, 'off', "filled");
+            h_gscatter = gscatter(ax, x, y, {sides, dataset_ids}, [], obj.MARKERS(1:n_dataset_ids), 1, 'off', "filled");
             for i_side=1:n_sides
                 for i_dataset=1:n_dataset_ids
                     i = (i_side - 1).*n_dataset_ids + i_dataset;
@@ -186,13 +195,10 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
                 end
             end
+            
+            % Plot values for comparison
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name);
 
-            % Print R^2, Spearman and Pearson coefficients
-            if correlations.(response_name).Numeric.Rsquared(p_idx) > 0.5
-                pol = polyfit(x, y, 1);
-                y_pred = polyval(pol, x);
-                plot(ax, x, y_pred, LineWidth=obj.LINE_WIDTH, LineStyle=obj.LINE_STYLE_DASHED, Color=obj.LINE_COLOR, DisplayName="Linear Regression");
-            end
             txt = sprintf(" R^2 = %.2g\n" + ...
                           " Spearman: \\rho = %.2g, p = %.2g\n" + ...
                           " Pearson: r = %.2g, p = %.2g", ...
@@ -248,14 +254,20 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             hold(ax, "on")
             grid(ax, "on")
 
-            h_violin = violinplot(ax, x, y, GroupByColor=sides);
+            % Plot predictors vs responses for both sides
+            h_violin = gobjects(n_sides, 1);
             for i_side=1:n_sides
                 side = unique_sides{i_side};
+                idx = sides == side;
+                h_violin(i_side) = violinplot(ax, x(idx), y(idx));
                 h_violin(i_side).DisplayName = sprintf('%s', side);
-                % plot_h(i_side).DensityDirection = directions(side);
+                h_violin(i_side).DensityDirection = violin_directions(side);
                 h_violin(i_side).FaceColor = side_color{side};
                 h_violin(i_side).EdgeColor = side_color{side};
             end
+            
+            % Plot values for comparison
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name);
 
             % Wilcoxon \ Mann-Whitney U-test
             txt = sprintf(" Wilcoxon: H = %d, p = %.2g", ...
@@ -288,14 +300,15 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             dataset_name = obj.get_dataset_name(unique_dataset_ids(i_dataset));
             h_gscatter(i_dataset).DisplayName = dataset_name;
         end
-        h_fill1 =  fill(ax, nan(1, 4), nan(1, 4), side_color{"right"}, FaceColor=side_color{"right"}, FaceAlpha=0.2, EdgeColor=side_color{"right"}, DisplayName="Right");
+        h_fill1 = fill(ax, nan(1, 4), nan(1, 4), side_color{"right"}, FaceColor=side_color{"right"}, FaceAlpha=0.2, EdgeColor=side_color{"right"}, DisplayName="Right");
         h_fill2 = fill(ax, nan(1, 4), nan(1, 4), side_color{"left"}, FaceColor=side_color{"left"}, FaceAlpha=0.2, EdgeColor=side_color{"left"}, DisplayName="Left");
-        h_dummy = [h_gscatter', h_fill1, h_fill2];
+     
+        h_dummy = [h_gscatter', h_fill1, h_fill2 h_compare];
 
         % Legend
         lgd = legend(ax, h_dummy, Location="layout");
-        lgd.Layout.Tile = "east";
-        % ax.Visible = "off";
+        lgd.Layout.Tile = axes_counter + 1;
+        lgd.NumColumns = 2;
 
         % Save figures
         if ~show
@@ -308,7 +321,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         % Reset axis counter
         axes_counter = 0;
 
-    end
+    end % r_idx=1:n_responses
 end
 
 
@@ -329,4 +342,49 @@ function mustBeTextOrEmpty(value)
        return
     end
     mustBeText(value);
+end
+
+function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, response_name)
+    arguments
+        obj
+        ax 
+        y_m             (1, 1) double
+        y_range         (1, 2) double
+        normalizer_name {mustBeTextScalarOrEmpty} = []
+        response_name   (1, 1) string = "Radius"
+    end
+
+    h = gobjects(0);
+    % Plot 0 value
+    h = [h yline(ax, 0, Color=obj.LINE_COLOR, LineWidth=1, DisplayName="Zero")];
+
+    % Plot representative values
+    h = [h yline(ax, y_m, Color=obj.COLOR_DEFAULT_BLUE, LineWidth=1, DisplayName="Median")];
+    h = [h yregion(y_range(1), y_range(2), FaceAlpha=0.1, FaceColor=obj.COLOR_DEFAULT_BLUE, EdgeColor="none", DisplayName="IQR")];
+
+    % Plot values from literature for comparison
+    if ~isempty(normalizer_name) && normalizer_name == "Height"
+        paper_colors = orderedcolors("gem");
+        paper_colors = paper_colors(2:end, :);
+
+        if response_name == "Radius"
+            % comparative values from papers (normalized by body height):
+            hansen_effects_2004_radius = 0.19;
+            hansen_roll_over_2010_radius = 0.22;
+            hansen_roll_over_2004_radius = 0.15;
+            hansen_effects_2005_radius = 0.16;
+
+            h = [h yline(ax, hansen_effects_2004_radius,   Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (A)")];
+            h = [h yline(ax, hansen_roll_over_2010_radius, Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2010")];
+            h = [h yline(ax, hansen_roll_over_2004_radius, Color=paper_colors(3, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
+            h = [h yline(ax, hansen_effects_2005_radius,   Color=paper_colors(4, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
+        elseif response_name == "Center_horizontal"
+            % comparative values from papers (normalized by body height):
+            hansen_roll_over_2004_center_hor = 0.006;
+            hansen_effects_2005_center_hor = 0.011;
+
+            h = [h yline(ax, hansen_roll_over_2004_center_hor, Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
+            h = [h yline(ax, hansen_effects_2005_center_hor,   Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
+        end
+    end
 end

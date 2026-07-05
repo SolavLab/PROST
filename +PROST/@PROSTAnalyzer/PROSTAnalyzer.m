@@ -49,7 +49,7 @@ classdef PROSTAnalyzer < handle
         MARKER_CIRCLE = 'o';
         MARKERS = 'o^sd*xv><phn';
         MARKER_SIZE = 5;
-        MARKER_SIZE_SCATTER = 50;
+        MARKER_SIZE_SCATTER = 30;
         MARKER_ALPHA = 0.5;
         MARKER_LINE_WIDTH = 1;
         LINE_WIDTH = 1.5;
@@ -58,7 +58,7 @@ classdef PROSTAnalyzer < handle
         LINE_STYLE_DOTTED = ":";
         LINE_STYLE_DASHED_DOTTED = "-.";
         LINE_STYLES = ["-" "--" ":" "-."];
-        LINE_COLOR = "black";
+        LINE_COLOR = [0 0 0];
         LINE_ALPHA = 0.6;
         FONT_SIZE = 12;
         FONT_SIZE_TEXT = 12;
