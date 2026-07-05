@@ -611,10 +611,10 @@ function metadata = read_participant_characteristics(metadata_array, participant
     metadata.Mass.unit = "kg";
     metadata.Mass.method = "provided";
 
-    % Is_shod
-    metadata.Is_shod.value = "Yes";
-    metadata.Is_shod.unit = "Yes/No";
-    metadata.Is_shod.method = "provided";
+    % Footwear condition
+    metadata.Footwear_condition.value = "Shod";
+    metadata.Footwear_condition.unit = "Shod/Barefoot";
+    metadata.Footwear_condition.method = "provided";
 
     % Calculate leg length, thigh length and shank length
     [right_leg_length, left_leg_length, right_thigh_length, left_thigh_length, right_shank_length, left_shank_length] = get_lengths(participant_raw_data, markers_guide); % [m]

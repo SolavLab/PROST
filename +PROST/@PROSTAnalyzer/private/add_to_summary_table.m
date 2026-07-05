@@ -27,6 +27,9 @@ function add_to_summary_table(obj, dataset_id)
     obj.SummaryTable.Article_url(entry_number) = dataset.Article_data.link_to_paper;
     obj.SummaryTable.Dataset_url(entry_number) = dataset.Article_data.link_to_dataset;
     obj.SummaryTable.Published_year(entry_number) = dataset.Article_data.published_year;
+    if ~iscell(dataset.Experiment_protocol.speed_categories)
+        dataset.Experiment_protocol.speed_categories = {dataset.Experiment_protocol.speed_categories};
+    end
     obj.SummaryTable.Speed_categories(entry_number) = dataset.Experiment_protocol.speed_categories;
     obj.SummaryTable.N_participants(entry_number) = dataset.Experiment_protocol.num_participants;
     obj.SummaryTable.N_steps(entry_number) = dataset.Experiment_protocol.num_steps;
@@ -35,15 +38,17 @@ function add_to_summary_table(obj, dataset_id)
     % Example participant for existing data to check if participants are
     % shod
     participant = dataset.Data(1);
-    obj.SummaryTable.Is_shod(entry_number) = participant.Anthropometric_data.Is_shod.value;
+    obj.SummaryTable.Footwear_condition(entry_number) = participant.Anthropometric_data.Footwear_condition.value;
     
     % Check whether medial markers exist.
     participants = [dataset.Data.Uniform_data];
     right_steps = [participants.right];
     left_steps = [participants.left];
     steps = [right_steps.step left_steps.step];
-    try
-    obj.SummaryTable.Has_medial(entry_number) = ~isempty(steps(1).Markers.Ankle.medial);
+    if ~isempty(steps(1).Markers.Ankle.medial)
+        obj.SummaryTable.Has_medial(entry_number) = true;
+    else
+        obj.SummaryTable.Has_medial(entry_number) = false;
     end
 
     % Count mean +- SD of age, height and mass.

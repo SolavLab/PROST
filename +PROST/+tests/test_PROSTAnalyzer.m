@@ -148,7 +148,7 @@ function test_summary_table(PROSTAnalyzer, dataset_to_load_name, dataset_to_load
     assert(PROSTAnalyzer.SummaryTable.N_steps(row_number) == dataset_to_load.Experiment_protocol.num_steps)
     assert(PROSTAnalyzer.SummaryTable.N_forceplates(row_number) == dataset_to_load.Lab_system.num_forceplates)
 
-    dataset_shod_situation = dataset_to_load.Data.participant_1.metadata.Is_shod.value;
+    dataset_footwear_condition = dataset_to_load.Data.participant_1.metadata.Footwear_condition.value;
     dataset_has_medial = false;
     participants = string(fieldnames(dataset_to_load.Data));
     for idx=1:numel(participants)
@@ -160,7 +160,7 @@ function test_summary_table(PROSTAnalyzer, dataset_to_load_name, dataset_to_load
             break
         end         
     end
-    assert(PROSTAnalyzer.SummaryTable.Is_shod(row_number) == dataset_shod_situation)
+    assert(PROSTAnalyzer.SummaryTable.Footwear_condition(row_number) == dataset_footwear_condition)
     assert(PROSTAnalyzer.SummaryTable.Has_medial(row_number) == dataset_has_medial)
     disp("SUMMARY TABLE TEST PASSED!")
 end

@@ -1,4 +1,4 @@
-function [age, sex, height, mass, leg_length, thigh_length, shank_length, is_shod] = get_metadata(metadata, side)
+function [age, sex, height, mass, leg_length, thigh_length, shank_length, footwear_condition] = get_metadata(metadata, side)
 %GET_METADATA get separate metadata parameters from field.
 % Input :
 %   metadata - struct with the anthropometric + functional data of a participant.
@@ -12,7 +12,7 @@ function [age, sex, height, mass, leg_length, thigh_length, shank_length, is_sho
 %   leg_length - the participant's leg length in m of side "side".
 %   thigh_length - the participant's thigh length in m of side "side".
 %   shank_length - the participant's shank length in m of side "side".
-%   is_shod - whether the participant was shod (Yes) or barefoot (No).
+%   footwear_condition - whether the participant was shod or barefoot.
 
     age = metadata.Age.value; assert(metadata.Age.unit == "years"); % [years]
     sex = categorical(metadata.Sex.value); % "Male" or "Female"
@@ -21,5 +21,5 @@ function [age, sex, height, mass, leg_length, thigh_length, shank_length, is_sho
     leg_length = metadata.Leg_length.(side); assert(metadata.Leg_length.unit == "m"); % [m]
     thigh_length = metadata.Thigh_length.(side); assert(metadata.Thigh_length.unit == "m"); % [m]
     shank_length = metadata.Shank_length.(side); assert(metadata.Shank_length.unit == "m"); % [m]
-    is_shod = categorical(metadata.Is_shod.value); % "Yes" (shod) or "No" (barefoot)
+    footwear_condition = categorical(metadata.Footwear_condition.value); % "Shod" or "Barefoot"
 end

@@ -3,10 +3,10 @@ function create_IPD_table(obj)
 % data in the data records.
     
     % IPD Table Initialization
-    IPD_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical', 'doublenan', 'doublenan',         'doublenan',        'doublenan', 'doublenan', 'doublenan',  'doublenan'};
-    IPD_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Sex',         'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Is_shod',     'Radius',    'Center_horizontal', 'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual_rms' };
-    IPD_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Yes/No',      'mm',        'mm',                'mm',               'deg',       'deg',       'deg',        'mm'       };
-    IPD_var_descriptions = {'',           '',               '',            '',                    'predictor', 'predictor',   'predictor', 'predictor', 'predictor',  'predictor',    'predictor',    'predictor',   'response',  'response',          'response',         'response',  'response',  'response',   ''         };
+    IPD_var_types =        {'doublenan',  'doublenan',      'categorical', 'categorical',         'doublenan', 'categorical', 'doublenan', 'doublenan', 'doublenan',  'doublenan',    'doublenan',    'categorical',        'doublenan', 'doublenan',         'doublenan',        'doublenan', 'doublenan', 'doublenan',  'doublenan'};
+    IPD_var_names =        {'Dataset_id', 'Participant_id', 'Side',        'Anatomical_side',     'Age',       'Sex',         'Height',    'Mass',      'Leg_length', 'Thigh_length', 'Shank_length', 'Footwear_condition', 'Radius',    'Center_horizontal', 'Center_vertical',  'Ang_start', 'Ang_end',   'Arc_length', 'Residual_rms' };
+    IPD_var_units =        {'',           '',               'right/left',  'lateral/medial/mean', 'years',     'Male/Female', 'm',         'kg',        'm',          'm',            'm',            'Shod/Bearfoot',      'mm',        'mm',                'mm',               'deg',       'deg',       'deg',        'mm'       };
+    IPD_var_descriptions = {'',           '',               '',            '',                    'predictor', 'predictor',   'predictor', 'predictor', 'predictor',  'predictor',    'predictor',    'predictor',          'response',  'response',          'response',         'response',  'response',  'response',   ''         };
     IPD_n_cols = numel(IPD_var_names);
 
     % Count the number of rows needed in the IPD table

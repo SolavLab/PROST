@@ -460,10 +460,10 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     metadata.Mass.unit = "kg";
     metadata.Mass.method = "provided";
     
-    % Is_shod
-    metadata.Is_shod.value = "No";
-    metadata.Is_shod.unit = "Yes/No";
-    metadata.Is_shod.method = "provided";
+    % Footwear Condition
+    metadata.Footwear_condition.value = "Barefoot";
+    metadata.Footwear_condition.unit = "Shod/Barefoot";
+    metadata.Footwear_condition.method = "provided";
     
     % Calculate missing metadata from standing trial
     % Markers:
