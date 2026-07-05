@@ -1,40 +1,40 @@
 function out = analyze_stats(value, distnames, opts)
-% ANALYZE_STATS
-% Fits requested distributions to a sample, computes AIC/BIC/log-likelihood, a 
-% valid Chi-square GoF (equal-prob bins with E_i >= MinExpected), and returns a 
-% rich struct including 'pd' objects (when available), custom Laplace, and KDE 
-% (ksdensity).
+% ANALYZE_STATS fits requested distributions to a sample, computes 
+% AIC/BIC/log-likelihood, a valid Chi-square GoF (equal-prob bins with 
+% E_i >= MinExpected), and returns a rich struct including 'pd' objects 
+% (when available), custom Laplace, and KDE (ksdensity).
 %
-% USAGE:
-%   out = analyze_stats(value, distnames)
-%   out = analyze_stats(value, distnames, opts)
-%
-% INPUT:
-%   value     : numeric vector
-%   distnames : string/cellstr of names. Supported (case-insensitive):
+% Input :
+%   value - numeric vector
+%   distnames - string/cellstr of names. Supported (case-insensitive):
 %               any distribution names supported by the Statistics and Machine 
 %               Learning Toolbox™, custom distributions: "laplace", "kernel".
-%   opts      : struct with optional fields:
-%               .KDESupport   = "unbounded" or "positive" (default: "unbounded")
-%               .KDEKernel    = "normal" (default)
-%               .KDEFunction  = "pdf", "cdf" or "icdf" (default: "pdf")
-%               .KDENumPoints = 100 (default)
-%               .TargetExp    = 10  (expected counts per initial bin)
-%               .MinExpected  = 5   (merge until all E_i >= this)
 %
-% OUTPUT:
-%   out.summary   : struct (n, mean, median, std, skewness, kurtosis, min, max)
-%   out.fits      : struct with a field per distribution:
-%                   .(name).name      = distribution name
-%                   .(name).type      = 'toolbox'|'custom'|'kde'
-%                   .(name).pd        = toolbox pd (if applicable)
-%                   .(name).params    = struct of parameters
-%                   .(name).pdf/cdf/icdf : function handles (if applicable)
-%                   .(name).LL/AIC/BIC : scalars (NaN for KDE)
-%                   .(name).chi2      : struct (stat, df, pvalue, edges, O, E, bins)
-%                   .kernel.kde       : struct (xi, f, bw, f_alt, bw_alt) for KDE
-%   out.rankingAIC: table (Distribution, LogLik, AIC, BIC), sorted by AIC
-%   out.rankingBIC: same, sorted by BIC
+% Name-Value pair options:
+%   KDESupport   = "unbounded" or "positive" (default: "unbounded")
+%   KDEKernel    = "normal" (default)
+%   KDEFunction  = "pdf", "cdf" or "icdf" (default: "pdf")
+%   KDENumPoints = 100 (default)
+%   TargetExp    = 10  (expected counts per initial bin)
+%   MinExpected  = 5   (merge until all E_i >= this)
+%
+% Output :
+%   out.summary - struct (n, mean, median, std, skewness, kurtosis, min, max)
+%   out.fits - struct with a field per distribution:
+%              .(name).name - distribution name
+%              .(name).type - 'toolbox'|'custom'|'kde'
+%              .(name).pd - toolbox pd (if applicable)
+%              .(name).params - struct of parameters
+%              .(name).pdf/cdf/icdf - function handles (if applicable)
+%              .(name).LL/AIC/BIC - scalars (NaN for KDE)
+%              .(name).chi2 - struct (stat, df, pvalue, edges, O, E, bins)
+%              .kernel.kde - struct (xi, f, bw, f_alt, bw_alt) for KDE
+%   out.rankingAIC - table (Distribution, LogLik, AIC, BIC), sorted by AIC
+%   out.rankingBIC - same, sorted by BIC
+%
+% Example usage :
+%   out = analyze_stats(value, distnames)
+%   out = analyze_stats(value, distnames, opts)
 %
 % NOTES:
 % - For positivity-restricted models (lognormal, gamma, rayleigh, half-normal),
@@ -68,15 +68,18 @@ function out = analyze_stats(value, distnames, opts)
     out = struct();
     out.summary = struct( ...
         'n', n, ...
-        'mean', mean(x), ...
-        'median', median(x), ...
-        'std', std(x), ...
-        'CV', std(x) / mean(x), ...
-        'variance', var(x), ...
-        'skewness', skewness(x), ...
-        'kurtosis', kurtosis(x), ...
-        'min', min(x), ...
-        'max', max(x) ...
+        'Mean', mean(x), ...
+        'Median', median(x), ...
+        'SD', std(x), ...
+        'Variance', var(x), ...
+        'IQR', iqr(x), ...
+        'MAD', mad(x), ...
+        'CV', 100 * std(x) / mean(x), ...
+        'CV_MAD', 100 * mad(x) / median(x), ...
+        'Skewness', skewness(x), ...
+        'Kurtosis', kurtosis(x), ...
+        'Min', min(x), ...
+        'Max', max(x) ...
     );
 
     if isempty(distnames)
@@ -121,6 +124,9 @@ function out = analyze_stats(value, distnames, opts)
                     'pdf', [], 'cdf', [], 'icdf', [], ...
                     'LL', NaN, 'AIC', NaN, 'BIC', NaN, ...
                     'chi2', struct('stat', NaN, 'df', NaN, 'pvalue', NaN, 'edges', [], 'O', [], 'E', [], 'bins', NaN), ...
+                    'AD', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
+                    'KS', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
+                    'Lilliefors', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
                     'kde', struct('xi', xi, 'f', f, 'bw', bw, 'f_alt', { {f2, f3} }, 'bw_alt', [1.5*bw 0.7*bw]) ...
                 );
 
@@ -133,17 +139,17 @@ function out = analyze_stats(value, distnames, opts)
                 nparams = 2;
 
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
-
-                chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
-
-                
+                chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);               
 
                 fits.(key) = struct( ...
                     'name', "Laplace", 'type', 'custom', 'pd', [], ...
                     'params', struct('mu', mu, 'b', b), ...
                     'pdf', pdf_f, 'cdf', cdf_f, 'icdf', icdf_f, ...
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
-                    'chi2', chi2 ...
+                    'chi2', chi2, ...
+                    'AD', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
+                    'KS', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
+                    'Lilliefors', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN) ...
                 );
                 rows = [rows; llrow("Laplace", LL, AIC, BIC)];
 
@@ -151,7 +157,7 @@ function out = analyze_stats(value, distnames, opts)
                 % Check support
                 if name == "lognormal" || name == "gamma" || name == "rayleigh" || name == "half normal" || name == "halfnormal"
                     if name == "lognormal" && any(x <= 0)
-                        PROST.PROSTWarning.warn("AnalyzeStats", "NegativeValuesExist", '%s requires x > 0. Skipping.', name);
+                        PROST.PROSTWarning.warn("AnalyzeStats", "NonPositiveValuesExist", '%s requires x > 0. Skipping.', name);
                         continue
                     end
                     if name ~= "lognormal" && any(x < 0)
@@ -174,14 +180,31 @@ function out = analyze_stats(value, distnames, opts)
 
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
                 chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
-                
+                [h, p, stat, cv] = adtest(x, "Distribution", pd);
+                AD = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
+                [h, p, stat, cv] = kstest(x, "CDF", pd);
+                KS = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
+                if ismember(name, ["normal" "exponential" " extreme value"])
+                    [h, p, stat, cv] = lillietest(x, "Distr", name);
+                elseif name == "lognormal"
+                    [h, p, stat, cv] = lillietest(log(x), "Distr", "normal");
+                elseif name == "weibull"
+                    [h, p, stat, cv] = lillietest(log(x), "Distr", "extreme value");
+                else
+                    [h, p, stat, cv] = deal(NaN);
+                end
+                Lilliefors = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
+
                 fits.(key) = struct( ...
                     'name', name_capitalized, 'type', 'toolbox', 'pd', pd, ...
                     'params', cell2struct(num2cell(pd.ParameterValues(:)'),  ...
                                           cellstr(pd.ParameterNames), 2), ...
                     'pdf', pdf_f, 'cdf', cdf_f, 'icdf', icdf_f, ...
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
-                    'chi2', chi2 ...
+                    'chi2', chi2, ...
+                    'AD', AD, ...
+                    'KS', KS, ...
+                    'Lilliefors', Lilliefors ...
                 );
                 rows = [rows; llrow(name_capitalized, LL, AIC, BIC)];
 

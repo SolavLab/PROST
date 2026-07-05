@@ -13,15 +13,13 @@ set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows
 warning('off', 'backtrace')
 
 %% Load Datasets
-db_list = ["Dataset_1", fullfile(dataset_dir, "Dataset_1.mat"); ...
-           "Dataset_2", fullfile(dataset_dir, "Dataset_2.mat"); ...
-           "Dataset_3", fullfile(dataset_dir, "Dataset_3.mat"); ...
-           "Dataset_4", fullfile(dataset_dir, "Dataset_4.mat")];
+dataset_list = ["Dataset_1"; "Dataset_2"; "Dataset_3"; "Dataset_4"];
 
-var_names = db_list(:, 1);
-for index = 1:length(var_names)
-    if ~exist(var_names(index), "var")
-        load(db_list(index, 2))
+for idx = 1:length(dataset_list)
+    var_name = dataset_list(idx);
+    if ~exist(var_name, "var")
+        file_name = fullfile(dataset_dir, var_name + ".mat");
+        load(file_name)
     end
 end
 

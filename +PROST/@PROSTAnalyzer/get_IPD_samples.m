@@ -6,9 +6,11 @@ function [samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, vara
 % Only returns the variables and rows that exist in the IPD table.
 % Returns empty table and empty array if the specified variables or entries
 % don't exist.
+%
 % Input :
 %   var_list - the variable name or list of variable names. Must be a
-%              string array or character cell array.
+%              string array or character cell array. Leave empty for all
+%              variables in list.
 %   dataset_id - the dataset ID for the requested entries. A positive
 %                integer number. Could be a vector of IDs.
 %   participant_id - the participant ID for the requested entry. A
@@ -17,11 +19,13 @@ function [samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, vara
 %                    ID dataset_id included in the IPD data.
 %   side - the side for the requested entry. Either "left", "right" or a
 %          vector containing both "left" and "right" (default).
+%
 % Output :
 %   samples - the entries in the IPD table.
 %   row_numbers - the row numbers of the entries in the IPD table.
 %   var_names - the names of the variables that are returned.
-% Usage :
+%
+% Example usage :
 %   get_IPD_samples(var_list, dataset_id, participant_id, side)
 %   get_IPD_samples(var_list, dataset_id, participant_id)
 %   get_IPD_samples(var_list, dataset_id)
