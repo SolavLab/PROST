@@ -19,7 +19,7 @@ if ~exist("PROSTAnalyzer", "var")
     load("PROSTAnalyzer.mat")
 end
 
-model = "lmm";
+glmm_flag = false;
 boot_flag = false;
 
 %% Create Table for Statistical Analysis
@@ -52,6 +52,7 @@ data = [data predictors];
 % Parameters to analyze
 data.R = radius;
 data.R_H = radius ./ height;
+data.log_R_H = log(data.R_H);
 data.Cx = horizontal;
 data.Cy = vertical;
 data.Cx_H = horizontal ./ height;
@@ -85,133 +86,144 @@ end
 
 clear radius horizontal residual height predictors
 
+%% Robust descriptive summary, by participant (use participant-level means first 
+% to avoid double-weighting participants with bilateral measurements)
+participantMeans = groupsummary(data, 'ParticipantIDGlobal', 'mean', 'R_H');
+
+med_RH  = median(participantMeans.mean_R_H);
+iqr_RH  = iqr(participantMeans.mean_R_H);
+mean_RH = mean(participantMeans.mean_R_H);
+sd_RH   = std(participantMeans.mean_R_H);
+
+fprintf('Participant-level R_H: median = %.4f, IQR = %.4f\n', med_RH, iqr_RH);
+fprintf('Participant-level R_H: mean = %.4f, SD = %.4f (sensitive to skew, report for completeness)\n', mean_RH, sd_RH);
+
 %% Linear Mixed Effects Model
-switch model
-    case "lmm"
-    lmm_response_name = 'R_H';
-    %% Test Weight Scheme
-    test_weight_scheme(data, lmm_response_name)
-    
-    %% Weighted LMM Model
-    formula = [lmm_response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-    weight_scheme = sqrt(data.n_steps);
+response_name = 'R_H';
+% Test Weight Scheme
+% test_weight_scheme(data, lmm_response_name)
 
-    % Fit the model using REML
-    opts = optimoptions('fminunc');
-    opts.Display = 'off';
-    lmm_weighted = fitlme(data, formula, ...
-                'FitMethod', 'REML', ...
-                'Weights', weight_scheme, ...
-                'DummyVarCoding', 'effects', ...
-                'Optimizer', 'fminunc', ...
-                'OptimizerOptions', opts);
-    
-    %% Test Cutoff of Unstable R
-    test_cutoff_unstable_R(data, lmm_weighted)
+% Weighted LMM Model
+formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
+weight_scheme = sqrt(data.n_steps);
 
-    %% Final Weighted and Cutoff LMM
-    data_final = data(data.R_H <= 1, :);
-    weight_final = weight_scheme(data.R_H <= 1);
+% Fit the model using REML
+opts = optimoptions('fminunc');
+opts.Display = 'off';
+lmm_weighted = fitlme(data, formula, ...
+    'FitMethod', 'REML', ...
+    'Weights', weight_scheme, ...
+    'DummyVarCoding', 'effects', ...
+    'Optimizer', 'fminunc', ...
+    'OptimizerOptions', opts);
 
-    fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
-            height(data)-height(data_final), height(data), ...
-            100*(height(data) - height(data_final)) / height(data));
+% Test Cutoff of Unstable R
+% test_cutoff_unstable_R(data, lmm_weighted)
+
+% Final Weighted and Cutoff LMM
+data_final = data(data.R_H <= 1, :);
+weight_final = weight_scheme(data.R_H <= 1);
+
+fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
+    height(data) - height(data_final), height(data), ...
+    100*(height(data) - height(data_final)) / height(data));
 
 
-    % Fit the model using:
-    % Formula: R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)
-    % Weight: sqrt(n_steps)
-    % Fit Method: REML
-    % Dummy Var Coding: Effects
-    % Optimizer: QuasiNewton (default)
-    % Dataset cutoff at R_H > 1
-    lmm_final = fitlme(data_final, formula, ...
-                       'FitMethod', 'REML', ...
-                       'Weights', weight_final, ...
-                       'DummyVarCoding', 'effects');
-    lmm_final_alt = fitlme(data_final, formula, ...
-                           'FitMethod', 'REML', ...
-                           'Weights', weight_final, ...
-                           'DummyVarCoding', 'effects', ...
-                           'Optimizer', 'fminunc');
+% Fit the model using:
+% Formula: R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)
+% Weight: sqrt(n_steps)
+% Fit Method: REML
+% Dummy Var Coding: Effects
+% Optimizer: QuasiNewton (default)
+% Dataset cutoff at R_H > 1
+lmm_final = fitlme(data_final, formula, ...
+    'FitMethod', 'REML', ...
+    'Weights', weight_final, ...
+    'DummyVarCoding', 'effects');
+lmm_final_alt = fitlme(data_final, formula, ...
+    'FitMethod', 'REML', ...
+    'Weights', weight_final, ...
+    'DummyVarCoding', 'effects', ...
+    'Optimizer', 'fminunc');
 
-    if lmm_final.LogLikelihood < lmm_final_alt.LogLikelihood
-        lmm_final = lmm_final_alt;
-        fprintf('Switched to FMinUnc!')
-    end
+if lmm_final.LogLikelihood < lmm_final_alt.LogLikelihood
+    lmm_final = lmm_final_alt;
+    fprintf('Switched to FMinUnc!')
+end
 
-    disp(lmm_final)
+disp(lmm_final)
 
-    % Extract estimates and covariance for the three estimated DatasetID coefficients
-    % coefNames = lmm_final.Coefficients.Name;
-    % idx = contains(coefNames, 'DatasetID');
-    % 
-    % b = lmm_final.Coefficients.Estimate(idx);       % [b1; b2; b3]
-    % V = lmm_final.CoefficientCovariance(idx, idx);  % 3x3 covariance submatrix
-    % 
-    % % Contrast vector: beta4 = -(b1+b2+b3) = c' * b, where c = [-1;-1;-1]
-    % c = [-1; -1; -1];
-    % 
-    % beta4 = c' * b;
-    % se_beta4 = sqrt(c' * V * c);
-    % 
-    % df = lmm_final.Coefficients.DF(find(idx,1));  % use same residual DF as other fixed effects
-    % tstat = beta4 / se_beta4;
-    % pval = 2 * (1 - tcdf(abs(tstat), df));
-    % ci_lower = beta4 - tinv(0.975, df) * se_beta4;
-    % ci_upper = beta4 + tinv(0.975, df) * se_beta4;
-    % 
-    % fprintf('\n--- Fixed Effects Values ---\n');
-    % for idx=1:3
-    %     fprintf('DatasetID_%d: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-    %     idx, ...
-    %     lmm_final.Coefficients.Estimate(idx), ...
-    %     lmm_final.Coefficients.SE(idx), ...
-    %     lmm_final.Coefficients.tStat(idx), ...
-    %     lmm_final.Coefficients.pValue(idx), ...
-    %     lmm_final.Coefficients.Lower(idx), ...
-    %     lmm_final.Coefficients.Upper(idx));
-    % end
-    % fprintf('DatasetID_4: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-    %     beta4, se_beta4, tstat, pval, ci_lower, ci_upper);
+% Extract estimates and covariance for the three estimated DatasetID coefficients
+% coefNames = lmm_final.Coefficients.Name;
+% idx = contains(coefNames, 'DatasetID');
+%
+% b = lmm_final.Coefficients.Estimate(idx);       % [b1; b2; b3]
+% V = lmm_final.CoefficientCovariance(idx, idx);  % 3x3 covariance submatrix
+%
+% % Contrast vector: beta4 = -(b1+b2+b3) = c' * b, where c = [-1;-1;-1]
+% c = [-1; -1; -1];
+%
+% beta4 = c' * b;
+% se_beta4 = sqrt(c' * V * c);
+%
+% df = lmm_final.Coefficients.DF(find(idx,1));  % use same residual DF as other fixed effects
+% tstat = beta4 / se_beta4;
+% pval = 2 * (1 - tcdf(abs(tstat), df));
+% ci_lower = beta4 - tinv(0.975, df) * se_beta4;
+% ci_upper = beta4 + tinv(0.975, df) * se_beta4;
+%
+% fprintf('\n--- Fixed Effects Values ---\n');
+% for idx=1:3
+%     fprintf('DatasetID_%d: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
+%     idx, ...
+%     lmm_final.Coefficients.Estimate(idx), ...
+%     lmm_final.Coefficients.SE(idx), ...
+%     lmm_final.Coefficients.tStat(idx), ...
+%     lmm_final.Coefficients.pValue(idx), ...
+%     lmm_final.Coefficients.Lower(idx), ...
+%     lmm_final.Coefficients.Upper(idx));
+% end
+% fprintf('DatasetID_4: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
+%     beta4, se_beta4, tstat, pval, ci_lower, ci_upper);
 
-    % Display metrics formatted for publication
-    ICC = model_metrics(lmm_final, "Final LMM");
+% Display metrics formatted for publication
+ICC = model_metrics(lmm_final, "Final LMM");
 
-    %% Test Linear Mixed-Effects Model Assumptions
-    test_lmm_assumptions(data_final, lmm_final, lmm_response_name)
+% Test Linear Mixed-Effects Model Assumptions
+assumptions_check(lmm_final, "Final LMM")
+left_right_difference_check(data_final, response_name);
 
-    %% General Linear Mixed Effects Model
-    case "glmm"
+%% General Linear Mixed Effects Model
+if glmm_flag
     % We use an Inverse Gaussian distribution with a Log link function.
     % Observations are weighted by 1/RMS^2 to account for circular fit precision.
-    expected_slope = dictionary(["Gamma", "InverseGaussian", "Poisson", "Normal"], [2 3 1 0]);
+    expected_mean_var_slope = dictionary(["Gamma", "InverseGaussian", "Poisson", "Normal"], [2 3 1 0]);
     glme_response_name = 'R_H';
     glme_distribution = 'InverseGaussian';
     glme_link = 'log';
     glme_fit_method = 'Laplace';
     glme_formula = [glme_response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-    
+
     % Fit the Generalized Linear Mixed-Effects Model (GLMM)
     glme = fitglme(data, glme_formula, ...
-                    'Distribution', glme_distribution, ...
-                    'Link', glme_link, ...
-                    'FitMethod', glme_fit_method, ...
-                    'Weights', weight);
-    
+        'Distribution', glme_distribution, ...
+        'Link', glme_link, ...
+        'FitMethod', glme_fit_method, ...
+        'Weights', weight);
+
     % Extract variance components
     [cov_estimates, ~, stats] = covarianceParameters(glme);
-    
+
     % By MATLAB convention, cov_estimates is a cell array containing covariance matrices.
     % For scalar random effects, these matrices contain a single element (the variance).
     tau2_participant = cov_estimates{1}(1, 1);
     phi = glme.Dispersion;                 % from fitglme output
     var_resid = psi(1, 1/phi);       % trigamma-based latent-scale residual variance
-    
+
     % Display metrics formatted for publication
     ICC = model_metrics(tau2_participant, var_resid, "GLMM");
 
-    %% GLMM Assumption Diagnostics
+    % GLMM Assumption Diagnostics
     %% ------------------------------------------------------------------
     %  CHECK 1: Variance Function (Var(Y) ~ mu^P)
     %  ------------------------------------------------------------------
@@ -224,7 +236,7 @@ switch model
     n_bins = 20;
     edges = quantile(mu_hat, linspace(0, 1, n_bins+1));
     bin_idx = discretize(mu_hat, edges);
-    
+
     log_mean_bin = nan(n_bins, 1);
     log_var_bin  = nan(n_bins, 1);
     for b = 1:n_bins
@@ -238,8 +250,8 @@ switch model
     p = polyfit(log_mean_bin(valid), log_var_bin(valid), 1);
     fprintf('--- GLMM Variance Function Check ---\n');
     fprintf('Estimated slope of log(Var) vs log(Mean): %.3f (%s expects ~ %d)\n\n', ...
-        p(1), glme_distribution, expected_slope(glme_distribution));
-    
+        p(1), glme_distribution, expected_mean_var_slope(glme_distribution));
+
     figure
     scatter(log_mean_bin(valid), log_var_bin(valid), 60, 'filled')
     hold on
@@ -248,38 +260,38 @@ switch model
     xlabel('log(Mean of \mu_{hat} per bin)')
     ylabel('log(Variance of residuals per bin)')
     txt = sprintf('GLMM Variance Function Check (slope = %.2f, %s expects ~ %d)', ...
-                   p(1), glme_distribution, expected_slope(glme_distribution));
+        p(1), glme_distribution, expected_mean_var_slope(glme_distribution));
     title(txt)
     grid on
-    
-    %% ------------------------------------------------------------------
+
+    % ------------------------------------------------------------------
     %  CHECK 2: Normality of Random Effects
     %  ------------------------------------------------------------------
     [~, ~, reStats] = randomEffects(glme); % reStats: table with Level, Name, Estimate, Group
     isPart  = strcmp(reStats.Group, 'DatasetID:ParticipantID');
     random_effects  = reStats.Estimate(isPart);
-    
-    test_normality(random_effects, "GLMM Participant Random Effects", 'anderson')
-    
-    figure; 
+
+    normality_check(random_effects, "GLMM Participant Random Effects", 'anderson')
+
+    figure;
     qqplot(random_effects);
     [skew_re, kurt_re] = deal(skewness(random_effects), kurtosis(random_effects));
     fprintf('Skewness: %.3f, Kurtosis: %.3f\n\n', skew_re, kurt_re);
-    
-    %% ------------------------------------------------------------------
+
+    % ------------------------------------------------------------------
     %  CHECK 3: Dispersion Adequacy (Pearson chi^2 / df)
     %  ------------------------------------------------------------------
     phi = glme.Dispersion;
     mu_hat = predict(glme);
     y = data{:, glme_response_name};
-    V_mu = mu_hat.^expected_slope(glme_distribution);
+    V_mu = mu_hat.^expected_mean_var_slope(glme_distribution);
 
     pearson_resid = (y - mu_hat) ./ sqrt(V_mu);
     pearson_chi2  = sum(pearson_resid.^2);
 
     df_resid      = glme.DFE; % residual degrees of freedom
     dispersion_ratio = pearson_chi2 / df_resid;
-    
+
     fprintf('--- GLMM Dispersion Adequacy Check ---\n');
     fprintf('Pearson chi^2:           %.3f\n', pearson_chi2);
     fprintf('df_resid:                %d\n', df_resid);
@@ -287,114 +299,116 @@ switch model
     fprintf('Model fitted dispersion: %.3f  (should agree with ratio if family is correct)\n', phi);
     fprintf('Ratio / phi:             %.3f  (should be approx. 1.0 if phi is well-estimated)\n\n', dispersion_ratio/phi);
 
-    %% ------------------------------------------------------------------
+    % ------------------------------------------------------------------
     %  CHECK 4: Randomized Quantile Residuals (Dunn & Smyth, 1996)
     %  Valid replacement for response-scale normality testing
     %  ------------------------------------------------------------------
     phi   = glme.Dispersion;
     shape = 1/phi;
     scale = phi .* mu_hat;
-    
+
     u = gamcdf(data{:, glme_response_name}, shape, scale);   % probability integral transform
     u = min(max(u, eps), 1-eps);                          % guard against 0/1 boundary issues
     quantile_resid = norminv(u);                          % should be ~ N(0,1) if model correctly specified
-    
-    test_normality(quantile_resid, "GLMM Quantile Resdial", 'anderson')
+
+    normality_check(quantile_resid, "GLMM Quantile Resdial", 'anderson')
 end
 
 %% Cluster (Participant-Level), Stratified-by-Dataset Bootstrap for ICC CI
 if boot_flag
-    n_boot = 2000;
-    ICC_boot   = nan(n_boot, 1);
-    sigma2_part_boot = nan(n_boot, 1);
-    sigma2_resid_boot = nan(n_boot, 1);
-    n_failed_error = 0;
-    n_failed_warning = 0;
-    
-    datasets = unique(data.DatasetID);
-    glme_response_name = 'R_H';
-    boot_formula = [glme_response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];  % unconditional model
-    
-    for b = 1:n_boot
-        boot_rows = [];
-        for d = 1:numel(datasets)
-            this_dataset = data(data.DatasetID == datasets(d), :);
-            partisipant_IDs = unique(this_dataset.ParticipantID);
-            n_participants = numel(partisipant_IDs);
-            sampled_IDs = partisipant_IDs(randi(n_participants, n_participants, 1));  % resample participants WITH replacement
-            [r, ~] = find(this_dataset.ParticipantID == sampled_IDs');
-            boot_rows = [boot_rows; this_dataset(r, :)];
-        end
-        
-        lastwarn('');  % clear warning state before each fit
-        warning('off', 'all');  % suppress console spam; we'll check programmatically instead
-        
-        try
-            % Weights from RMS
-            boot_weight = 1 ./ (boot_rows.RMS.^2);
-            boot_weight(~isfinite(weight)) = max(boot_weight(isfinite(boot_weight)));
-            glme_boot = fitglme(boot_rows, boot_formula, ...
-                                'Distribution', 'InverseGaussian', ...
-                                'Link', 'log', ...
-                                'FitMethod', 'Laplace', ...
-                                'Weights', boot_weight);
-            
-            [last_warning, warnID] = lastwarn();
-            if ~isempty(warnID) && ...
-               ~contains(last_warning, 'Posterior mode estimation of random effects did not converge.') && ...
-               ~contains(last_warning, 'Line search for posterior mode estimation of random effects did not converge.')
-    
-                disp(warnID + ": " + last_warning)
-                warning('on','all');
-            end
-            if contains(warnID, 'lmeutils', IgnoreCase=true) || ...
-               contains(warnID, 'StandardGeneralizedLinearMixedModel', IgnoreCase=true) || ...
-               contains(last_warning, 'did not converge', IgnoreCase=true)
-                n_failed_warning = n_failed_warning + 1;
-                warning('on','all');
-                continue  % discard this resample - convergence not trustworthy
-            end
-            
-            [cov_estimates, ~, stats] = covarianceParameters(glme_boot);  % adjust extraction to match your existing helper
-            sigma2_part  = cov_estimates{1}(1, 1); % participant variance component 
-            phi = glme_boot.Dispersion;  % trigamma-corrected latent residual variance
-            var_resid = psi(1, 1/phi);       % trigamma-based latent-scale residual variance
-    
-            sigma2_part_boot(b)  = sigma2_part;
-            sigma2_resid_boot(b) = var_resid;
-            ICC_boot(b) = sigma2_part / (sigma2_part + var_resid);
-        catch
-            n_failed_error = n_failed_error + 1;
-            % leave as NaN, continue
-        end
-    end
+   n_boot = 100;
+   participants_global = unique(data_final.ParticipantIDGlobal);
+   n_participants = length(participants_global);
+   n_failed_error = 0;
+
+   n_coefs = height(lmm_final.Coefficients);
+   bootCoefs   = nan(n_boot, n_coefs);
+   bootPartSD  = nan(n_boot, 1);   % participant-level random intercept SD
+   bootResSD   = nan(n_boot, 1);   % residual SD
+   bootICC     = nan(n_boot, 1);   % ICC
+
+   for b = 1:n_boot
+       sampled_global = participants_global(randi(n_participants, n_participants, 1));
+
+       bootData = table();
+       for p = 1:n_participants
+           rows = data_final(data_final.ParticipantIDGlobal == sampled_global(p), :);
+
+           % give this draw a unique label so repeated draws of the same
+           % participant don't collapse into one random-effect group
+           rows.ParticipantID = repmat(string(sprintf('boot%d', p)), height(rows), 1);
+
+           bootData = [bootData; rows]; %#ok<AGROW>
+       end
+       % 
+       % [last_warning, warnID] = lastwarn();
+       % 
+       % if ~isempty(warnID) && ...
+       %         ~contains(last_warning, 'Posterior mode estimation of random effects did not converge.') && ...
+       %         ~contains(last_warning, 'Line search for posterior mode estimation of random effects did not converge.')
+       % 
+       %     disp(warnID + ": " + last_warning)
+       %     warning('on','all');
+       % end
+       % 
+       % if contains(warnID, 'lmeutils', IgnoreCase=true) || ...
+       %         contains(warnID, 'StandardGeneralizedLinearMixedModel', IgnoreCase=true) || ...
+       %         contains(last_warning, 'did not converge', IgnoreCase=true)
+       %     n_failed_warning = n_failed_warning + 1;
+       %     warning('on','all');
+       %     continue  % discard this resample - convergence not trustworthy
+       % end
+
+       try
+           bootLme = fitlme(bootData, char(lmm_final.Formula), ...
+               'FitMethod', lmm_final.FitMethod, ...
+               'Weights', sqrt(bootData.n_steps), ...
+               'DummyVarCoding', 'effects');
+
+           % fixed effects
+           bootCoefs(b, :) = bootLme.Coefficients.Estimate;
+
+           % random effects covariance (participant-level intercept SD)
+           [psi, sigma] = covarianceParameters(bootLme);
+           % psi is a cell array (one per grouping variable); for a single (1|Group) term:
+           bootPartSD(b) = sqrt(psi{1}(1, 1)); % or psi{1}(1,1) depending on MATLAB version output shape
+           bootResSD(b)  = sqrt(sigma);
+
+           % ICC = participant variance / (participant variance + residual variance)
+           bootICC(b) = bootPartSD(b)^2 / (bootPartSD(b)^2 + bootResSD(b)^2);
+
+       catch ME
+           n_failed_error = n_failed_error + 1;
+           continue
+       end
+   end
     %%
-    ICC_boot = ICC_boot(~isnan(ICC_boot));
+    bootICC = bootICC(~isnan(bootICC));
     fprintf('Hard errors: %d / %d (%.1f%%)\n', n_failed_error, n_boot, 100*n_failed_error/n_boot);
-    fprintf('Convergence warnings (discarded): %d / %d (%.1f%%)\n', n_failed_warning, n_boot, 100*n_failed_warning/n_boot);
-    fprintf('Usable resamples: %d / %d (%.1f%%)\n', numel(ICC_boot), n_boot, 100*numel(ICC_boot)/n_boot);
+    % fprintf('Convergence warnings (discarded): %d / %d (%.1f%%)\n', n_failed_warning, n_boot, 100*n_failed_warning/n_boot);
+    fprintf('Usable resamples: %d / %d (%.1f%%)\n', numel(bootICC), n_boot, 100*numel(bootICC)/n_boot);
     
     %% Percentile method
-    ICC_CI_percentile = quantile(ICC_boot, [0.025, 0.975]);
+    ICC_CI_percentile = quantile(bootICC, [0.025, 0.975]);
     fprintf('ICC point estimate: %.4f\n', ICC); % from your original full-sample fit
     fprintf('Bootstrap 95%% CI (percentile): [%.4f, %.4f]\n', ICC_CI_percentile(1), ICC_CI_percentile(2));
     
     figure; 
-    histogram(ICC_boot, 40); 
+    histogram(bootICC, 40); 
     xlabel('Bootstrapped ICC'); 
     ylabel('Frequency');
     title('Bootstrap Distribution of ICC'); 
-    test_normality(ICC_boot, "Bootstrap ICC", 'anderson')
+    normality_check(bootICC, "Bootstrap ICC", 'anderson')
     
-    mean_boot = mean(ICC_boot);
-    median_boot = median(ICC_boot);
+    mean_boot = mean(bootICC);
+    median_boot = median(bootICC);
     fprintf('Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
-            mean_boot, median_boot, 0.4350);
+            mean_boot, median_boot, ICC);
     
     %% BCa Correction to Bootstrapped ICC CI
     % Proportion of bootstrap ICCs less than the original point estimate
     ICC_hat = ICC;  % your original full-sample point estimate
-    p0 = mean(ICC_boot < ICC_hat);
+    p0 = mean(bootICC < ICC_hat);
     z0 = norminv(p0);  % bias-correction factor
     fprintf('z0 = %.4f (proportion below point estimate: %.4f)\n', z0, p0);
     
@@ -426,33 +440,24 @@ if boot_flag
     fprintf('Acceleration (a_hat) = %.5f\n', a_hat);
 end
 
-%% Robust descriptive summary, by participant (use participant-level means first 
-% to avoid double-weighting participants with bilateral measurements)
-participantMeans = groupsummary(data, 'ParticipantIDGlobal', 'mean', 'R_H');
-
-med_RH  = median(participantMeans.mean_R_H);
-iqr_RH  = iqr(participantMeans.mean_R_H);
-mean_RH = mean(participantMeans.mean_R_H);
-sd_RH   = std(participantMeans.mean_R_H);
-
-fprintf('Participant-level R_H: median = %.4f, IQR = %.4f\n', med_RH, iqr_RH);
-fprintf('Participant-level R_H: mean = %.4f, SD = %.4f (sensitive to skew, report for completeness)\n', mean_RH, sd_RH);
-
 %% ----------------------------------------------------------------------------- 
 % Helper Functions
 % ------------------------------------------------------------------------------
-function test_normality(var, name, test_type)
+function normality_check(varaiable, var_name, test_type)
 % TEST_NORMALITY(VAR, NAME, TEST_TYPE)
-% Normality test for variable. Prints the result to command window.
+% Normality test for variable. 
+% Plots a histogram against the Gaussian PDF and a QQ-plot.
+% Performs a normality test and prints the result to command window.
+% Ignores nan and inf values of the variable.
 %
 % Input :
-%   var - the variable to test
-%   name - the name of the variable to test for printing
+%   varaiable - the variable to test.
+%   var_name - the name of the variable to test for printing.
 %   test_type - the type of test to perform. One of the following:
-%               - Anderson-Darling (default)
-%               - Chi2 goodness-of-fit
-%               - Kolmogorov-Smirnov (standardized)
-%               - Lilliefors
+%              'anderson'   - Anderson-Darling (default)
+%              'chi2gof'    - Chi2 goodness-of-fit
+%              'lilliefors' - Kolmogorov-Smirnov (standardized)
+%              'kolmogorov' - Lilliefors
 %
 % Example usage:
 %   test_normality(var, "variable", "chi2gof")
@@ -460,60 +465,73 @@ function test_normality(var, name, test_type)
 
 
 arguments
-    var {mustBeNumeric}
-    name (1, 1) string
+    varaiable {mustBeNumeric}
+    var_name  (1, 1) string
     test_type (1, 1) string {mustBeMember(test_type, ["anderson" "chi2gof" "kolmogorov" "lilliefors"])} = "anderson"
 end
+
+    varaiable = varaiable(~isnan(varaiable) & ~isinf(varaiable));
+
     switch test_type
     case "chi2gof"
         % Chi-squared Goodness-of-Fit test
-        [h, p, stat] = chi2gof(var);
-        fprintf('--- Chi-Squared Normality Test on %s ---\n', name);
+        [h, p, stat] = chi2gof(varaiable);
+        fprintf('--- Chi-Squared Normality Test on %s ---\n', var_name);
         fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
         fprintf('Test Statistic (Chi^2): %.5f\n', stat.chi2stat);
         fprintf('p-value:                %.5f\n\n', p);
     case "lilliefors"
         % Lilliefors test
-        [h, p, stat] = lillietest(var);
-        fprintf('--- Lilliefors Normality Test on %s ---\n', name);
+        [h, p, stat] = lillietest(varaiable);
+        fprintf('--- Lilliefors Normality Test on %s ---\n', var_name);
         fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
         fprintf('Test Statistic (D):     %.5f\n', stat);
         fprintf('p-value:                %.5f\n\n', p);
     case "anderson"
         % Anderson-Darling test
-        [h, p, stat] = adtest(var);
-        fprintf('--- Anderson-Darling Normality Test on %s ---\n', name);
+        [h, p, stat] = adtest(varaiable);
+        fprintf('--- Anderson-Darling Normality Test on %s ---\n', var_name);
         fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
         fprintf('Test Statistic (A^2):   %.5f\n', stat);
         fprintf('p-value:                %.5f\n\n', p);
     case "kolmogorov" 
         % standardized KS vs N(0,1)
-        [h, p, stat] = kstest((var - mean(var)) / std(var));
-        fprintf('--- Standardized Kolmogorov-Smirnov Normality Test on %s ---\n', name);
+        [h, p, stat] = kstest((varaiable - mean(varaiable)) / std(varaiable));
+        fprintf('--- Standardized Kolmogorov-Smirnov Normality Test on %s ---\n', var_name);
         fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
         fprintf('Test Statistic (D):     %.5f\n', stat);
         fprintf('p-value:                %.5f\n\n', p);
     end
 
-    figure
+    figure(Name=var_name + " Normality Test")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
     nexttile(tl)
-    qqplot(var)
-    title("QQ-plot: " + name)
+    qqplot(varaiable)
+    title("QQ-plot: " + var_name)
     grid on
 
     nexttile(tl)
-    histogram(var, 'Normalization','pdf')
+    histogram(varaiable, Normalization='pdf', DisplayName="Histogram")
     hold on
-    xx = linspace(min(var), max(var), 100);
-    mu = mean(var);
-    sigma = std(var);
-    plot(xx, normpdf(xx, mu, sigma), 'r-', 'LineWidth', 1.5)
-    xline(mu, 'b-', LineWidth=1.5)
-    xline(mu + sigma, 'b--', LineWidth=1.5)
-    xline(mu - sigma, 'b--', LineWidth=1.5)
-    title(name + " vs Normal Distribution")
-    xlabel(name);
+
+    xx = linspace(min(varaiable), max(varaiable), 100);
+    mu = mean(varaiable);
+    sigma = std(varaiable);
+    median_val = median(varaiable);
+    quartiles = prctile(varaiable, [25 75]);
+    Q1 = quartiles(1);
+    Q3 = quartiles(2);
+
+    plot(xx, normpdf(xx, mu, sigma), 'r-', LineWidth=1.5,  LineStyle='-', DisplayName="Normal Distribution")  
+    xline(mu, 'b-', LineWidth=1.5, DisplayName="Mean")
+    xregion(mu - 3*sigma, mu + 3*sigma, FaceColor=0.7*[0 0 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="\pm 3SD")   
+    xline(median_val, 'k-', LineWidth=1.5, DisplayName="Median")
+    xregion(Q1, Q3, FaceColor=(1 - 0.7)*[1 1 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="IQR")
+
+    title(var_name + " vs Normal Distribution")
+    xlabel(var_name)
+    ylabel('Probability Density Function')
+    legend
     grid on
 end
 
@@ -837,7 +855,7 @@ function test_weight_scheme(data, response_name)
     model_metrics(lmm_sqrt_fminunc, "LMM - Sqrt-scaled Weight with FMinUnc Optimizer");
 end
 
-function test_lmm_assumptions(data, model, response_name)
+function assumptions_check(model, model_name, model_type)
 % TEST_LMM_ASSUMPTIONS(DATA, MODEL, RESPONSE_NAME)
 % Tests the various assumptions of the mixed-effects model: 
 %   - Normality of the  random effects, 
@@ -849,74 +867,90 @@ function test_lmm_assumptions(data, model, response_name)
 %
 % Input :
 %   data - the data table of measurements.
-%   model - the mixed effects model to test. 
+%   model - the mixed effects model to test.
+%   model_type - "lmm" (default) or "glmm"
 %
 % Example usage :
 %   test_lmm_assumptions(data, lmm_final, "R_H")
 
-    figure(Name="LMM Assumptions")
+
+    arguments 
+        model
+        model_name (1, 1) string = "Final Model"
+        model_type (1, 1) string {ismember(model_type, ["lmm" "glmm"])} = "lmm"
+    end
+
+    % ME Model Parameters
+    data = model.Variables;
+    excluded = model.ObservationInfo.Excluded;
+    valid = ~excluded;
+    response_name = model.ResponseName;
+    formula = model.Formula.char;
+
+    figure(Name=model_name + " Assumptions")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
     
     % ------------------------------------------------------------------
     % Formal Statistical Tests on Raw Vectors (Stratified/Pooled)
     % ------------------------------------------------------------------
-    var_raw = data{:, response_name}; % Load your empirical data vectors
-    RMS_raw = data.RMS; % RMS residuals
-    test_normality(RMS_raw, "Pooled RMS Radial Residual", 'anderson') % Test on pooled RMS data
-    test_normality(log(var_raw), "Pooled log(" + replace(response_name, '_', ' \_ ') + ")", 'anderson') % Test continuous pooled response data
-    
+    var_raw = data.(response_name)(valid); % Load your empirical data vectors
+    RMS_raw = data.RMS(valid); % RMS residuals
+    normality_check(RMS_raw, "Pooled RMS [mm]", 'anderson') % Test on pooled RMS data
+    normality_check(var_raw, "Pooled " + response_name + " [-]", 'anderson') % Test continuous pooled response data
+
     % ------------------------------------------------------------------
     % Conditional Normality Assessment (LME Model Residuals)
     % ------------------------------------------------------------------
     model_residuals = residuals(model, 'ResidualType', 'Pearson');
-    test_normality(model_residuals, "Final LMM Model Residual", 'anderson')
+    model_residuals = model_residuals(valid);
+    normality_check(model_residuals, model_name + " Residual [-]", 'anderson')
     
     % ------------------------------------------------------------------
     % Normality of Random Effects (BLUPs)
     % ------------------------------------------------------------------
     random_effects = randomEffects(model);
-    test_normality(random_effects, "Final LMM Random Effects", 'anderson')
+    normality_check(random_effects, model_name + " Random Effects [-]", 'anderson')
 
     % ------------------------------------------------------------------
     % Homoscedasticity
     % ------------------------------------------------------------------
-    fitted_values = fitted(model);
+    mu_hat = fitted(model);
+    mu_hat = mu_hat(valid);
 
     nexttile(tl)
-    scatter(fitted_values, model_residuals, 20, 'filled');
+    scatter(mu_hat, model_residuals, 20, 'filled');
     yline(0, '--r');
-    xlabel('Fitted values'); 
-    ylabel('Pearson residuals');
-    title('Final LMM Residuals vs Fitted (check for funnel shape)');
+    xlabel('Fitted values [-]'); 
+    ylabel('Pearson residuals [-]');
+    title([model_name ' Residuals vs Fitted (check for funnel shape)']);
 
     % Levene's test: residual variance equal across Dataset groups
-    group = data.DatasetID;   % categorical grouping variable
+    group = data.DatasetID(valid);   % categorical grouping variable
 
-    % Manual Levene's test (ANOVA on absolute deviations from group median)
-    groups = unique(group);
-    absDevFromMedian = zeros(size(model_residuals));
-    for i = 1:numel(groups)
-        idx = group == groups(i);
-        absDevFromMedian(idx) = abs(model_residuals(idx) - median(model_residuals(idx)));
-    end
-    [p_levene, ~, stat_levene] = anova1(absDevFromMedian, group, 'on');
-    fprintf('--- Final LMM Homoscedasticity Check ---\n');
-    fprintf('Levene''s test (DatasetID) p = %.4f\n\n', p_levene);
-
-    nexttile(tl)
-    multcompare(stat_levene);
-
+    % Brown-Forsythe test (ANOVA on absolute deviations from group median)
+    [p, stats] = vartestn(model_residuals, group, "Display", "off", "TestType", "BrownForsythe");
     
+    fprintf('--- %s - Participant-level %s Brown-Forsythe Test of Variance Homoscedasticity ---\n', model_name, response_name);
+    fprintf('Rejection Decision (h): %d (where 1 = Heteroscedastic Variance)\n', p < 0.05);
+    fprintf('Test Statistic (W):     %.5f\n', stats.fstat);
+    fprintf('p-value:                %.5f\n\n', p);
+
     % ------------------------------------------------------------------
     % Random-effects structure: Likelihood Ratio Test
     % ------------------------------------------------------------------
     % Compare model WITH participant random intercept vs WITHOUT
-    lmm_full_ML = fitlme(data, char(model.Formula), ...
-                        'FitMethod','ML');  % must use ML, not REML, to compare   
+    lmm_full_ML = fitlme(data, formula, ...
+                        'FitMethod','ML', ...
+                        'DummyVarCoding', 'effect', ...
+                        'Exclude', excluded);  % must use ML, not REML, to compare 
+
     % No Random Effects formula
-    formula_noRE = [response_name ' ~ 1 + DatasetID'];
-    lmm_reduced_ML = fitlme(data, formula_noRE, 'FitMethod', 'ML');
-    fprintf('Likelehood Ratio Test For Final LMM With/Without Random Effects:\n')
+    formula_noRE = model.Formula.FELinearFormula.char;
+    lmm_reduced_ML = fitlme(data, formula_noRE, ...
+                            'FitMethod', 'ML', ...
+                            'DummyVarCoding', 'effect', ...
+                            'Exclude', excluded);  % must use ML, not REML, to compare
+    fprintf('--- %s - Likelehood Ratio Test With/Without Random Effects ---\n', model_name)
     results = compare(lmm_reduced_ML, lmm_full_ML, 'CheckNesting', true);
     disp(results);
     
@@ -924,29 +958,27 @@ function test_lmm_assumptions(data, model, response_name)
     % Variance Function (Var(Y) ~ mu^P)
     % ------------------------------------------------------------------
     % Plot group means vs group variances directly
-    groupMeans = splitapply(@mean, data{:, response_name}, findgroups(data.DatasetID));
-    groupVars  = splitapply(@var,  data{:, response_name}, findgroups(data.DatasetID));
-    
+    groupMeans = splitapply(@mean, data{valid, response_name}, findgroups(data.DatasetID(valid)));
+    groupVars  = splitapply(@var,  data{valid, response_name}, findgroups(data.DatasetID(valid)));
+
+    % Fit line to log-log to check power relationship (slope~2 => Gamma, slope~3 => IG)
+    p = polyfit(log(groupMeans), log(groupVars), 1);
+    fprintf('--- %s - Variance Function Check Across Datasets Directly ---\n', model_name);
+    fprintf('Estimated slope of log(Var) vs log(Mean): %.3f\n\n', p(1));
+
     nexttile(tl)
     scatter(log(groupMeans), log(groupVars), 60, 'filled');
     h_l = lsline();
     h_l.Color = "red";
     h_l.LineWidth = 1.5;
-    xlabel(['log(Group Mean) of ' replace(response_name, "_", " / ")]); 
-    ylabel(['log(Group Variance) of ' replace(response_name, "_", " / ")]);
-    title('Final LMM Mean-Variance Relationship Across Datasets Directly');
+    xlabel(['$\log(\textrm{Group Mean})$ of $' response_name '$'], 'Interpreter', 'latex'); 
+    ylabel(['$\log(\textrm{Group Variance})$ of $' response_name '$'], 'Interpreter', 'latex');
+    title(sprintf('%s Mean-Variance Relationship Across Datasets Directly (slope = %.2f)', model_name, p(1)));
     grid on
-
-    % Fit line to log-log to check power relationship (slope~2 => Gamma, slope~3 => IG)
-    p = polyfit(log(groupMeans), log(groupVars), 1);
-    fprintf('--- Final LMM Variance Function Check Across Datasets Directly ---\n');
-    fprintf('Estimated slope of log(Var) vs log(Mean): %.3f\n\n', p(1));
 
     % Bin fitted values into groups, compute empirical variance per bin,
     % then regress log(variance) on log(mean) -> slope should be ~3 for Inverse
     % Gaussian
-    mu_hat    = predict(model); % conditional mean predictions
-    model_residuals = residuals(model, 'ResidualType', 'Pearson');
 
     % Use Pearson residuals instead of raw residuals - these already incorporate
     % the model's weight structure, so remaining heteroscedasticity reflects
@@ -964,28 +996,28 @@ function test_lmm_assumptions(data, model, response_name)
             log_var_bin(b)  = log(var(model_residuals(sel)));
         end
     end
-    valid = ~isnan(log_mean_bin) & ~isnan(log_var_bin);
-    p = polyfit(log_mean_bin(valid), log_var_bin(valid), 1);
-    fprintf('--- Final LMM Binned Variance Function Check ---\n');
+    valid2 = ~isnan(log_mean_bin) & ~isnan(log_var_bin);
+    p = polyfit(log_mean_bin(valid2), log_var_bin(valid2), 1);
+    fprintf('--- %s - Binned Variance Function Check ---\n', model_name);
     fprintf('Estimated slope of log(Var) vs log(Mean): %.3f\n\n', p(1));
     
     nexttile(tl)
-    scatter(log_mean_bin(valid), log_var_bin(valid), 60, 'filled')
+    scatter(log_mean_bin(valid2), log_var_bin(valid2), 60, 'filled')
     hold on
-    xfit = linspace(min(log_mean_bin(valid)), max(log_mean_bin(valid)), 50);
+    xfit = linspace(min(log_mean_bin(valid2)), max(log_mean_bin(valid2)), 50);
     plot(xfit, polyval(p, xfit), 'r-', 'LineWidth', 1.5)
-    xlabel('log(Mean of \mu_{hat} per bin)')
-    ylabel('log(Variance of residuals per bin)')
-    title(sprintf('Final LMM Binned Variance Function Check (slope = %.2f)', p(1)))
+    xlabel('$\log($Mean of $\hat\mu$ per bin$)$', 'Interpreter', 'latex')
+    ylabel('$\log($Variance of residuals per bin$)$', 'Interpreter', 'latex')
+    title(sprintf('%s Mean-Variance Relationship Accross Binned $\hat\mu$ (slope = %.2f)', model_name, p(1)), 'Interpreter', 'latex')
     grid on
 
     % Diagnose what's actually driving bin membership
-    tabulate(discretize(mu_hat, edges))  % check bin sizes are reasonably balanced
+    % tabulate(discretize(mu_hat, edges))  % check bin sizes are reasonably balanced
     nexttile(tl)
-    scatter(mu_hat, data.DatasetID); % see if bins ~ perfectly separate Datasets
-    xlabel('\mu_{hat}')
-    ylabel('Dataset ID')
-    title('Final LMM Fitted vs Dataset')
+    scatter(mu_hat, data.DatasetID(valid)); % see if bins ~ perfectly separate Datasets
+    xlabel('$\hat\mu$ [-]', 'Interpreter', 'latex')
+    ylabel('Dataset ID', 'Interpreter', 'latex')
+    title([model_name ' Fitted vs Dataset'])
     grid on
 end
 
@@ -1003,7 +1035,8 @@ function test_cutoff_unstable_R(data, model)
 
     response_name = model.ResponseName;
     weight = model.ObservationInfo.Weights;
-    formula = char(model.Formula);
+    formula = model.Formula.char;
+    excluded = model.ObservationsInfo.Excluded;
 
     figure(Name="Radius Instability Threshold")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
@@ -1094,7 +1127,8 @@ function test_cutoff_unstable_R(data, model)
         lme_filt   = fitlme(data_filt, formula, ...
                             'FitMethod', 'REML', ...
                             'Weights', weight_filt, ...
-                            'DummyVarCoding', 'effects');
+                            'DummyVarCoding', 'effects', ...
+                            'Excluded', excluded);
         [psi, mse] = covarianceParameters(lme_filt);
         ICC_filt = psi{1}(1,1) / (psi{1}(1,1) + mse);
 
@@ -1107,6 +1141,7 @@ function test_cutoff_unstable_R(data, model)
                          'FitMethod', 'REML', ...
                          'Weights', weight_filt, ...
                          'DummyVarCoding', 'effects', ...
+                         'Excluded', excluded, ...
                          'Optimizer', 'fminunc', ...
                          'OptimizerOptions', opts);
 
@@ -1170,4 +1205,48 @@ function test_cutoff_unstable_R(data, model)
         % If one of them is MEANINGFULLY higher, that one is the correct answer
         % and the other optimizer failed to find it.
     end
+end
+
+function left_right_difference_check(data, var_name)
+    participants_global = unique(data.ParticipantIDGlobal);
+    n_participants = numel(participants_global);
+    delta_Variable = nan(n_participants, 1);
+    delta_RMS = nan(n_participants, 1);
+    mean_RMS = nan(n_participants, 1);
+    n_1leg_participants = 0;
+
+    for p=1:n_participants
+        this_participant = data(data.ParticipantIDGlobal == participants_global(p), :);
+        if height(this_participant) == 1
+            n_1leg_participants = n_1leg_participants + 1;
+            continue
+        end
+        delta_Variable(p) = this_participant.(var_name)(this_participant.Leg == "left") - this_participant.(var_name)(this_participant.Leg == "right");
+        delta_RMS(p) = this_participant.RMS(this_participant.Leg == "left") - this_participant.RMS(this_participant.Leg == "right");
+        mean_RMS(p) = (this_participant.RMS(this_participant.Leg == "left") + this_participant.RMS(this_participant.Leg == "right")) / 2;
+    end
+
+    delta_Variable = delta_Variable(~isnan(delta_Variable));
+    delta_RMS = delta_RMS(~isnan(delta_RMS));
+    mean_RMS = mean_RMS(~isnan(mean_RMS));
+
+    fprintf('%d single-legged participant of %d participants (%.2f%%) not used.\n\n', n_1leg_participants, n_participants, 100 * n_1leg_participants / n_participants)
+
+    fprintf('----- Left-Right %s Difference -----\n', var_name)
+    fprintf('Delta %s:   Mean = %.2f, SD = %.2f\n', ...
+        var_name, mean(delta_Variable), std(delta_Variable))
+    fprintf('|Delta %s|: Median = %.2f, IQR = %.2f, MAD = %.2f\n\n', ...
+        var_name, median(abs(delta_Variable)), iqr(abs(delta_Variable)), mad(abs(delta_Variable), 1))
+
+    fprintf('----- Left-Right RMS Difference -----\n')
+    fprintf('Delta RMS: Mean = %.2f, SD = %.2f\n', mean(delta_RMS), std(delta_RMS))
+    fprintf('|Delta RMS|: Median = %.2f, IQR = %.2f, MAD = %.2f\n\n', ...
+        median(abs(delta_RMS)), iqr(abs(delta_RMS)), mad(abs(delta_RMS), 1))
+
+    fprintf('----- %s-RMS Difference Correlation -----\n', var_name)
+    fprintf('Correlation Delta_%s to Delta_RMS: %.2f\n', corr(abs(delta_Variable), abs(delta_RMS)))
+    fprintf('Correlation Delta_%s to mean_RMS: %.2f\n\n', corr(abs(delta_Variable), mean_RMS))
+
+    normality_check(delta_Variable, "Delta " + var_name + " [-]", 'anderson')
+    normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
 end
