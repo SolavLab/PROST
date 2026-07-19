@@ -81,8 +81,6 @@ for dataset_id=1:4
         data.n_steps(idx) = sum([steps.Is_included]);
     end
 end
-% Exclude unstable data
-% data(data.ArcSpanDeg < 5, :) = [];
 
 clear radius horizontal residual height predictors
 
@@ -101,7 +99,7 @@ fprintf('Participant-level R_H: mean = %.4f, SD = %.4f (sensitive to skew, repor
 %% Linear Mixed Effects Model
 response_name = 'R_H';
 % Test Weight Scheme
-% test_weight_scheme(data, lmm_response_name)
+test_weight_scheme(data, response_name)
 
 % Weighted LMM Model
 formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
@@ -118,16 +116,11 @@ lmm_weighted = fitlme(data, formula, ...
     'OptimizerOptions', opts);
 
 % Test Cutoff of Unstable R
-% test_cutoff_unstable_R(data, lmm_weighted)
+test_cutoff_unstable_R(data, lmm_weighted)
 
 % Final Weighted and Cutoff LMM
 data_final = data(data.R_H <= 1, :);
 weight_final = weight_scheme(data.R_H <= 1);
-
-fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
-    height(data) - height(data_final), height(data), ...
-    100*(height(data) - height(data_final)) / height(data));
-
 
 % Fit the model using:
 % Formula: R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)
@@ -152,6 +145,9 @@ if lmm_final.LogLikelihood < lmm_final_alt.LogLikelihood
 end
 
 disp(lmm_final)
+fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
+    height(data) - height(data_final), height(data), ...
+    100*(height(data) - height(data_final)) / height(data));
 
 % Extract estimates and covariance for the three estimated DatasetID coefficients
 % coefNames = lmm_final.Coefficients.Name;
@@ -191,7 +187,7 @@ ICC = model_metrics(lmm_final, "Final LMM");
 
 % Test Linear Mixed-Effects Model Assumptions
 assumptions_check(lmm_final, "Final LMM")
-left_right_difference_check(data_final, response_name);
+left_right_difference_check(data, response_name);
 
 %% General Linear Mixed Effects Model
 if glmm_flag
@@ -524,7 +520,7 @@ end
 
     plot(xx, normpdf(xx, mu, sigma), 'r-', LineWidth=1.5,  LineStyle='-', DisplayName="Normal Distribution")  
     xline(mu, 'b-', LineWidth=1.5, DisplayName="Mean")
-    xregion(mu - 3*sigma, mu + 3*sigma, FaceColor=0.7*[0 0 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="\pm 3SD")   
+    xregion(mu - sigma, mu + sigma, FaceColor=0.7*[0 0 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="\pm SD")   
     xline(median_val, 'k-', LineWidth=1.5, DisplayName="Median")
     xregion(Q1, Q3, FaceColor=(1 - 0.7)*[1 1 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="IQR")
 
@@ -535,7 +531,7 @@ end
     grid on
 end
 
-function [ICC, random_effects_var, residual_var] = model_metrics(model, name)
+function [ICC, tau2, sigma2] = model_metrics(model, name)
 % [ICC, RANDOM_EFFECTS_VAR, RESIDUAL_VAR] = MODEL_METRICS(MODEL, NAME)
 % Computes metrics of variance components from the Mixed-Effects Model and
 % displays them in the command window.
@@ -555,19 +551,24 @@ function [ICC, random_effects_var, residual_var] = model_metrics(model, name)
 %   ICC = model_metrics(lme, "LMM Final");
 %   [ICC, random_effects_var, residual_var] = model_metrics(lme, "LMM Final")
 
-    [psi, mse] = covarianceParameters(model);
-    random_effects_var = psi{1}(1, 1);
-    residual_var = mse;
-    total_variance = random_effects_var + residual_var;
-    ICC = random_effects_var / total_variance;
+    [psi, sigma2] = covarianceParameters(model);
+    tau2 = psi{1}(1, 1);
+    weights =  model.ObservationInfo.Weights;
+
+    sigma2_avg = sigma2 * mean(1 ./ weights);
+    ICC1 = tau2 ./ (tau2 + sigma2_avg);
+    ICC2_per_leg = tau2 ./ (tau2 + sigma2 ./ weights);
+    ICC2 = mean(ICC2_per_leg);
+    ICC = [ICC1 ICC2];
 
     % Display metrics formatted for publication
     fprintf('\n--- %s - Hierarchical Variance Decomposition Metrics ---\n', name);
-    fprintf('Participant-Level Variance:     %8.3f (%5.2f%%)\n', random_effects_var, (random_effects_var/total_variance)*100);
-    fprintf('Residual-Level Variance:        %8.3f (%5.2f%%)\n', residual_var, (residual_var/total_variance)*100);
+    fprintf('Participant-Level Variance:                          %8.3f \n', tau2);
+    fprintf('Residual-Level Variance (reference with no weights): %8.3f \n', sigma2);
+    fprintf('Residual-Level Variance (average):                   %8.3f \n', sigma2_avg);
     fprintf('---------------------------------------------------\n');
-    fprintf('Total Unexplained Variance:                    %8.3f\n', total_variance);
-    fprintf('Participant Intraclass Correlation (ICC):      %8.4f\n\n', ICC);
+    fprintf('ICC1:                                                %8.4f\n', ICC1);
+    fprintf('ICC2:                                                %8.4f\n\n', ICC2);
 end
 
 function test_weight_scheme(data, response_name)
@@ -581,7 +582,6 @@ function test_weight_scheme(data, response_name)
 %
 % Example usage:
 %   test_weight_scheme(data, "R_H")
-
 
     figure(Name="Weight Schemes")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
@@ -1008,7 +1008,7 @@ function assumptions_check(model, model_name, model_type)
     plot(xfit, polyval(p, xfit), 'r-', 'LineWidth', 1.5)
     xlabel('$\log($Mean of $\hat\mu$ per bin$)$', 'Interpreter', 'latex')
     ylabel('$\log($Variance of residuals per bin$)$', 'Interpreter', 'latex')
-    title(sprintf('%s Mean-Variance Relationship Accross Binned $\hat\mu$ (slope = %.2f)', model_name, p(1)), 'Interpreter', 'latex')
+    title(sprintf('%s Mean-Variance Relationship Accross Binned $$\\hat\\mu$$ (slope = %.2f)', model_name, p(1)), 'Interpreter', 'latex')
     grid on
 
     % Diagnose what's actually driving bin membership
@@ -1036,7 +1036,8 @@ function test_cutoff_unstable_R(data, model)
     response_name = model.ResponseName;
     weight = model.ObservationInfo.Weights;
     formula = model.Formula.char;
-    excluded = model.ObservationsInfo.Excluded;
+    excluded = model.ObservationInfo.Excluded;
+    fit_method = model.FitMethod;
 
     figure(Name="Radius Instability Threshold")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
@@ -1108,7 +1109,7 @@ function test_cutoff_unstable_R(data, model)
     [G,~] = findgroups(data.DatasetID);
     data.abs_dev = abs(data.R_H - dataset_medians(G));
     [rho_span, p_span] = corr(data.ArcSpanRad, data.abs_dev, 'Type','Spearman');
-    fprintf('Spearman correlation: arc span vs |R_H deviation|: rho=%.3f, p=%.4f\n', rho_span, p_span);
+    fprintf('Spearman correlation: arc span vs |R_H deviation from dataset median|: rho=%.3f, p=%.4f\n', rho_span, p_span);
 
     % ------------------------------------------------------------------
     % Sensitivity Sweep for Arc Span Threshold
@@ -1119,16 +1120,20 @@ function test_cutoff_unstable_R(data, model)
     
     for th_deg = candidate_thresholds
         th_rad = deg2rad(th_deg);
-        data_filt = data(data.ArcSpanDeg >= th_deg, :);
-        weight_filt = weight(data.ArcSpanDeg >= th_deg);
-        n_excluded = height(data) - height(data_filt);
+        idx = data.ArcSpanDeg >= th_deg;
+        data_filt = data(idx, :);
+        weight_filt = weight(idx);
+        excluded_filt = excluded(idx);
+
+        n_filtered = height(data) - height(data_filt);
 
 
         lme_filt   = fitlme(data_filt, formula, ...
-                            'FitMethod', 'REML', ...
+                            'FitMethod', fit_method, ...
                             'Weights', weight_filt, ...
                             'DummyVarCoding', 'effects', ...
-                            'Excluded', excluded);
+                            'Exclude', excluded_filt);
+
         [psi, mse] = covarianceParameters(lme_filt);
         ICC_filt = psi{1}(1,1) / (psi{1}(1,1) + mse);
 
@@ -1138,10 +1143,10 @@ function test_cutoff_unstable_R(data, model)
         opts = optimoptions('fminunc');
         opts.Display = 'off';
         lme_alt = fitlme(data_filt, formula, ...
-                         'FitMethod', 'REML', ...
+                         'FitMethod', fit_method, ...
                          'Weights', weight_filt, ...
                          'DummyVarCoding', 'effects', ...
-                         'Excluded', excluded, ...
+                         'Exclude', excluded_filt, ...
                          'Optimizer', 'fminunc', ...
                          'OptimizerOptions', opts);
 
@@ -1149,8 +1154,8 @@ function test_cutoff_unstable_R(data, model)
         ICC_alt = psi_alt{1}(1,1) / (psi_alt{1}(1,1) + mse_alt);
 
         sensitivity_results = [sensitivity_results; ...
-            table(th_deg, th_rad, n_excluded, ICC_filt, ICC_alt, adstat, p_ad, ...
-            'VariableNames', {'ThresholdDeg', 'ThresholdRad', 'N_Excluded','ICC', 'ICC_alt', 'AD_Statistic', 'Pvalue'})];
+            table(th_deg, th_rad, n_filtered, ICC_filt, ICC_alt, adstat, p_ad, ...
+            'VariableNames', {'ThresholdDeg', 'ThresholdRad', 'N_Filtered','ICC', 'ICC_alt', 'AD_Statistic', 'Pvalue'})];
     end
 
     disp(sensitivity_results)
@@ -1164,13 +1169,17 @@ function test_cutoff_unstable_R(data, model)
     % ------------------------------------------------------------------
     % Sanity check for better optimizer for 5 and 8 degrees
     % ------------------------------------------------------------------
+    formula_noRE = model.Formula.FELinearFormula.char;
     for th_deg = [5, 8]
-        data_filt = data(data.ArcSpanDeg >= th_deg, :);
-        weight_filt = weight(data.ArcSpanDeg >= th_deg);
+        idx = data.ArcSpanDeg >= th_deg;
+        data_filt = data(idx, :);
+        weight_filt = weight(idx);
+        excluded_filt = excluded(idx);
 
         lmm_qn = fitlme(data_filt, formula, ...
-                        'FitMethod','REML', ...
+                        'FitMethod', fit_method, ...
                         'Weights', weight_filt, ...
+                        'Exclude', excluded_filt, ...
                         'DummyVarCoding','effects');
         [psi_qn, mse_qn] = covarianceParameters(lmm_qn);
         ICC_qn = psi_qn{1}(1, 1) / (psi_qn{1}(1, 1) + mse_qn);
@@ -1178,33 +1187,34 @@ function test_cutoff_unstable_R(data, model)
         opts = optimoptions('fminunc');
         opts.Display = 'off';
         lmm_fu = fitlme(data_filt, formula, ...
-                        'FitMethod','REML', ...
+                        'FitMethod', fit_method, ...
                         'Weights', weight_filt, ...
                         'DummyVarCoding','effects', ...
+                        'Exclude', excluded_filt, ...
                         'Optimizer','fminunc', ...
                         'OptimizerOptions', opts);
         [psi_fu, mse_fu] = covarianceParameters(lmm_fu);
         ICC_fu = psi_fu{1}(1, 1) / (psi_fu{1}(1, 1) + mse_fu);
 
-        fprintf('--- Threshold %d degrees ---\n', th_deg);
-        fprintf('Quasi-Newton: LogLik=%.6f, ICC=%.4f\n', lmm_qn.LogLikelihood, ICC_qn);
-        fprintf('fminunc:      LogLik=%.6f, ICC=%.4f\n', lmm_fu.LogLikelihood, ICC_fu);
-
         % Manual profile: refit with tau^2 constrained near zero vs. away from zero,
         % by comparing a model that FORCES no random effect (tau^2=0) against the
         % freely-optimized model's log-likelihood
-        formula_noRE = [response_name, '~ 1 + DatasetID'];
         lmm_noRE = fitlme(data_filt, formula_noRE, ...
-                         'FitMethod','REML', ...
-                         'Weights', weight_filt, ...
+                         'FitMethod', fit_method, ...
+                         'Weights', weight_filt, ...,
+                         'Exclude', excluded_filt, ...
                          'DummyVarCoding','effects');
-        fprintf('No random effect: LogLik=%.6f\n', lmm_noRE.LogLikelihood);
-        
-        % If lmm_qn (or lmm_fu)'s LogLik is only trivially higher than lmm_noRE's,
-        % that supports tau^2=0 genuinely being close to the true optimum at this threshold.
-        % If one of them is MEANINGFULLY higher, that one is the correct answer
-        % and the other optimizer failed to find it.
+
+        fprintf('--- Threshold %d degrees ---\n', th_deg);
+        fprintf('Quasi-Newton: LogLik=%.6f, ICC=%.4f\n', lmm_qn.LogLikelihood, ICC_qn);
+        fprintf('fminunc:      LogLik=%.6f, ICC=%.4f\n', lmm_fu.LogLikelihood, ICC_fu);
+        fprintf('No random effect: LogLik=%.6f\n\n', lmm_noRE.LogLikelihood);
     end
+
+    fprintf("If lmm_qn (or lmm_fu)'s LogLik is only trivially higher than lmm_noRE's,\n")
+    fprintf("that supports tau^2=0 genuinely being close to the true optimum at this threshold.\n")
+    fprintf("If one of them is MEANINGFULLY higher, that one is the correct answer\n")
+    fprintf("and the other optimizer failed to find it.\n\n")
 end
 
 function left_right_difference_check(data, var_name)
@@ -1250,3 +1260,5 @@ function left_right_difference_check(data, var_name)
     normality_check(delta_Variable, "Delta " + var_name + " [-]", 'anderson')
     normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
 end
+%%
+left_right_difference_check(data_final, "R_H");
