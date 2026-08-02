@@ -35,25 +35,31 @@ function correlations = compute_correlations(predictors, responses)
     n_categorical_predictors = numel(categorical_predictor_names);
 
     % Regression and Spearman rank coefficients for numeric data
-    [rho_spearman, p_spearman] = corr(numeric_predictors, responses, Type="Spearman", Rows="complete");
-    [r_pearson, p_pearson] = corr(numeric_predictors, responses, Type="Pearson", Rows="complete");
+    if n_numeric_predictors > 0
+        [rho_spearman, p_spearman] = corr(numeric_predictors, responses, Type="Spearman", Rows="complete");
+        [r_pearson, p_pearson] = corr(numeric_predictors, responses, Type="Pearson", Rows="complete");
+    end
 
-    correlation_variable_names = {'Spearman_rho', 'Spearman_p', 'Pearson_r', 'Pearson_p', 'Rsquared', 'FitSlope', 'FitIntercept', 'FitRMSE'};
-    n_correlation_variables = numel(correlation_variable_names);
+    numeric_variable_names = {'Spearman_rho', 'Spearman_p', 'Pearson_r', 'Pearson_p', 'Rsquared', 'FitSlope', 'FitIntercept', 'FitRMSE'};
+    categorical_variable_names = {'Wilcoxon_H', 'Wilcoxon_p', 'Wilcoxon_z', 'Wilcoxon_Ranksum'};
+    n_numeric_variables = numel(numeric_variable_names);
+    n_categorical_variables = numel(categorical_variable_names);
     for r=1:numel(response_names)
         correlations.(response_names(r)) = struct;
+
+        % Numeric correlation tests (Spearman, Pearson, Rsquared, ...)
         correlations.(response_names(r)).Numeric = ...
-        table('Size', [n_numeric_predictors n_correlation_variables], ...
-              'VariableTypes', convertStringsToChars("doublenan" + strings(1, n_correlation_variables)), ...
-              'VariableNames', correlation_variable_names);
+        table('Size', [n_numeric_predictors n_numeric_variables], ...
+              'VariableTypes', convertStringsToChars("doublenan" + strings(1, n_numeric_variables)), ...
+              'VariableNames', numeric_variable_names);
         correlations.(response_names(r)).Numeric.Properties.RowNames = numeric_predictor_names;
 
-        correlations.(response_names(r)).Numeric.Spearman_rho = rho_spearman(:, r);
-        correlations.(response_names(r)).Numeric.Spearman_p = p_spearman(:, r);
-        correlations.(response_names(r)).Numeric.Pearson_r = r_pearson(:, r);
-        correlations.(response_names(r)).Numeric.Pearson_p = p_pearson(:, r);
-        correlations.(response_names(r)).Numeric.Pearson_r = r_pearson(:, r);
-
+        if n_numeric_predictors > 0
+            correlations.(response_names(r)).Numeric.Spearman_rho = rho_spearman(:, r);
+            correlations.(response_names(r)).Numeric.Spearman_p = p_spearman(:, r);
+            correlations.(response_names(r)).Numeric.Pearson_r = r_pearson(:, r);
+            correlations.(response_names(r)).Numeric.Pearson_p = p_pearson(:, r);
+        end
         for p=1:n_numeric_predictors
             x = numeric_predictors(:, p);
             y = responses(:, r);
@@ -69,18 +75,34 @@ function correlations = compute_correlations(predictors, responses)
 
         % Wilcoxon rank sum test (equivalent to the Mann-Whitney U-test) for
         % categorical data
-        p_wilcoxon = zeros(numel(categorical_predictor_names), 1);
-        h_wilcoxon = zeros(numel(categorical_predictor_names), 1);
-        for p=1:n_categorical_predictors
-            predictor = categorical(categorical_predictors{:, p});
-            predictor_categories = categories(predictor, OutputType="categorical");
-            y1 = responses(predictor == predictor_categories(1), r);
-            y2 = responses(predictor == predictor_categories(2), r);
-            [p_wilcoxon(p), h_wilcoxon(p)] = ranksum(y1, y2);
+        correlations.(response_names(r)).Categorical = ...
+        table('Size', [n_categorical_predictors n_categorical_variables], ...
+              'VariableTypes', convertStringsToChars("doublenan" + strings(1, n_categorical_variables)), ...
+              'VariableNames', categorical_variable_names);
+        correlations.(response_names(r)).Categorical.Properties.RowNames = categorical_predictor_names;
+        
+        if n_categorical_predictors > 0
+            p_wilcoxon = zeros(n_categorical_predictors, 1);
+            h_wilcoxon = zeros(n_categorical_predictors, 1);
+            z_wilcoxon = zeros(n_categorical_predictors, 1);
+            ranksum_wilcoxon = zeros(n_categorical_predictors, 1);
+            for p=1:n_categorical_predictors
+                predictor = categorical(categorical_predictors{:, p});
+                predictor_categories = categories(predictor, OutputType="categorical");
+                y1 = responses(predictor == predictor_categories(1), r);
+                y2 = responses(predictor == predictor_categories(2), r);
+                [p_wilcoxon(p), h_wilcoxon(p), stat] = ranksum(y1, y2);
+                z_wilcoxon(p) = stat.zval;
+                ranksum_wilcoxon(p) = stat.ranksum;
+            end
+            correlations.(response_names(r)).Categorical.Wilcoxon_H = h_wilcoxon;
+            correlations.(response_names(r)).Categorical.Wilcoxon_p = p_wilcoxon;
+            correlations.(response_names(r)).Categorical.Wilcoxon_z = z_wilcoxon;
+            correlations.(response_names(r)).Categorical.Wilcoxon_Ranksum = ranksum_wilcoxon;
         end
-        correlations.(response_names(r)).Categorical = table(...
-                                    h_wilcoxon, p_wilcoxon, ...
-                                    VariableNames=["Wilcoxon_H", "Wilcoxon_p"], ...
-                                    RowNames=categorical_predictor_names);
+        % correlations.(response_names(r)).Categorical = table(...
+        %                             h_wilcoxon, p_wilcoxon, ...
+        %                             VariableNames=["Wilcoxon_H", "Wilcoxon_p"], ...
+        %                             RowNames=categorical_predictor_names);
     end
 end
