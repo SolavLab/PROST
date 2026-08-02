@@ -231,6 +231,32 @@ prepare_options.showTextbox = "off";
                                                prepare=prepare, ...
                                                prepare_options=prepare_options);
 
+%% Regression and Spearman rank coefficients for numeric data
+R = PROSTAnalyzer.get_IPD_samples("Radius");
+H = PROSTAnalyzer.get_IPD_samples("Height");
+Cx = PROSTAnalyzer.get_IPD_samples("Center_horizontal");
+response = R.Radius ./ H.Height;
+predictores = PROSTAnalyzer.get_predictors(["Age" "Mass" "Height" "Leg_length" "Thigh_length" "Shank_length"]);
+
+mycorr = @(x1, x2) corr(x1, x2, Type="Spearman", Tail='both', Rows="complete");
+nIterations = [10 100 1000 5000];
+
+rho = correlations_norm.Radius.Numeric.Spearman_rho;
+p = correlations_norm.Radius.Numeric.Spearman_p;
+
+predictores_sig = predictores(:, p <= 0.05);
+rho_sig = rho(p <= 0.05);
+
+for i=1:numel(nIterations)
+    ci = bootci(nIterations(i),{mycorr, table2array(predictores_sig), response});
+    ci_lengths = [rho_sig' - ci(1, :); ci(2, :) - rho_sig'];
+    figure
+    errorbar(categorical(predictores_sig.Properties.VariableNames), rho_sig, ci_lengths(1, :), ci_lengths(2,:), 'x', MarkerSize=10, LineWidth=1.5)
+    yline(0, '--', LineWidth=1.5)
+    yregion(-0.05, 0.05, FaceColor='blue', FaceAlpha=0.1)
+    title("NIterations = " + nIterations(i))
+    grid on
+end
 %% Plot Example COP
 prepare = "on";
 prepare_options = struct;
