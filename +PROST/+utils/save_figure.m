@@ -15,15 +15,14 @@ function save_figure(fig, file_path, opts, prep_opts)
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: 'off'.
-%   prepare - whether to prepare the figure for publication by setting size and 
-%          fonts. Specified as 'on' or 'off', or as numeric or logical 1 (true) 
-%          or 0 (false). A value of 'on' is equivalent to true, and 'off' is 
-%          equivalent to false. 
+%   prepare - whether to prepare the figure for publication. Specified as 'on' 
+%             or 'off', or as numeric or logical 1 (true) or 0 (false). A value 
+%             of 'on' is equivalent to true, and 'off' is equivalent to false. 
 %               - 'on' - prepare figure for publication.
 %               - 'off' - keep settings as-is.
 %          Default: 'on'.
-%   prep_options - a struct containing the Name-Value pair options publication 
-%                  preparation of the figures. The format is: 
+%   prep_options - a struct containing the Name-Value pair options of the
+%                  PROST.utils.prep_figure_for_publish function. The format is: 
 %                  prep_options.name=value.
 %
 % Example :

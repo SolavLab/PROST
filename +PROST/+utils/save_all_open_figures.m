@@ -29,8 +29,8 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
 %               - 'on' - prepare figure for publication.
 %               - 'off' - keep settings as-is.
 %          Default: 'on'.
-%   prep_options - a struct containing the Name-Value pair options publication 
-%                  preparation of the figures. The format is: 
+%   prep_options - a struct containing the Name-Value pair options of the
+%                  PROST.utils.prep_figure_for_publish function. The format is: 
 %                  prep_options.name=value.
 %
 % Example :
@@ -54,6 +54,8 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
     % Prepare input arguments    
     file_type = opts.file_type;
     append = opts.append;
+    prepare = prep_opts.prepare;
+    prepare_options = prep_opts.prepare_options;
 
     if nargin < 1 || isempty(figures_folder)
         figures_folder = uigetdir(pwd);
@@ -92,7 +94,7 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
         % Define file path for saving
         file_path = fullfile(figures_folder, sub_folder);
 
-        PROST.utils.save_figure(f, file_path, file_type=file_type, append=append, prepare=false)
+        PROST.utils.save_figure(f, file_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options)
     end
 
     fprintf("All figures saved.\n");

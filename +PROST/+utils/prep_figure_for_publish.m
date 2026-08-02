@@ -131,7 +131,7 @@ function prep_figure_for_publish(fig, opts)
     end
 
     % Shorten y label
-    if tl(1).GridSize(1) >= 2 && tl.GridSize(2) >= 3
+    if ~isempty(tl) && tl(1).GridSize(1) >= 2 && tl.GridSize(2) >= 3
         for k = 1:numel(ax)
             ax(k).YLabel.String = shorten_label(ax(k).YLabel.String, 10);
         end
