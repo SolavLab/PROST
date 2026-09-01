@@ -1486,7 +1486,7 @@ function metadata = read_metadata_table(data_path)
         end
     end
 
-    [~, order] = sort([unsorted_metadata.SubjID]);
+    [~, order] = sort([unsorted_metadata.SubjNum]);
     metadata = unsorted_metadata(order);
 end
 
