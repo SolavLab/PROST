@@ -131,13 +131,14 @@ if summary_flag
     flignerKilleen(participantMeans.("mean_" + response_name), extract(participant_id_global, 1));
 end
 %% Linear Mixed Effects Model
-initial_formula = ['R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
+formula_initial = ['R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
+formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
 weight_initial = sqrt(data.n_steps);
 
 % Weighted LME Model
 opts = optimoptions('fminunc');
 opts.Display = 'off';
-lme_initial = fitlme(data, initial_formula, ...
+lme_initial = fitlme(data, formula_initial, ...
     'FitMethod', 'REML', ...
     'Weight', weight_initial,...
     'DummyVarCoding', 'effects', ...
@@ -145,42 +146,17 @@ lme_initial = fitlme(data, initial_formula, ...
     'OptimizerOptions', opts);
 
 % Test Cutoff of Unstable R
-test_cutoff_unstable_R(data, lme_initial)
+% test_cutoff_unstable_R(data, lme_initial)
 idx = data.R_H <= 1;
 data_final = data(idx, :);
 
 % Test Weight Scheme After Cutoff
-test_weight_scheme(data_final, response_name)
-
-weight_raw = data_final.n_steps;
-% cap_val = prctile(weight_raw, 90);
-% data_final.Weight = min(weight_raw, cap_val);
-% data_final.Weight = sqrt(weight_raw);
-data_final.Weight = ones(height(data_final), 1);
+% test_weight_scheme(data_final, response_name)
 
 % Final Weighted and Cutoff LME Model
-formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-% Fit the model using:
-% Formula: R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)
-% Weight: none
-% Fit Method: REML
-% Dummy Var Coding: Effects
-% Optimizer: Quasinewton (default)
-% Dataset cutoff at R_H > 1
 lme_final = fitlme(data_final, formula, ...
     'FitMethod', 'REML', ...
-    'Weights', data_final.Weight, ...
     'DummyVarCoding', 'effects');
-model_alt = fitlme(data_final, formula, ...
-    'FitMethod', 'REML', ...
-    'Weights', data_final.Weight, ...
-    'DummyVarCoding', 'effects', ...
-    'Optimizer', 'fminunc');
-
-if lme_final.LogLikelihood < model_alt.LogLikelihood
-    lme_final = model_alt;
-    fprintf('Switched to FMinUnc!')
-end
 
 disp(lme_final)
 fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
@@ -226,7 +202,7 @@ ICC = (exp(tau2) - 1) / (exp(tau2 + sigma2) - 1);
 fprintf('ICC scaled:                                          %8.4f\n', ICC);
 
 % Test Linear Mixed-Effects Model Assumptions
-assumptions_check(lme_final, "Final LME - " + response_name + ":")
+% assumptions_check(lme_final, "Final LME - " + response_name + ":")
 % PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots", ".", "file_type", "pdf", "prepare","on", "append", "off")
 %% Cluster (Participant-Level), Stratified-by-Dataset Bootstrap for CIs
 if boot_flag
