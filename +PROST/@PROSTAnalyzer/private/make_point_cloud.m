@@ -18,7 +18,7 @@ function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums,
     % cut_length = 0;
     trial_size = (n_temporal - 2*cut_length);
 
-    if nargin < 4
+    if nargin < 7 || isempty(anatomical_side)
         anatomical_side = "lateral";
     end
     

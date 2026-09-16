@@ -12,13 +12,16 @@ function shank_cop = cop_to_shank_frame(step, anatomical_side)
 %                     "medial" or "mean".
 % Output :
 %   shank_cop - the CoP in the Shank coordinate frame.
+    if nargin < 2 || isempty(anatomical_side)
+        anatomical_side = "lateral";
+    end
 
     cop = step.COP;
     knee = step.Markers.Knee.(anatomical_side);
     ankle = step.Markers.Ankle.(anatomical_side);
     if isempty(ankle) ||  isempty(knee)
         throw(PROST.PROSTError("DataRecords", "MissingAnatomicalSide", ...
-            "The dataset %s has no marker trajectories with anatomical side %s.", dataset_name, anatomical_side));
+            "The step has no ankle/knee marker trajectories with anatomical side %s.", anatomical_side));
     end
     shank_cop = PROST.PROSTAnalyzer.convert_to_shank_frame(cop, knee, ankle);
 end
