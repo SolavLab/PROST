@@ -16,7 +16,7 @@ data_path = "..\Data Files";
 
 % Add PROST package root to path
 toolbox_root = split(script_folder, filesep);
-toolbox_root = fullfile(toolbox_root{1:end-2});
+toolbox_root = fullfile(toolbox_root{1:end-3});
 addpath(toolbox_root); % Add PROST package to path
 
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
