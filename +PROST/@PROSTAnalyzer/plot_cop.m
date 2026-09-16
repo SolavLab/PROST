@@ -159,6 +159,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 time = 0:100; % Time vector for temporally aligned data to 101 points
 
                 % Get CoP and ankle, knee trajectories after temporal alignment
+                cop = step.COP;
                 cop.z = 0.*cop.x;
                 ankle = step.Markers.Ankle.(anatomical_side);
                 knee = step.Markers.Knee.(anatomical_side);

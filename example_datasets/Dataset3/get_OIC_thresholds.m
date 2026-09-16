@@ -10,7 +10,8 @@ function [right_OIC_threshold, left_OIC_threshold] = get_OIC_thresholds(walking_
 %       walking_data - the data of the walking trials.
 %       MarkerVarNames - a list of the marker names where each name index
 %       corresponds to that marker's row in the data.
-%       threshold_shift – a parameter to shift the left and right thresholds upwards. Default: 0.
+%       threshold_shift – a parameter to shift the left and right thresholds 
+%       upwards. Units: [m]. Default: 0.
 %   Output :
 %       right_OIC_threshold, left_OIC_threshold - right and left thresholds
 %       of the heel heights to use for finding OIC event.

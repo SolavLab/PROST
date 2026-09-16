@@ -656,7 +656,7 @@ for participant_number = 1:n_participants
             Dataset_3.Data.(participant_name).uniform_data.(side).step(relevant_index).GRF = interpolated_GRF;
 
             %                                                                      --------                           --------------
-            % Dataset_3 / Data / participant_# / uniform_data / Right,Left / step(#) / markers   -  temporally aligned to single support
+            % Dataset_3 / Data / participant_# / uniform_data / Right,Left / step(#) / Markers   -  temporally aligned to single support
             %                                                                      --------                           --------------
             % Get event indices of the trajectory measurements
             IC_index = step_info.events.IC.trajectory_index;
