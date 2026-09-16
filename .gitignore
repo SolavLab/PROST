@@ -7,3 +7,11 @@ example_datasets/Dataset_1.mat
 example_datasets/Dataset_2.mat
 example_datasets/Dataset_3.mat
 example_datasets/Dataset_4.mat
+
+# Local before/after debug snapshots and pre-fix archive (large .mat files)
+Dataset4Debug/
+
+# Session transcripts and reports (contain full working conversation - review before publishing)
+session_docs/
+PROJECT_GUIDELINES.md
+Dataset_MAT_Structure_for_Claude_PowerPoint.md
