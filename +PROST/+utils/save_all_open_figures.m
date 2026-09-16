@@ -39,7 +39,7 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
 %   save_all_open_figures("C:/path/to/folder", file_type="fig")
 
     arguments
-        figures_folder  (1, 1) string
+        figures_folder  {mustBeTextScalarOrEmpty(figures_folder)} = []
         sub_folders     {mustBeTextOrEmpty(sub_folders)} = []
     end
     arguments
@@ -108,4 +108,13 @@ function mustBeTextOrEmpty(value)
         return
     end   
     mustBeText(value);
+end
+
+function mustBeTextScalarOrEmpty(value)
+%MUSTBETEXTSCALAROREMPTY Validate that value is a text scalar or an empty
+% array.
+    if isempty(value)
+        return
+    end   
+    mustBeTextScalar(value);
 end
