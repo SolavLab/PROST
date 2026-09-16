@@ -1,7 +1,7 @@
 function foot_length = estimate_foot_length(steps)
-%ESTIMATE_FOOT_LENGTH estimates the foot length from the COP.
+%ESTIMATE_FOOT_LENGTH estimates the foot length from the CoP.
 %   Based on: Lugade & Kaufman, 2019; Han, Paik & Im, 2019:
-%   COP excursion in the anterior-posterior direction covers approximately 
+%   CoP excursion in the anterior-posterior direction covers approximately 
 %   83% of the foot length.
 %   Input :
 %       steps - the steps measurements for all trials of the given foot. 
@@ -11,7 +11,7 @@ function foot_length = estimate_foot_length(steps)
 %   Output :
 %       foot_length - the estimated foot length in [m]
     
-    % Calculate mean COP length in walking direction
+    % Calculate mean CoP length in walking direction
     cop = [steps(:).COP];
     cop_x = cell2mat({cop(:).x}');
     % cop_y = cell2mat({cop(:).y}');
@@ -20,7 +20,7 @@ function foot_length = estimate_foot_length(steps)
     d = max(cop_x, [], 2) - min(cop_x, [], 2);
     mead_d = mean(d);
     
-    % Estimate foot length from COP
+    % Estimate foot length from CoP
     foot_length = mead_d / 0.83;
 
     % Convert to [m]

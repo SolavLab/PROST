@@ -243,7 +243,7 @@ for particpant_num=participants % all participants
             plot(ax_shank, X, Y, '-k');
             h(1) = scatter(ax_shank, shank_ankle.u, shank_ankle.w, 30, time, 'square', 'filled', DisplayName="Ankle");
             h(2) = scatter(ax_shank, shank_knee.u, shank_knee.w, 30, time, 'o', 'filled', DisplayName="Knee");
-            h(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, 30, time, '^', 'filled', DisplayName="Cop");
+            h(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, 30, time, '^', 'filled', DisplayName="CoP");
             % c = colorbar(ax_shank, "eastoutside");
             % c.Label.String = 'WA + SS %';
             title(ax_shank, "Shank CS");

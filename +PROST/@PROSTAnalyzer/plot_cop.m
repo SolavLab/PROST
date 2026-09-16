@@ -1,5 +1,5 @@
 function fig = plot_cop(obj, who_to_plot, opts, save_opts)
-%PLOT_COP plots the both the shank CS and lab CS COP data, ankle and 
+%PLOT_COP plots the both the shank CS and lab CS CoP data, ankle and 
 % knee trajectories for each trial in who_to_plot. 
 % Notice: here we can choose the anatomical side to use for the shank CS and 
 % the marker trajectories. This can be different than the default "lateral" as 
@@ -77,7 +77,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
    
     % Start plotting
     fig_counter = 0;
-    fprintf("Plotting COP...\n");
+    fprintf("Plotting CoP...\n");
     for i=1:length([who_to_plot.List.Dataset_id])
         axes_counter = 0;
         
@@ -139,7 +139,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 % Create new figure for new set of axes
                 if axes_counter == 0
                     fig_counter = fig_counter + 1;
-                    fig_name = "COP Plots: Lab CS & shank CS";
+                    fig_name = "CoP Plots: Lab CS & shank CS";
                     fig(fig_counter) = figure(Name=fig_name, Visible=show);
                     % n_cols = ceil(sqrt(number_of_axes_in_fig));
                     % n_rows = ceil(number_of_axes_in_fig / n_cols);
@@ -148,7 +148,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                     sgtitle(fig(fig_counter), replace(fig(fig_counter).Name, "_", " "), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME);
                 end
 
-                % Inner tile for pair of Ankle-Knee Trajectories and COPs in
+                % Inner tile for pair of Ankle-Knee Trajectories and CoPs in
                 % World and Shank Frames
                 % tInner = tOuter;
                 tInner = tiledlayout(tOuter, 1, 2, Units="normalized", TileSpacing="none", Padding="none");
@@ -158,8 +158,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 % Time vector
                 time = 0:100; % Time vector for temporally aligned data to 101 points
 
-                % Get COP and ankle, knee trajectories after temporal alignment
-                cop = step.COP;
+                % Get CoP and ankle, knee trajectories after temporal alignment
                 cop.z = 0.*cop.x;
                 ankle = step.Markers.Ankle.(anatomical_side);
                 knee = step.Markers.Knee.(anatomical_side);
@@ -200,7 +199,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 plot(ax_lab, X, Y, LineStyle=obj.LINE_STYLE_SOLID, LineWidth=0.5, Color=obj.LINE_COLOR)
                 h_lab(1) = scatter(ax_lab, ankle.x, ankle.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_lab(2) = scatter(ax_lab, knee.x, knee.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
-                h_lab(3) = scatter(ax_lab, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h_lab(3) = scatter(ax_lab, cop.x, 0*cop.z, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='CoP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 xlabel(ax_lab, "x [mm]")
                 ylabel(ax_lab, "z [mm]")
 
@@ -209,7 +208,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 shank_ankle = obj.convert_to_shank_frame(ankle, knee, ankle);
                 shank_knee = obj.convert_to_shank_frame(knee, knee, ankle);
 
-                % Plot ankle-knee trajectories and COP in shank CS.
+                % Plot ankle-knee trajectories and CoP in shank CS.
                 % Should look like this:
                 %     ...
                 %    .--.
@@ -243,7 +242,7 @@ function fig = plot_cop(obj, who_to_plot, opts, save_opts)
                 h_shank = gobjects(3, 1);
                 h_shank(1) = scatter(ax_shank, shank_ankle.u, shank_ankle.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_SQUARE, 'filled', DisplayName='Ankle', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 h_shank(2) = scatter(ax_shank, shank_knee.u, shank_knee.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_CIRCLE, 'filled', DisplayName='Knee', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
-                h_shank(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='COP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
+                h_shank(3) = scatter(ax_shank, shank_cop.u, shank_cop.w, obj.MARKER_SIZE_SCATTER, time, obj.MARKER_TRIANGLE_UP, 'filled', DisplayName='CoP', MarkerEdgeColor="black", MarkerEdgeAlpha=0.5);
                 xlabel(ax_shank, "u [mm]")
                 ylabel(ax_shank, "w [mm]")
                 legend(ax_shank, h_shank, Location="best");

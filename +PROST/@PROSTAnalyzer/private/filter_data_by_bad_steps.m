@@ -6,7 +6,7 @@ function filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anato
 %   dataset_id - the ID of the dataset to filter. A positive integer number or
 %                vector of positive integer numbers. By default filters all
 %                datasets in the data record.
-%   bad_step_min_duration - min duration when COP of step loops backwards
+%   bad_step_min_duration - min duration when CoP of step loops backwards
 %                           (from walking direction = x). This indicates
 %                           a bad measurement of the step. Default: 10.
 %   anatomical_side - the anatomical side of the shank frame. Either

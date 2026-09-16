@@ -2,7 +2,7 @@
 % Evaluates walking direction consistency across subjects and trials. For each 
 % walking trial, direction is determined from the sign of PSIS 
 % anterior–posterior displacement. Trials identified as backward walking 
-% (negative direction) are flagged and visualized with GRF, COP, and PSIS 
+% (negative direction) are flagged and visualized with GRF, CoP, and PSIS 
 % trajectories to support inspection and validation.
 % ------------------------------------------------------------------------------
 clearvars -except -regexp ^Dataset_\d+$
@@ -86,12 +86,12 @@ for s_idx=1:n_subjects
             xlabel("time [s]")
             ylabel("z [N]")
 
-            % COP
+            % CoP
             subplot(3, 3, 2)
             plot(force_plate_time_vector, cop_data(1, :))
             hold on
             grid on
-            title("COP")
+            title("CoP")
             xlabel("time [s]")
             ylabel("x [mm]")
 

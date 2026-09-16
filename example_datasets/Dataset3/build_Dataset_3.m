@@ -426,7 +426,7 @@ for participant_number = 1:n_participants
         
         % now if the step is good,
         % we will change the initial contact that we saved
-        % according to the COP (check where the COP starts making sense)
+        % according to the CoP (check where the CoP starts making sense)
         trial = Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number);
         if ((trial.step_1_info.step_quality) == "good")
             step_info = trial.step_1_info;
@@ -434,14 +434,15 @@ for participant_number = 1:n_participants
             % find out what is the right force plate
             plate = step_info.plate;
             
-            % get the COP from this forceplate
+            % get the CoP from this forceplate
             cut_COP = trial.COP.("plate_" + plate);
             
             % get the IC and the OIC of this step
             IC_index = step_info.events.IC.forceplate_index;
             OIC_index = step_info.events.OIC.forceplate_index;
 
-            % cut the COP according to the IC and OIC
+
+            % cut the CoP according to the IC and OIC
             cut_COP.x=cut_COP.x(IC_index:OIC_index);
             cut_COP.y=cut_COP.y(IC_index:OIC_index);
             cut_COP.z=cut_COP.z(IC_index:OIC_index);
@@ -556,7 +557,7 @@ for participant_number = 1:n_participants
         % summary of temporal alignment:
         % -------------------------
         % the GRF should be temporally aligned (to n_temporal_alignment points) in the stance phase (SP) -> from initial contact to toe off 
-        % while the COP, markers, and ROS should be temporally aligned (to n_temporal_alignment points) in the single support phase (SS) -> from initial contact to opposite initial contact 
+        % while the CoP, markers, and ROS should be temporally aligned (to n_temporal_alignment points) in the single support phase (SS) -> from initial contact to opposite initial contact 
 
         %                                               ---------------------
         % Dataset_3 / Data / participant_# / uniform_data / Right,Left / step(#)
@@ -616,12 +617,12 @@ for participant_number = 1:n_participants
             %                                                                      ----------------------------
             % Dataset_3 / Data / participant_# / uniform_data / Right,Left / step(#) / COP   -  temporally aligned  
             %                                                                      ----------------------------
-            % get data (get the COP):
+            % get data (get the CoP):
             COP = Dataset_3.Data.(participant_name).processed_original_data.trial(trial_number).COP;
             tmp_COP.x = walking_direction*COP.plate_1.x;
             tmp_COP.y = -walking_direction*COP.plate_1.z;
             % tmp_COP.z = COP.plate_1.y;
-            % % cut the COP from IC to OIC filter it and temporally align to to n_temporal_alignment points
+            % % cut the CoP from IC to OIC filter it and temporally align to to n_temporal_alignment points
             interpolated_COP.x = interp1(IC_index:OIC_index, tmp_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
             interpolated_COP.y = interp1(IC_index:OIC_index, tmp_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index - 0.0001, n_temporal_alignment)); % NOTE: why -0.0001?????
             interpolated_COP.z = zeros(size(interpolated_COP.x)); 

@@ -1,10 +1,10 @@
 % TEST_AXIS_DIRECTIONS :
 % Explores and verifies coordinate-system consistency and walking direction in 
-% gait data. For a selected subject and trial, the script plots GRF and COP 
+% gait data. For a selected subject and trial, the script plots GRF and CoP 
 % components to confirm axis definitions (walking, vertical, lateral), 
-% visualizes COP trajectories in the walking–medial plane, and generates a 
+% visualizes CoP trajectories in the walking–medial plane, and generates a 
 % simple lower-limb animation from marker data as well as heel height data. 
-% Finally, PSIS marker trajectories and COP signals are plotted for multiple 
+% Finally, PSIS marker trajectories and CoP signals are plotted for multiple 
 % subjects and trials to validate walking direction consistency across the 
 % dataset.
 % ------------------------------------------------------------------------------
@@ -36,12 +36,12 @@ set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows
 subject_number = 1;
 trial_number = 1;
 
-% Choose subjects and number of walking trials for multiple COP, GRF and PSIS
+% Choose subjects and number of walking trials for multiple CoP, GRF and PSIS
 % Trajectory plots
 subjects = [1 20 50]; % Subjects to plot
 numTrials = [5 5 5]; % Number of trials for each subject to plot
 
-%% Plot COP and GRF of Example Trial
+%% Plot CoP and GRF of Example Trial
 % Loading example subject data
 load(fullfile(data_path, "Subject" + subject_number + ".mat"))
 
@@ -82,36 +82,36 @@ ylabel('Force [N]')
 xlabel('Time [s]')
 sgtitle(sprintf("GRF\nSubject %d, Trial %d", subject_number, trial_number), "FontSize", 20)
 
-% plot the COP data
+% plot the CoP data
 figure
 % x
 subplot(3, 1, 1)
 plot(force_plate_time_vector, cop_data(1,:), '.', 'linewidth', 2)
 title("x - walking direction", "FontSize", 12)
-ylabel('COP location [mm]')
+ylabel('CoP location [mm]')
 xlabel('Time [s]')
 % y
 subplot(3, 1, 2)
 plot(force_plate_time_vector, cop_data(2,:), '.', 'linewidth', 2)
 title("y - up", "FontSize", 12)
-ylabel('COP location [mm]')
+ylabel('CoP location [mm]')
 xlabel('Time [s]')
 % z
 subplot(3, 1, 3)
 plot(force_plate_time_vector, cop_data(3,:), '.', 'linewidth', 2)
 title("z - latteral direction (by right hand rule)", "FontSize", 12)
-ylabel('COP location [mm]')
+ylabel('CoP location [mm]')
 xlabel('Time [s]')
-sgtitle(sprintf("COP\nSubject %d, Trial %d", subject_number, trial_number), "FontSize", 20)
+sgtitle(sprintf("CoP\nSubject %d, Trial %d", subject_number, trial_number), "FontSize", 20)
 
 figure
 psis_x = walking_trials(trial_number).Marker(7, :);
 waling_direction = sign(psis_x(end) - psis_x(1));
 plot(cop_data(1,:), waling_direction*cop_data(3,:), "*", 'linewidth', 2)
-xlabel('COP location in walking direction [mm]')
-ylabel('COP location in medial direction [mm]')
+xlabel('CoP location in walking direction [mm]')
+ylabel('CoP location in medial direction [mm]')
 axis equal
-title(sprintf("COP\nSubject %d, Trial %d", subject_number, trial_number), "FontSize", 20)
+title(sprintf("CoP\nSubject %d, Trial %d", subject_number, trial_number), "FontSize", 20)
 
 %% Plot Walking Animation for Example Trial
 % Creating an animation of a walking trial as an example.
@@ -219,11 +219,11 @@ for subject_number=subjects
         grid on
         hold on
 
-        % COP
+        % CoP
         ax2 = subplot(3, 3, 2);
         xlabel("time [s]")
         ylabel("x [mm]")
-        title("COP")
+        title("CoP")
         grid on
         hold on
         % is_in = ~isoutlier(cop_data(1, :));

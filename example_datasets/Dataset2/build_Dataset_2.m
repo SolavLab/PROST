@@ -340,7 +340,7 @@ for participant_number=1:n_participants
         % summery of temporal alignment:
         % -------------------------
         % the GRF should be temporally aligned (to 101 points) in the stance phase (SP) -> from initial contact to toe off 
-        % while the COP and Markers should be temporally aligned (to 101 points) from initial contact to opposite initial contact 
+        % while the CoP and markers should be temporally aligned (to 101 points) from initial contact to opposite initial contact 
 
         % Don't process bad participants / trials
         if isempty(good_trials(participant_number).trial) || ~ismember(trial_number, [good_trials(participant_number).trial.index])
@@ -982,7 +982,7 @@ function speed = calculate_speed(trajectories, events, walking_marker_name)
 end
 
 function interpolated_COP = interpolate_COP(COP, step_info, walking_direction, n_temporal_alignment)
-%INTERPOLATE_COP converts the center of pressure (COP) measurements to our 
+%INTERPOLATE_COP converts the center of pressure (CoP) measurements to our 
 % coordinate system and interpolates into n_temporal_alignment points from 
 % initial contact to opposite initial contact.
 % By default n_temporal_alignment is 101 points thus the trajectories are 
@@ -1009,12 +1009,12 @@ function interpolated_COP = interpolate_COP(COP, step_info, walking_direction, n
     IC_index = step_info.events.IC.forceplate_index;
     OIC_index = step_info.events.OIC.forceplate_index;
 
-    % get data (get the COP of the fitting plate:
+    % get data (get the CoP of the fitting plate:
     interpolated_COP.x = walking_direction*COP.("plate_" + fp_num).x;
     interpolated_COP.y = walking_direction*COP.("plate_" + fp_num).y;
     % interpolated_COP.z = COP.("plate_" + fp_num).z;
 
-    % % cut the COP from IC to OIC filter it and temporally align to 101 points
+    % % cut the CoP from IC to OIC filter it and temporally align to 101 points
     interpolated_COP.x = interp1(IC_index:OIC_index, interpolated_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_COP.y = interp1(IC_index:OIC_index, interpolated_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
     interpolated_COP.z = zeros(size(interpolated_COP.x));

@@ -81,13 +81,13 @@ Dataset_1.Markers_guide = Markers_guide;
 %       --------------------
 Lab_system.lab_frame = ...
     "X Direction: \n" + ...
-    "For COP and marker trajectories: pointing in the direction that completes a right handed coordinate system.\n" + ...
+    "For CoP and marker trajectories: pointing in the direction that completes a right handed coordinate system.\n" + ...
     "for GRF data: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
     "Y Direction: \n" + ...
-    "For COP and marker trajectories: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
+    "For CoP and marker trajectories: the direction in the lab from the first forceplate to the last forceplate (walking direction).\n" + ...
     "For GRF data: pointing in the direction that completes a right handed coordinate system.\n" + ...
     "Z Direction: \n" + ...
-    "For GRF, COP and marker trajectories the z direction is pointing up.";
+    "For GRF, CoP and marker trajectories the z direction is pointing up.";
 Lab_system.num_forceplates = 6;
 
 Dataset_1.Lab_system = Lab_system;
@@ -195,7 +195,7 @@ for participant_number=1:n_participants
             %                                                              -----------------------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / walking_direction
             %                                                              -----------------------------
-            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction = "+y in COP and tragectories data. +x in GRF data";
+            Dataset_1.Data.(participant_name).processed_original_data.trial(trial_number).walking_direction = "+y in CoP and tragectories data. +x in GRF data";
 
             %                                                              ----------------------
             % Dataset_1 / Data / participant_# / processed_original_data / trials(#) / first_foot
@@ -254,7 +254,7 @@ for participant_number=1:n_participants
             % Dataset_1 / Data / participant_# / uniform_data / right or left / step(#)
             %                              ---------------- --------------- --------
             % reminder:
-            % the frame of reference of the given (original) markers and COP:
+            % the frame of reference of the given (original) markers and CoP:
             % x - right direction
             % y - walking direction
             % z - up
@@ -263,12 +263,12 @@ for participant_number=1:n_participants
             % y - the medial direction?
             % z - up
             % ---------------------------------------------
-            % in uniform data, the markers and COP data should be transformed so that:
+            % in uniform data, the markers and CoP data should be transformed so that:
             % x - walking direction
             % y - to the left (of the body)
             % z - up
             % ---------------------------------------------
-            % so: (for markers and COP)
+            % so: (for markers and CoP)
             % summery of needed transformation:
             % ---------------------------------
             % new_x =  old_y
@@ -279,7 +279,7 @@ for participant_number=1:n_participants
             % summery of temporal alignment:
             % -------------------------
             % the GRF should be temporally aligned (to 101 points) in the stance phase (SP) -> from initial contact to toe off
-            % while the COP and markers should be temporally aligned (to 101 points) in the weight acceptance + single support phase (SS) -> from initial contact to opposite initial contact
+            % while the CoP and markers should be temporally aligned (to 101 points) in the weight acceptance + single support phase (SS) -> from initial contact to opposite initial contact
 
             % Saving data of 3 steps
             % We have the data of 4 steps per trial but since OIC isn't known,
@@ -357,7 +357,7 @@ for participant_number=1:n_participants
                 one_step_COP.y = -PROST.utils.convert_units(COP.("plate_" + fp_number).x, COP.unit, "mm");
                 % one_step_COP.z = Dataset_1.Data.(participant_name).processed_original_data.trial(trials_counter).COP.FP(step_number).z;
 
-                % cut the COP data from IC to OIC (weight acceptance + single support) and interpolate it to 101 points
+                % cut the CoP data from IC to OIC (weight acceptance + single support) and interpolate it to 101 points
                 interpolated_COP.x = interp1(IC_index:OIC_index, one_step_COP.x(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.y = interp1(IC_index:OIC_index, one_step_COP.y(IC_index:OIC_index), linspace(IC_index, OIC_index, n_temporal_alignment));
                 interpolated_COP.z = zeros(size(interpolated_COP.x));
@@ -665,13 +665,12 @@ function COP = save_cop_data(single_trial_COP_data, GRF)
     [left_activation_index, left_deactivation_index] = find_forceplate_activation_deactivation(GRF.Left.z);
     [right_activation_index, right_deactivation_index] = find_forceplate_activation_deactivation(GRF.Right.z);
     for fp_num=1:GRF.n_forceplates
-        % Get COP data
-        % cop is given in meters. notice we multiplied by 1000 to convert to mm.
+        % Get CoP data
         x_cop = single_trial_COP_data.("FP" + fp_num + "_X"); % [mm]
         y_cop = single_trial_COP_data.("FP" + fp_num + "_Y"); % [mm]
         z_cop = single_trial_COP_data.("FP" + fp_num + "_Z"); % [mm]
 
-        % Process the COP data to get rid of noisy points and save step
+        % Process the CoP data to get rid of noisy points and save step
         % foot
         if ismember(fp_num, GRF.left_forceplates) % left foot
             non_active_idx = true(1, length(x_cop));
@@ -699,7 +698,8 @@ function COP = save_cop_data(single_trial_COP_data, GRF)
         y_cop(getrid) = nan;
         z_cop(getrid) = nan;
 
-        % Save the COP
+
+        % Save the CoP
         COP.("plate_" + fp_num).x = x_cop;
         COP.("plate_" + fp_num).y = y_cop;
         COP.("plate_" + fp_num).z = z_cop;
@@ -774,7 +774,7 @@ function steps_info = save_step_data(COP, n_steps, relevant_forceplates)
             steps_info(step_number).foot = "left";
         end
 
-        % Get COP data
+        % Get CoP data
         y_cop = COP.("plate_" + fp_num).y;
 
         % Find the event indices and times

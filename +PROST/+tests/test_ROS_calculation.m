@@ -20,7 +20,7 @@ for idx = 1:length(steps)
     cop_transformed = [cop_transformed shank_cop_vec];
     plot(time, shank_cop_vec(2, :), Color=cmap(idx, :), MarkerSize=5, LineStyle="none", Marker="o", DisplayName="Trial " + steps(idx).source.original_trial) 
 end
-title("COP z vs time in lab frame")
+title("CoP z vs time in lab frame")
 xlabel('index')
 ylabel("w [mm]")
 legend
@@ -29,7 +29,7 @@ figure
 axis equal
 grid on
 gscatter(cop_transformed(1, :), cop_transformed(3, :), cop_transformed(4, :), {}, "o", 5, "filled");
-title("COP in shank frame")
+title("CoP in shank frame")
 xlabel("u [mm]")
 ylabel("w [mm]")
 
@@ -52,7 +52,7 @@ for idx = 1:length(steps)
     scatter(COP.x, 0*COP.y, 30, time, '^', 'filled')
     scatter(shank_cop.u + ankle.x(1), shank_cop.w + ankle.z(1), 30, time, 'v', 'filled')
 end
-title("COP and shank in lab frame")
+title("CoP and shank in lab frame")
 xlabel("x [mm]")
 ylabel("z [mm]")
 
@@ -68,10 +68,10 @@ for idx = 1:length(steps)
     d_time = diff(time);
     dz_ankle = diff(ankle.z) ./ d_time;
     dw_cop = diff(shank_cop.w) ./ d_time;
-    plot(time(1:end-1), dw_cop, '.', DisplayName="COP diff " + "Trial " + steps(idx).source.original_trial)
+    plot(time(1:end-1), dw_cop, '.', DisplayName="CoP diff " + "Trial " + steps(idx).source.original_trial)
     plot(time(1:end-1), dz_ankle, '.', DisplayName="ankle diff " + "Trial " + steps(idx).source.original_trial)
 end
-title("COP differential over time in shank frame")
+title("CoP differential over time in shank frame")
 xlabel("time [s]")
 ylabel("dw [mm]")
 legend

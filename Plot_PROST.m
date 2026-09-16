@@ -261,7 +261,7 @@ for i=1:numel(nIterations)
     title("NIterations = " + nIterations(i))
     grid on
 end
-%% Plot Example COP
+%% Plot Example CoP
 prepare = "on";
 prepare_options = struct;
 prepare_options.PaperOrientation = 'portrait';

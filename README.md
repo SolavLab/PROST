@@ -23,7 +23,7 @@
 - **Individual Participant Data (IPD) Meta-Analysis**: Analyze relationships between ROS/arc parameters and anthropometric variables across pooled datasets
 - **Statistical Analysis**: Distribution fitting, correlation analysis (Pearson & Spearman), and goodness-of-fit testing
 - **Data Cleaning**: Automatic detection and handling of invalid/ignored participant data
-- **Visualization**: Comprehensive plotting functions for ROS analysis, COP trajectories, and correlations
+- **Visualization**: Comprehensive plotting functions for ROS analysis, CoP trajectories, and correlations
 
 ## Installation
 
@@ -210,7 +210,7 @@ PROST/
 
 | Function | Purpose |
 |----------|---------|
-| `convert_to_shank_frame()` | Transform COP to shank-relative coordinate system |
+| `convert_to_shank_frame()` | Transform CoP to shank-relative coordinate system |
 | `cop_to_shank_frame()` | Convert center of pressure measurements |
 
 ### Plotting Methods
@@ -286,7 +286,7 @@ For bug reports, feature requests, or questions:
 
 ## Version History
 
-- **v1.0** (Current): Initial release with ROS analysis, COP tracking, and statistical tools
+- **v1.0** (Current): Initial release with ROS analysis, CoP tracking, and statistical tools
 
 ---
 

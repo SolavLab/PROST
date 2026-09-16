@@ -1,11 +1,10 @@
 % TEST_FIND_IC_OIC_TO :
 % The point of this is to find IC, OIC and TO of step.
-% Each trial is comprised of a step phase which includes 2 steps. The GRF
-% and COP data etc. was cut to only show single support from a single force 
-% plate.
-% This means the GRF and COP of each trial begins at IC and ends at TO. 
-% The trajectory data was cut to show the full stance phase from IC to
-% contact of the same leg.
+% Each trial is comprised of a stride which includes 2 steps. The GRF and CoP 
+% data etc. was cut to only show single support from a single force plate.
+% This means the GRF and CoP of each trial begins at IC and ends at TO. 
+% The trajectory data was cut to show the full stride from IC to contact of the 
+% same leg.
 % But where is OIC? We need to find it by looking at marker trajectories of 
 % the heel and toe of the other foot during that trial.
 % Where do they indicate OIC? Maybe look at a different trial where the
@@ -103,8 +102,8 @@ for subject=subjects
     plot(R_marker_time, R_left_toe, LineWidth=2, DisplayName="Left Toe")
     plot(R_marker_time, R_right_toe, LineWidth=2, DisplayName="Right Toe")
     plot(R_grf_time, R_grf, LineWidth=2, DisplayName="GRF")
-    plot(R_grf_time, R_cop_x, LineWidth=2, DisplayName="COP X")
-    plot(R_grf_time, R_cop_z, LineWidth=2, DisplayName="COP Z")
+    plot(R_grf_time, R_cop_x, LineWidth=2, DisplayName="CoP X")
+    plot(R_grf_time, R_cop_z, LineWidth=2, DisplayName="CoP Z")
     legend
   
     title("Subject: " + num2str(subject) + ", IC Foot: Right",...

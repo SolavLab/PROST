@@ -1,7 +1,7 @@
 % TEST_SHOW_COP :
-% Visualizes center-of-pressure (COP) trajectories for selected participants. 
-% For each participant, the script plots COP x vs y trajectories for all 
-% right and left step trials separately, enabling per-trial inspection of COP 
+% Visualizes center-of-pressure (CoP) trajectories for selected participants. 
+% For each participant, the script plots CoP x vs y trajectories for all 
+% right and left step trials separately, enabling per-trial inspection of CoP 
 % patterns and consistency across steps.
 % ------------------------------------------------------------------------------
 clearvars -except -regexp ^Dataset_\d+$
@@ -40,7 +40,7 @@ for p=participants
         break
     end
 
-    fig  = figure(Name="COP MEasurements - Participant " + p, Visible='on');
+    fig  = figure(Name="CoP Measurements - Participant " + p, Visible='on');
     tOuter = tiledlayout(fig, 'TileSpacing', 'tight', 'Padding', 'tight');
     sgtitle(fig, replace(fig.Name, "_", " "))
 

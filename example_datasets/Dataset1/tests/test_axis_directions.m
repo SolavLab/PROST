@@ -1,6 +1,6 @@
 % TEST_AXIS_DIRECTIONS :
-% Plots raw GRF, COP, and PSIS trajectory data for all participants at any 
-% available walking speed. Left/right GRF components, multi–force-plate COP 
+% Plots raw GRF, CoP, and PSIS trajectory data for all participants at any 
+% available walking speed. Left/right GRF components, multi–force-plate CoP 
 % signals (with outliers removed), and averaged PSIS trajectories are overlaid 
 % across trials to support visual quality control and consistency checks. This
 % allows us to determine which axis corresponds to which direction in space 
@@ -113,7 +113,7 @@ for p=6%1:16
             grid on
             hold on
 
-            % COP
+            % CoP
             cop_data = participant_data.("V" + available_speed).COP{t, 2};
             time = cop_data.Time(:);
     
@@ -138,7 +138,7 @@ for p=6%1:16
             ax3 = subplot(3, 5, 3);
             xlabel("time [s]")
             ylabel("x [mm]")
-            title("COP", "Left")
+            title("CoP", "Left")
             grid on
             hold on
             plt = plot(ax3, time(~isoutlier(fp3_cop.x)), fp3_cop.x(~isoutlier(fp3_cop.x)));
@@ -167,7 +167,7 @@ for p=6%1:16
             ax4 = subplot(3, 5, 4);
             xlabel("time [s]")
             ylabel("x [mm]")
-            title("COP", "Right")
+            title("CoP", "Right")
             grid on
             hold on
             plt = plot(ax4, time(~isoutlier(fp2_cop.x)), fp2_cop.x(~isoutlier(fp2_cop.x)));
