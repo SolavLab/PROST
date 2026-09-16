@@ -11,13 +11,15 @@ function fit_to_circular_arc(obj, entry_number)
 %   entry_number - the row number in the IPD table where the
 %                  fitted data is entered.
 %  Output :
-%   circular arc parameters:
-%       radius [m]
-%       center_horizontal [m]
-%       center_vertical [m]
-%       ang_start [deg]
-%       ang_end [deg]
-%       arc_length [deg]
+%   None. The fitted circular arc parameters are written directly into row
+%   entry_number of obj.IPDTable:
+%       Radius [mm]
+%       Center_horizontal [mm]
+%       Center_vertical [mm]
+%       Ang_start [deg]
+%       Ang_end [deg]
+%       Arc_length [deg]
+%       Residual_rms [mm]
 
     % Check if participant exists
     if entry_number > size(obj.IPDTable, 1)

@@ -1,15 +1,25 @@
 function make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums, row_number, anatomical_side)
-%MAKE_POINT_CLOUD receives an array of good "steps" (structures)
-% and extracts all the ROS points in the sagital (XZ) plane into a
-% "point_cloud" - a 2 x length(good_steps)*101 matrix. The data is
-% saved into the point_clouds property.
-%   Input :
-%       good_steps - a structure array of the good steps from
-%                    multiple measurements for a given participant.
-%       entry_number - the row in the samples table that the point
-%                      cloud corresponds to.
-%       anatomical_side - the anatomical side to use for fitting. Either
-%                         "lateral" (default), "medial" or "mean".
+%MAKE_POINT_CLOUD receives an array of good step numbers and extracts all the
+% ROS points in the sagittal (UW) plane into a "point_cloud" that is saved
+% into the PointClouds property.
+% Input :
+%   dataset_id - the ID of the dataset the participant belongs to.
+%   participant_id - the ID of the participant within the dataset.
+%   side - the walking side. Either "right" or "left".
+%   good_step_nums - the step numbers of the good steps for this participant
+%                    and side.
+%   row_number - the row in the IPD table that the point cloud corresponds to.
+%   anatomical_side - the anatomical side to use for fitting. Either
+%                     "lateral" (default), "medial" or "mean".
+% Output :
+%   None. The point cloud is written directly into element row_number of
+%   obj.PointClouds, as a (numel(good_step_nums)*trial_size) x 3 matrix with
+%   columns:
+%       u [mm] - CoP coordinate along the walking direction.
+%       w [mm] - CoP coordinate from the ankle towards the knee.
+%       step_num - the step number each point originated from.
+%   Rows holding NaN or Inf values are discarded, so the final number of rows
+%   may be smaller.
 
     % Cut leading and trailing data points of each step since they
     % contain artifacts from beginning and end of the step
