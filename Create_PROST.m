@@ -3,7 +3,11 @@ close all
 clc
 
 %% Setup
-script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_full_path = mfilename('fullpath'); % Full path of this script (MATLAB editor, VS Code, and batch)
+if isempty(script_full_path)
+    script_full_path = matlab.desktop.editor.getActiveFilename; % Fallback: evaluating a selection in the MATLAB editor
+end
+assert(~isempty(script_full_path), "Cannot determine script location. Run the whole file rather than a selection.")
 toolbox_root = fileparts(script_full_path); % Get the folder of the script
 addpath(toolbox_root); % Add PROST package to path
 dataset_dir = fullfile(toolbox_root, 'example_datasets'); % Path to the example_datasets

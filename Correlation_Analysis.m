@@ -15,7 +15,11 @@ close all
 clc
 
 %% Setup
-script_full_path = matlab.desktop.editor.getActiveFilename;
+script_full_path = mfilename('fullpath'); % Full path of this script (MATLAB editor, VS Code, and batch)
+if isempty(script_full_path)
+    script_full_path = matlab.desktop.editor.getActiveFilename; % Fallback: evaluating a selection in the MATLAB editor
+end
+assert(~isempty(script_full_path), "Cannot determine script location. Run the whole file rather than a selection.")
 toolbox_root = fileparts(script_full_path);
 
 addpath(toolbox_root)

@@ -8,7 +8,11 @@ clearvars -except -regexp ^Dataset_(?!1$)\d+$
 close all
 clc
 
-script_full_path = matlab.desktop.editor.getActiveFilename; % Get full path of the current script
+script_full_path = mfilename('fullpath'); % Full path of this script (MATLAB editor, VS Code, and batch)
+if isempty(script_full_path)
+    script_full_path = matlab.desktop.editor.getActiveFilename; % Fallback: evaluating a selection in the MATLAB editor
+end
+assert(~isempty(script_full_path), "Cannot determine script location. Run the whole file rather than a selection.")
 script_folder = fileparts(script_full_path); % Get the folder of the script
 cd(script_folder);
 
