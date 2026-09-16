@@ -164,7 +164,16 @@ for participant_number=1:n_participants
 
     % Get participant metadata and standing trial data
     standing_trial_data = raw_data(participant_number).standing_trial;
-    participant_metadata = all_metadata(participant_number);
+    % Bind metadata by subject ID, not by position: all_metadata, raw_data and
+    % good_trials are built independently, so positional binding silently
+    % assigns another participant's anthropometrics if any of the three is
+    % ordered differently.
+    subj_num = str2double(regexp(string(participant_ID), '\d+', 'match', 'once'));
+    metadata_idx = find([all_metadata.SubjNum] == subj_num, 1);
+    assert(~isempty(metadata_idx), 'Dataset4:MissingMetadata', ...
+        "No metadata record for participant %s (parsed subject number %d).", ...
+        string(participant_ID), subj_num);
+    participant_metadata = all_metadata(metadata_idx);
 
     %                              -------------------------------------
     % Dataset_4 / Data / participant_# / participant_ID_in_original_structure :
@@ -1494,6 +1503,19 @@ function metadata = read_metadata_table(data_path)
 
     [~, order] = sort([unsorted_metadata.SubjNum]);
     metadata = unsorted_metadata(order);
+
+    % The metadata, raw_data and good_trials lists are built independently, so
+    % nothing downstream detects a mismatch between them. Fail loudly here: a
+    % silent misalignment assigns anthropometrics to the wrong participant and
+    % is invisible in the results (the bug fixed in commit 8d763cd).
+    subj_nums = [metadata.SubjNum];
+    sorted_nums = sort(subj_nums);
+    duplicated = unique(sorted_nums([false, diff(sorted_nums) == 0]));
+    missing = setdiff(1:numel(subj_nums), subj_nums);
+    assert(isequal(subj_nums, 1:numel(subj_nums)), 'Dataset4:BadMetadataIDs', ...
+        "Metadata SubjNum must be unique and contiguous 1..%d. " + ...
+        "Records read: %d. Missing: %s. Duplicated: %s.", ...
+        numel(subj_nums), numel(subj_nums), mat2str(missing), mat2str(duplicated));
 end
 
 function data_filtered = filter_data(data, Fs, order, Fc)
