@@ -13,6 +13,10 @@ Dataset4Debug/
 
 # Session transcripts and reports (contain full working conversation - review before publishing)
 session_docs/
-PROJECT_GUIDELINES.md
-Dataset_MAT_Structure_for_Claude_PowerPoint.md
+# Personal Claude Code setup: instructions, imported rules, skills, local settings.
+# Not part of the tracked toolbox — machine-specific and personal, not team guidance.
 CLAUDE.md
+.claude/
+
+# Local VSCode multi-root workspace (points at ../PROST-paper on this machine)
+PROST.code-workspace
