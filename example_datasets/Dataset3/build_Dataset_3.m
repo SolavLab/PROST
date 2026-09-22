@@ -2,6 +2,51 @@
 %  build a matlab structure containing the third dataset data
 %  Created by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
+%
+%  SEX PARSING FIX (17.09.2026) - participant 50 (original ID Subject50) was
+%  stored as Male while the source file says Female.
+%
+%  The defect:
+%    Sex was read with
+%
+%        if contains(s.Gender,'M')
+%            metadata.Sex.value = "Male";
+%        elseif contains(s.Gender, 'F')
+%            metadata.Sex.value = "Female";
+%        end
+%
+%    Three faults combined into a single silent wrong value:
+%      1. contains is CASE-SENSITIVE.
+%      2. There was no else branch, so an unmatched code assigned nothing.
+%      3. metadata was never cleared between participants, so an unassigned
+%         field kept the PREVIOUS participant's value.
+%
+%    Subject50 carries s.Gender = 'f ' - lowercase. Across the 50 subject
+%    files the only values are "M ", "F " and that one "f ", so Subject50 is
+%    the sole case in the dataset. Neither branch fired for it, and
+%    metadata.Sex.value silently retained participant 49's "Male". Nothing
+%    errored and nothing downstream could detect it: the value was a valid
+%    sex, just the wrong participant's. Found in the 09.2026 metadata-linkage
+%    audit that followed the Dataset-4 sort bug.
+%
+%  The fix (see the "sex" block in the participant loop below):
+%    Normalise with upper(strtrim(...)), compare for EXACT equality, and raise
+%    Dataset3:UnrecognisedGender otherwise, so an unknown code stops the build
+%    instead of inheriting a neighbour's value. metadata is also reset at the
+%    top of the participant loop, which removes the carry-over mechanism
+%    itself rather than only this one instance of it.
+%
+%    Deliberately NOT written as contains(upper(s.Gender),'M'): upper("Female")
+%    is "FEMALE", which contains 'M', so that form would misclassify a
+%    spelled-out Female as Male - a worse bug than the one being fixed.
+%
+%  Effect on results: Subject50's Sex changes Male -> Female (2 of 467 IPD
+%    rows). Age, height and mass were never affected, and no other participant
+%    in any dataset changes. Dataset 3's sex split becomes 25 M / 25 F
+%    (previously 26 M / 24 F), so any quoted sex distribution and any Sex
+%    association test must be recomputed. Guarded by
+%    tests/test_Dataset3_metadata_linkage.m.
+% -------------------------------------------------------------------
 clearvars -except -regexp ^Dataset_(?!3$)\d+$
 close all
 clc
@@ -137,6 +182,8 @@ n_participants = size(dir(fullfile(data_path, "*.mat")), 1);
 % Get relevant marker names in original database
 markers_guide = Dataset_3.Markers_guide;
 for participant_number = 1:n_participants
+    metadata = struct(); % do not inherit the previous participant's fields
+
     right_steps_counter = 0; left_steps_counter = 0;
     participant_name = "participant_" + participant_number;
     load(fullfile(data_path, "Subject" + participant_number + ".mat"));
@@ -160,10 +207,14 @@ for participant_number = 1:n_participants
     metadata.Age.method = "provided";
     
     % sex
-    if contains(s.Gender,'M')
+    sex_code = upper(strtrim(string(s.Gender))); % source uses "M ", "F " and one "f "
+    if sex_code == "M"
         metadata.Sex.value = "Male";
-    elseif contains(s.Gender, 'F')
+    elseif sex_code == "F"
         metadata.Sex.value = "Female";
+    else
+        error('Dataset3:UnrecognisedGender', ...
+            "Unrecognised Gender '%s' for %s.", string(s.Gender), string(s.name));
     end
     metadata.Sex.unit = "Male/Female";
     metadata.Sex.method = "provided";
