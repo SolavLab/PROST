@@ -3,6 +3,44 @@
 %  Created by Dani Feal
 %  Edited by Chen Reichsbouscher, 11.06.2025
 % -------------------------------------------------------------------
+%
+%  METADATA SOURCE CHANGE (17.09.2026) - anthropometrics now come from
+%  "Data Files/anthropometric_data.csv" instead of the per-participant
+%  "Data Files/Participant<N>/Metadata.txt" files.
+%
+%  Reason - a defect in the published source files:
+%    Participant8, Participant9 and Participant10 shipped BYTE-IDENTICAL
+%    Metadata.txt files, all three reading "ID: Subject8". Their Raw_Data.mat
+%    files are distinct, so participants 9 and 10 had their own genuine gait
+%    measurements bound to Subject8's anthropometrics. Nothing errored: the
+%    parser read exactly what the files contained, so the only symptom was in
+%    the statistics. This was found during the 09.2026 metadata-linkage audit
+%    that followed the Dataset-4 sort bug, and is the same class of defect
+%    (right measurements, wrong provided anthropometrics) arriving through the
+%    data rather than through the code.
+%
+%  Why the CSV is now authoritative:
+%    It carries distinct, plausible records for participants 9 and 10
+%    (1.80 m / 83.7 kg / 26 y and 1.82 m / 76.8 kg / 25 y, against Subject8's
+%    1.72 m / 75.8 kg / 23 y), so it RESOLVES the duplication rather than
+%    working around it by excluding two participants. Verified against all 16
+%    Metadata.txt files: 14 agree exactly on Age, Sex, Height, Mass, leg length
+%    and foot length; the only differences are participants 9 and 10 above, and
+%    participant 5's height (1.80 m in the text file, 1.79 m in the CSV). The
+%    CSV was taken as authoritative for participant 5 too, so that one source
+%    of truth governs the whole dataset.
+%
+%  Effect on results: Age/Height/Mass change for participants 5, 9 and 10
+%    (6 of 467 IPD rows). Sex is unchanged for all participants. Leg, thigh and
+%    shank lengths are unaffected because they are computed from each
+%    participant's own markers, as are all ROS and arc responses. Dataset 1's
+%    Age/Height/Mass mean+-SD DO change, because Subject8 is no longer counted
+%    three times - the previously reported Dataset 1 demographics were wrong.
+%
+%  The Metadata.txt files are deliberately left in place for provenance; this
+%  script no longer reads them. Guarded by
+%  tests/test_Dataset1_metadata_linkage.m.
+% -------------------------------------------------------------------
 
 clearvars -except -regexp ^Dataset_(?!1$)\d+$
 close all
@@ -128,6 +166,12 @@ Dataset_1.Experiment_protocol = Experiment_protocol;
 % Number of participants
 n_participants = 16;
 
+% load metadata (see the METADATA SOURCE CHANGE note at the top of this file)
+all_metadata = read_metadata_table(data_path);
+assert(numel(all_metadata) == n_participants, 'Dataset1:MetadataCountMismatch', ...
+    "anthropometric_data.csv has %d records but there are %d participants.", ...
+    numel(all_metadata), n_participants);
+
 % Get relevant marker names in original dataset
 markers_guide = Dataset_1.Markers_guide;
 for participant_number=1:n_participants
@@ -141,7 +185,12 @@ for participant_number=1:n_participants
     participant_name = "participant_" + participant_number;
     participant_data = load(fullfile(data_path, participant_ID, "Raw_Data.mat"));
     participant_raw_data = participant_data.("Subject" + participant_number + "_raw");
-    metadata_array = split(string(fileread(fullfile(data_path, participant_ID, "Metadata.txt"))));
+
+    % Bind metadata by subject ID rather than by folder position.
+    metadata_idx = find([all_metadata.SubjNum] == participant_number, 1);
+    assert(~isempty(metadata_idx), 'Dataset1:MissingMetadata', ...
+        "No metadata record for %s.", participant_ID);
+    participant_metadata = all_metadata(metadata_idx);
 
     %                                    -------------------------------------
     % Dataset_1 / Data / participant_# / participant_ID_in_original_structure :
@@ -152,7 +201,7 @@ for participant_number=1:n_participants
     %                                    ---------
     % Dataset_1 / Data / participant_# / metadata :
     %                                    ---------
-    metadata = read_participant_characteristics(metadata_array, participant_raw_data, markers_guide);
+    metadata = read_participant_characteristics(participant_metadata, participant_raw_data, markers_guide);
     Dataset_1.Data.(participant_name).metadata = metadata;
 
     %                                                   ---------------------
@@ -584,34 +633,84 @@ function [median_right_leg_length, ...
     median_left_shank_length = PROST.utils.convert_units(median(left_shank_lengths_vector), "mm", "m");
 end
 
-function metadata = read_participant_characteristics(metadata_array, participant_raw_data, markers_guide)
-%READ_PARTICIPANT_CHARACTERISTICS reads anthropometric data from the data files 
-% of the participant. Also gets the trial data and calculates missing data from 
+function metadata = read_metadata_table(data_path)
+%READ_METADATA_TABLE Read the Dataset-1 anthropometric table, keyed by ID.
+% Columns are addressed BY NAME, so a reordered or extended file cannot
+% silently shift a value - which was the failure mode of the fixed
+% token-position parsing of Metadata.txt that this replaces. Note the CSV's
+% column order is not the order of the old text files (Age is 5th here, 2nd
+% there). See the METADATA SOURCE CHANGE note at the top of this file.
+% Input :
+%   data_path - the path to the data files.
+% Output :
+%   metadata - struct array of anthropometric records, one per participant,
+%              carrying SubjNum for ID-based binding.
+
+    metadata_path = fullfile(data_path, "anthropometric_data.csv");
+    T = readtable(metadata_path, "VariableNamingRule", "preserve", "TextType", "string");
+
+    required = ["ID", "Gender", "Body Height (m)", "Body Mass (kg)", "Age (years)"];
+    absent = required(~ismember(required, string(T.Properties.VariableNames)));
+    assert(isempty(absent), 'Dataset1:MissingMetadataColumn', ...
+        "anthropometric_data.csv is missing column(s): %s.", strjoin(cellstr(absent), ", "));
+
+    metadata = struct([]);
+    for r = 1:height(T)
+        metadata(r).SubjNum      = T.("ID")(r);
+        metadata(r).Age.value    = T.("Age (years)")(r);
+        metadata(r).Age.unit     = "years";
+        metadata(r).Sex.value    = T.("Gender")(r);
+        metadata(r).Sex.unit     = "Male/Female";
+        metadata(r).Height.value = T.("Body Height (m)")(r);
+        metadata(r).Height.unit  = "m";
+        metadata(r).Mass.value   = T.("Body Mass (kg)")(r);
+        metadata(r).Mass.unit    = "kg";
+    end
+
+    % The participant loop binds on SubjNum, so a duplicate would make the
+    % match order-dependent and silently wrong.
+    subj_nums = [metadata.SubjNum];
+    assert(numel(unique(subj_nums)) == numel(subj_nums), 'Dataset1:DuplicateMetadataIDs', ...
+        "Duplicate ID in anthropometric_data.csv.");
+end
+
+function metadata = read_participant_characteristics(participant_metadata, participant_raw_data, markers_guide)
+%READ_PARTICIPANT_CHARACTERISTICS reads anthropometric data from the data files
+% of the participant. Also gets the trial data and calculates missing data from
 % it (leg length, shank length, thigh length) by computing medians of all trials.
 % Input :
-%   metadata_array - participant metadata (anthropometric data).
-%   participant_raw_data - the participant's raw data of all trials for 
+%   participant_metadata - one record from read_metadata_table, holding this
+%                          participant's anthropometric data.
+%   participant_raw_data - the participant's raw data of all trials for
 %                          calculating missing data.
 %   markers_guide - the reference guide for all the important markers.
 % Output :
 %   metadata - the anthropometric data of the participant.
 
-    metadata.Age.value = double(metadata_array(4));
+    metadata.Age.value = participant_metadata.Age.value;
     metadata.Age.unit = "years";
     metadata.Age.method = "provided";
 
     % Sex
-    metadata.Sex.value = metadata_array(6);
+    sex_value = strtrim(string(participant_metadata.Sex.value));
+    if strcmpi(sex_value, "Male") || strcmpi(sex_value, "M")
+        metadata.Sex.value = "Male";
+    elseif strcmpi(sex_value, "Female") || strcmpi(sex_value, "F")
+        metadata.Sex.value = "Female";
+    else
+        error('Dataset1:UnrecognisedSex', ...
+            "Unrecognised Gender '%s' in anthropometric_data.csv.", sex_value);
+    end
     metadata.Sex.unit = "Male/Female";
     metadata.Sex.method = "provided";
 
     % Height
-    metadata.Height.value = double(metadata_array(9));
+    metadata.Height.value = participant_metadata.Height.value;
     metadata.Height.unit = "m";
     metadata.Height.method = "provided";
 
     % Mass
-    metadata.Mass.value = double(metadata_array(13));
+    metadata.Mass.value = participant_metadata.Mass.value;
     metadata.Mass.unit = "kg";
     metadata.Mass.method = "provided";
 
