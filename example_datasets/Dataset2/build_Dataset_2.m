@@ -206,8 +206,16 @@ for participant_number=1:n_participants
 
     % Get participant metadata and standing trial data
     standing_trial_data = raw_data(participant_number).standing_trial;
-    participant_metadata = all_metadata(participant_number);
-    
+
+    % Bind metadata by subject ID, not by position. SubjID is the folder name
+    % raw_data was built from, so this is an identity match. SubjNum must NOT
+    % be used here - it is the CSV row counter (read_metadata_table:1337-1340)
+    % and stops meaning anything once the records are sorted.
+    metadata_idx = find([all_metadata.SubjID] == participant_ID, 1);
+    assert(~isempty(metadata_idx), 'Dataset2:MissingMetadata', ...
+        "No metadata record for participant %s.", participant_ID);
+    participant_metadata = all_metadata(metadata_idx);
+
     % Get metadata
     [metadata, standing_trial] = get_metadata(participant_metadata, standing_trial_data, markers_guide);
     Dataset_2.Data.(participant_name).metadata = metadata;
@@ -455,10 +463,15 @@ function [metadata, standing_trial] = get_metadata(participant_metadata, standin
     metadata.Age.method = "provided";
     
     % Sex
-    if strcmp(participant_metadata.Sex.value, 'M')
+    sex_code = upper(strtrim(string(participant_metadata.Sex.value)));
+    if sex_code == "M"
         metadata.Sex.value = "Male";
-    else
+    elseif sex_code == "W" || sex_code == "F"   % this CSV uses W for women
         metadata.Sex.value = "Female";
+    else
+        error('Dataset2:UnrecognisedSex', ...
+            "Unrecognised Sex '%s' in subject_metadata.csv.", ...
+            string(participant_metadata.Sex.value));
     end
     metadata.Sex.unit = "Male/Female";
     metadata.Sex.method = "provided";
