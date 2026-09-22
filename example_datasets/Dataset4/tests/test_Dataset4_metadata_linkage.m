@@ -1,6 +1,12 @@
 function tests = test_Dataset4_metadata_linkage
 %TEST_DATASET4_METADATA_LINKAGE Regression guard for the Dataset-4 metadata
-% linkage bug fixed in commit 8d763cd.
+% linkage bug fixed in commits 8d763cd and ac2961b.
+%
+% This file lives in example_datasets/Dataset4/tests/ rather than in the
+% toolbox-wide suite +PROST/+tests/, because it is specific to Dataset 4 and
+% depends on that dataset's raw source files. +PROST/+tests/ holds tests of
+% toolbox behaviour that must pass on any clone; this one cannot. Datasets 1,
+% 2 and 3 each have their own counterpart in their own tests folder.
 %
 % read_metadata_table sorted the metadata lexicographically on SubjID
 % ("SUBJ100" sorts before "SUBJ15") while raw_data and good_trials were
@@ -13,21 +19,25 @@ function tests = test_Dataset4_metadata_linkage
 %   1. metadata SubjNum are unique and contiguous 1..N
 %   2. every participant in the built dataset holds ITS OWN source record
 %
-% Tests are skipped (not failed) when the raw data files are absent, so the
-% suite still runs on a clone without the large data downloads.
+% All tests here are expected to PASS.
 %
-% Run with:  runtests('+PROST/+tests')
+% Tests are skipped (not failed) when the raw data files are absent, so the
+% file still runs on a clone without the large data downloads.
+%
+% Run with:  runtests(fullfile("example_datasets", "Dataset4", "tests"))
 tests = functiontests(localfunctions);
 end
 
 function setupOnce(testCase)
-    here = fileparts(mfilename('fullpath'));
-    parts = split(string(here), filesep);
-    root = fullfile(parts{1:end-2});
+    here = fileparts(mfilename('fullpath'));            % .../Dataset4/tests
+    dataset_folder = fileparts(here);                   % .../Dataset4
+    datasets_folder = fileparts(dataset_folder);        % .../example_datasets
+    root = fileparts(datasets_folder);                  % toolbox root
     addpath(root);
-    testCase.TestData.xlsx = fullfile(root, "example_datasets", "Dataset4", ...
-        "Data Files", "41597_2023_2767_MOESM1_ESM.xlsx");
-    testCase.TestData.dataset = fullfile(root, "example_datasets", "Dataset_4.mat");
+
+    testCase.TestData.xlsx = fullfile(dataset_folder, "Data Files", ...
+        "41597_2023_2767_MOESM1_ESM.xlsx");
+    testCase.TestData.dataset = fullfile(datasets_folder, "Dataset_4.mat");
 end
 
 function test_source_ids_unique_and_contiguous(testCase)
