@@ -8,8 +8,8 @@ example_datasets/Dataset_2.mat
 example_datasets/Dataset_3.mat
 example_datasets/Dataset_4.mat
 
-# Local before/after debug snapshots and pre-fix archive (large .mat files)
-Dataset4Debug/
+# Local before/after snapshots for the metadata-linkage fixes (large .mat files)
+metadata_fix_archive/
 
 # Session transcripts and reports (contain full working conversation - review before publishing)
 session_docs/

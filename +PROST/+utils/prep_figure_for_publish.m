@@ -120,7 +120,7 @@ function prep_figure_for_publish(fig, opts)
     % Set colorbar font size
     cl = findall(fig, 'Type', 'colorbar');
     for k = 1:numel(cl)
-        cl.FontSize = opts.FontSize;
+        cl(k).FontSize = opts.FontSize;
     end
 
     % Remove tiledlayout titles
@@ -131,7 +131,7 @@ function prep_figure_for_publish(fig, opts)
     end
 
     % Shorten y label
-    if ~isempty(tl) && tl(1).GridSize(1) >= 2 && tl.GridSize(2) >= 3
+    if ~isempty(tl) && tl(1).GridSize(1) >= 2 && tl(1).GridSize(2) >= 3
         for k = 1:numel(ax)
             ax(k).YLabel.String = shorten_label(ax(k).YLabel.String, 10);
         end
