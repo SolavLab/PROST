@@ -37,7 +37,7 @@ addpath("../");
 set(0, 'DefaultFigureWindowStyle', 'docked'); % Set figures as tabbed windows 
 
 %%
-plot_color = dictionary(["right" "left"], {[1 0 0], [0 1 0]});
+plot_color = dictionary(["right" "left"], {[0 1 0], [1 0 0]}); % toolbox convention: right green, left red
 for threshold_shift=[0.025] %[0 0.02 0.025 0.03 0.035 0.04]
     for participant_number=[6]
         load(fullfile(data_path, "Subject" + participant_number + ".mat"))
