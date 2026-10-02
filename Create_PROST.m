@@ -54,7 +54,7 @@ ignore_list.add_to_list(Dataset_1_ID, 3, 63, "Left"); % Mislabeled markers or ax
 ignore_list.add_to_list(Dataset_1_ID, 5, 69, "Left"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 5, 138, "Right"); % Mislabeled markers or axes
 ignore_list.add_to_list(Dataset_1_ID, 15); % Mislabeled markers or axes
-ignore_list.add_to_list(Dataset_1_ID, 14); % Markers behave weirdly due to large ankle medial-lateral swaying.
+ignore_list.add_to_list(Dataset_1_ID, 14); % Mislabeled marker: left "knee" sits ~200 mm above the ankle (likely a mid-shank marker), so left shank-CS CoP is non-physiological.
 ignore_list.add_to_list(Dataset_3_ID, [43, 47], [], "Left"); % Flat step (large\negative outlier radius)
 PROSTAnalyzer.clean_data(ignore_list);
 
