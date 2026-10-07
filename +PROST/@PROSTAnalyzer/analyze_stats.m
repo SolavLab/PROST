@@ -28,6 +28,8 @@ function out = analyze_stats(value, distnames, opts)
 %              .(name).pdf/cdf/icdf - function handles (if applicable)
 %              .(name).LL/AIC/BIC - scalars (NaN for KDE)
 %              .(name).chi2 - struct (stat, df, pvalue, edges, O, E, bins)
+%              .(name.AD) - struct(h, pvalue, stat, critical_value)
+%              .(name.Lilliefors) - struct(h, pvalue, stat, critical_value)
 %              .kernel.kde - struct (xi, f, bw, f_alt, bw_alt) for KDE
 %   out.rankingAIC - table (Distribution, LogLik, AIC, BIC), sorted by AIC
 %   out.rankingBIC - same, sorted by BIC
@@ -41,6 +43,8 @@ function out = analyze_stats(value, distnames, opts)
 %   the function will skip (and warn) if value has invalid support.
 % - Half-normal is implemented custom (location fixed at 0).
 % - KDE is nonparametric: AIC/BIC/Chi-square are not computed for KDE.
+% - Lilliefors test returns NaN parameters for unsupported distributions
+%   (see Matlab documentation).
 %
 % (c) You + Copilot. Free to use in your project.
 
@@ -89,7 +93,7 @@ function out = analyze_stats(value, distnames, opts)
 
     % Normalize distnames
     if iscell(distnames); distnames = string(distnames); end
-    distnames = erase(lower(distnames), whitespacePattern);
+    distnames_lower = erase(lower(distnames), whitespacePattern);
     allowed_distnames = matlabContinuousDistributions();
     allowed_distnames_lower = erase(lower(allowed_distnames), whitespacePattern);
 
@@ -97,8 +101,8 @@ function out = analyze_stats(value, distnames, opts)
     fits = struct();
     rows = [];
 
-    for di = 1:numel(distnames)
-        name = distnames(di);
+    for di = 1:numel(distnames_lower)
+        name = distnames_lower(di);
         name = allowed_distnames_lower(strcmp(allowed_distnames_lower, name));
         name_capitalized = PROST.utils.capitalize(name);
         key  = matlab.lang.makeValidName(char(name));
@@ -126,7 +130,6 @@ function out = analyze_stats(value, distnames, opts)
                     'LL', NaN, 'AIC', NaN, 'BIC', NaN, ...
                     'chi2', struct('stat', NaN, 'df', NaN, 'pvalue', NaN, 'edges', [], 'O', [], 'E', [], 'bins', NaN), ...
                     'AD', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
-                    'KS', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
                     'Lilliefors', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
                     'kde', struct('xi', xi, 'f', f, 'bw', bw, 'f_alt', { {f2, f3} }, 'bw_alt', [1.5*bw 0.7*bw]) ...
                 );
@@ -149,14 +152,13 @@ function out = analyze_stats(value, distnames, opts)
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
                     'chi2', chi2, ...
                     'AD', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
-                    'KS', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN), ...
                     'Lilliefors', struct('h', NaN, 'pvalue', NaN, 'stat', NaN, 'critical_value', NaN) ...
                 );
                 rows = [rows; llrow("Laplace", LL, AIC, BIC)];
 
             case cellstr(allowed_distnames_lower)
                 % Check support
-                if name == "lognormal" || name == "gamma" || name == "rayleigh" || name == "half normal" || name == "halfnormal"
+                if name == "lognormal" || name == "gamma" || name == "rayleigh" || name == "halfnormal"
                     if name == "lognormal" && any(x <= 0)
                         PROST.PROSTWarning.warn("AnalyzeStats", "NonPositiveValuesExist", '%s requires x > 0. Skipping.', name);
                         continue
@@ -181,16 +183,29 @@ function out = analyze_stats(value, distnames, opts)
 
                 [LL, AIC, BIC] = aicbic_from_pdf(x, pdf_f, nparams);
                 chi2 = chi2_equalprob(x, cdf_f, icdf_f, nparams, opts.TargetExp, opts.MinExpected);
-                [h, p, stat, cv] = adtest(x, "Distribution", pd);
-                AD = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
-                [h, p, stat, cv] = kstest(x, "CDF", pd);
-                KS = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
-                if ismember(name, ["normal" "exponential" " extreme value"])
-                    [h, p, stat, cv] = lillietest(x, "Distr", name);
+                if name == "normal"
+                    [h, p, stat, cv] = adtest(x, "Distribution", "norm");
+                elseif name == "exponential"
+                    [h, p, stat, cv] = adtest(x, "Distribution", "exp");
+                elseif name == "extremevalue"
+                    [h, p, stat, cv] = adtest(x, "Distribution", "ev");
                 elseif name == "lognormal"
-                    [h, p, stat, cv] = lillietest(log(x), "Distr", "normal");
+                    [h, p, stat, cv] = adtest(x, "Distribution", "logn");
                 elseif name == "weibull"
-                    [h, p, stat, cv] = lillietest(log(x), "Distr", "extreme value");
+                    [h, p, stat, cv] = adtest(x, "Distribution", "weibull");
+                else
+                    [h, p, stat, cv] = adtest(x, "Distribution", pd);
+                end
+                AD = struct('h', h, 'pvalue', p, 'stat', stat, 'critical_value', cv);
+              
+                if name == "normal" || name == "exponential"
+                    [h, p, stat, cv] = lillietest(x, "Distribution", name);
+                elseif name == "extremevalue"
+                    [h, p, stat, cv] = lillietest(x, "Distribution", "extreme value");
+                elseif name == "lognormal"
+                    [h, p, stat, cv] = lillietest(log(x), "Distribution", "normal");
+                elseif name == "weibull"
+                    [h, p, stat, cv] = lillietest(log(x), "Distribution", "extreme value");
                 else
                     [h, p, stat, cv] = deal(NaN);
                 end
@@ -204,7 +219,6 @@ function out = analyze_stats(value, distnames, opts)
                     'LL', LL, 'AIC', AIC, 'BIC', BIC, ...
                     'chi2', chi2, ...
                     'AD', AD, ...
-                    'KS', KS, ...
                     'Lilliefors', Lilliefors ...
                 );
                 rows = [rows; llrow(name_capitalized, LL, AIC, BIC)];
