@@ -15,80 +15,196 @@ set(groot, 'defaultAxesFontSize',   14);
 set(groot, 'defaultTextFontSize',   14);
 set(groot, 'defaultLegendFontSize', 14);
 
+boot_flag = false; % run the bootstrap SE/CI computation
+summary_flag = false; % calculate summary statistics of the data
+cutoff_test_flag = false; % test the R_H cutoff of unstable radii on the initial model
+weight_test_flag = true; % test the weight scheme of each response model
+assumptions_flag = false; % test the LME assumptions of each response model
+self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
+boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see boot_stream)
+n_boot = 5000; % number of bootstrap replicates
+
+% Responses to model. 'scale' decides which ICC back-transform applies:
+%   "log"    - the ICC is also back-transformed to the original scale
+%   "linear" - the model-scale ICC is already on the original scale
+responses = struct('name', {'R_H', 'log_R_H'}, 'scale', {"linear", "log"});
+
+if self_test_flag
+    self_test()
+    return
+end
+
 if ~exist("PROSTAnalyzer", "var")
     load("PROSTAnalyzer.mat")
 end
 
-response_name = 'log_R_H';
-boot_flag = false;
-summary_flag = false;
-
 %% Create Table for Statistical Analysis
-% Read from IPDTable
-radius = table2array(PROSTAnalyzer.get_IPD_samples("Radius"));
-horizontal = table2array(PROSTAnalyzer.get_IPD_samples("Center_horizontal"));
-vertical = table2array(PROSTAnalyzer.get_IPD_samples("Center_vertical"));
-residual = table2array(PROSTAnalyzer.get_IPD_samples("Residual_rms"));
-predictors = PROSTAnalyzer.get_predictors();
-height = PROST.utils.convert_units(predictors.Height, "m", "mm");
-angle_start = table2array(PROSTAnalyzer.get_IPD_samples("Ang_start"));
-angle_end = table2array(PROSTAnalyzer.get_IPD_samples("Ang_end"));
-arc_span = table2array(PROSTAnalyzer.get_IPD_samples("Arc_length"));
+data = build_analysis_table(PROSTAnalyzer);
 
-% Create table for statistical analysis
-data = table;
+%% Initial Model and Cutoff of Unstable R
+% Defined on R_H whatever the analyzed response: the cutoff flags degenerate arc
+% fits, which are a property of the leg, not of the response.
+formula_initial = ['R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
+weight_initial = sqrt(data.n_steps);
 
-% Random and Fixed Effects Parameters
-data.DatasetID = table2array(PROSTAnalyzer.get_IPD_samples("Dataset_id"));
-data.ParticipantID = table2array(PROSTAnalyzer.get_IPD_samples("Participant_id"));
-data.ParticipantIDGlobal = data.DatasetID.*1000 + data.ParticipantID;
-data.Leg = categorical(table2array(PROSTAnalyzer.get_IPD_samples("Side")));
-data.DatasetID = categorical(data.DatasetID);
-data.ParticipantID = categorical(data.ParticipantID);
-data.ParticipantIDGlobal = categorical(data.ParticipantIDGlobal);
+% Weighted LME Model
+opts = optimoptions('fminunc');
+opts.Display = 'off';
+lme_initial = fitlme(data, formula_initial, ...
+    'FitMethod', 'REML', ...
+    'Weight', weight_initial,...
+    'DummyVarCoding', 'effects', ...
+    'Optimizer', 'fminunc', ...
+    'OptimizerOptions', opts);
 
-% Predictors
-data = [data predictors];
+% Test Cutoff of Unstable R
+if cutoff_test_flag
+    test_cutoff_unstable_R(data, lme_initial)
+end
 
-% Parameters to analyze
-data.R = radius;
-data.R_H = radius ./ height;
-data.log_R_H = log(data.R_H);
-data.Cx = horizontal;
-data.Cy = vertical;
-data.Cx_H = horizontal ./ height;
-data.Cy_H = vertical ./ height;
-data.AngleStartDeg = angle_start;
-data.AngleStartRad = deg2rad(angle_start);
-data.AngleEndDeg = angle_end;
-data.AngleEndRad = deg2rad(angle_end);
-data.ArcSpanDeg = arc_span;
-data.ArcSpanRad = deg2rad(arc_span);
+% A physiological cutoff was chosen as R > body height. This corresponds to ~5
+% degree arc span
+idx = data.R_H <= 1;
+data_final = data(idx, :);
 
-% Parameters for weights from RMS and Number of Steps
-data.RMS = residual; % RMS radial residual
+fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
+    height(data) - height(data_final), height(data), ...
+    100*(height(data) - height(data_final)) / height(data));
 
-% Compute number of steps for each leg
-for dataset_id=1:4
-    dataset = PROSTAnalyzer.get_dataset(dataset_id);
-    dataset_idx = find(dataset_id == double(string(data.DatasetID)));
-    for idx = dataset_idx'
-        participant_id = double(string(data.ParticipantID(idx)));
-        side = data.Leg(idx);
-        steps = dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).step;
-        if isempty(steps) || ~dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).Is_included
-            error("Side not included even though it is in table")
-        end
-        data.n_steps(idx) = sum([steps.Is_included]);
+%% Linear Mixed Effects Model per Response
+results = struct();
+for spec = responses
+    if summary_flag
+        describe_response(data_final, spec)
+    end
+
+    % Test Weight Scheme After Cutoff
+    if weight_test_flag
+        test_weight_scheme(data_final, spec.name)
+    end
+
+    results.(spec.name) = fit_response_model(data_final, spec);
+
+    % Test Linear Mixed-Effects Model Assumptions
+    if assumptions_flag
+        assumptions_check(results.(spec.name).lme, "Final LME - " + spec.name + ":")
+    end
+
+    if boot_flag
+        results.(spec.name).boot = bootstrap_response_model(data_final, spec, results.(spec.name), n_boot, boot_seed);
     end
 end
 
-clear radius horizontal residual height predictors
+% PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots", ".", "file_type", "pdf", "prepare","on", "append", "off")
 
-%% Robust descriptive summary, by participant (use participant-level means first
-if summary_flag
-    % to avoid double-weighting participants with bilateral measurements)
-    participantMeans = groupsummary(data(data.R_H <= 1, :), 'ParticipantIDGlobal', 'mean', response_name);
+%% -----------------------------------------------------------------------------
+% Helper Functions
+% ------------------------------------------------------------------------------
+function data = build_analysis_table(analyzer)
+% DATA = BUILD_ANALYSIS_TABLE(ANALYZER)
+% Builds the table for statistical analysis from the IPD table of the analyzer:
+% one row per leg with its IDs, predictors, fitted ROS parameters (absolute and
+% normalized by height) and the number of included steps.
+%
+% Input :
+%   analyzer - the PROSTAnalyzer object.
+%
+% Example usage :
+%   data = build_analysis_table(PROSTAnalyzer)
+
+    % Read from IPDTable
+    radius = table2array(analyzer.get_IPD_samples("Radius"));
+    horizontal = table2array(analyzer.get_IPD_samples("Center_horizontal"));
+    vertical = table2array(analyzer.get_IPD_samples("Center_vertical"));
+    residual = table2array(analyzer.get_IPD_samples("Residual_rms"));
+    predictors = analyzer.get_predictors();
+    body_height = PROST.utils.convert_units(predictors.Height, "m", "mm");
+    angle_start = table2array(analyzer.get_IPD_samples("Ang_start"));
+    angle_end = table2array(analyzer.get_IPD_samples("Ang_end"));
+    arc_span = table2array(analyzer.get_IPD_samples("Arc_length"));
+
+    % Create table for statistical analysis
+    data = table;
+
+    % Random and Fixed Effects Parameters
+    data.DatasetID = table2array(analyzer.get_IPD_samples("Dataset_id"));
+    data.ParticipantID = table2array(analyzer.get_IPD_samples("Participant_id"));
+    data.ParticipantIDGlobal = data.DatasetID.*1000 + data.ParticipantID;
+    data.Leg = categorical(table2array(analyzer.get_IPD_samples("Side")));
+    data.DatasetID = categorical(data.DatasetID);
+    data.ParticipantID = categorical(data.ParticipantID);
+    data.ParticipantIDGlobal = categorical(data.ParticipantIDGlobal);
+
+    % Predictors
+    data = [data predictors];
+
+    % Parameters to analyze
+    data.R = radius;
+    data.R_H = radius ./ body_height;
+    data.log_R_H = log(data.R_H);
+    data.Cx = horizontal;
+    data.Cy = vertical;
+    data.Cx_H = horizontal ./ body_height;
+    data.Cy_H = vertical ./ body_height;
+    data.AngleStartDeg = angle_start;
+    data.AngleStartRad = deg2rad(angle_start);
+    data.AngleEndDeg = angle_end;
+    data.AngleEndRad = deg2rad(angle_end);
+    data.ArcSpanDeg = arc_span;
+    data.ArcSpanRad = deg2rad(arc_span);
+
+    % Parameters for weights from RMS and Number of Steps
+    data.RMS = residual; % RMS radial residual
+
+    % Compute number of steps for each leg
+    for dataset_id=1:4
+        dataset = analyzer.get_dataset(dataset_id);
+        dataset_idx = find(dataset_id == double(string(data.DatasetID)));
+        for idx = dataset_idx'
+            participant_id = double(string(data.ParticipantID(idx)));
+            side = data.Leg(idx);
+            steps = dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).step;
+            if isempty(steps) || ~dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).Is_included
+                error("Side not included even though it is in table")
+            end
+            data.n_steps(idx) = sum([steps.Is_included]);
+        end
+    end
+end
+
+function is_log = is_log_scale(spec)
+% IS_LOG = IS_LOG_SCALE(SPEC)
+% Whether the response of SPEC is modelled on a log scale. Errors on an unknown
+% scale rather than guess which ICC back-transform applies.
+%
+% Example usage :
+%   is_log = is_log_scale(struct('name', 'log_R_H', 'scale', "log"))
+
+    if ~ismember(spec.scale, ["linear" "log"])
+        error("Unknown response scale ""%s"": no ICC back-transform is defined for it.", spec.scale)
+    end
+    is_log = spec.scale == "log";
+end
+
+function describe_response(data, spec)
+% DESCRIBE_RESPONSE(DATA, SPEC)
+% Robust descriptive summary of a response, by participant: uses participant-level
+% means first to avoid double-weighting participants with bilateral measurements.
+% Prints pooled and per-dataset statistics, plots histograms, QQ-plots and a
+% boxplot per dataset, and tests homoscedasticity across datasets.
+%
+% Input :
+%   data - the data table of measurements, after the cutoff.
+%   spec - struct with fields name (the response column) and scale ("linear"
+%          or "log"). The coefficients of variation are printed for "linear" only.
+%
+% Example usage :
+%   describe_response(data_final, struct('name', 'R_H', 'scale', "linear"))
+
+    response_name = spec.name;
+    is_log = is_log_scale(spec);
+
+    participantMeans = groupsummary(data, 'ParticipantIDGlobal', 'mean', response_name);
 
     med_RH  = median(participantMeans.("mean_" + response_name));
     iqr_RH  = iqr(participantMeans.("mean_" + response_name));
@@ -107,8 +223,12 @@ if summary_flag
         fprintf('n = %d\n', numel(mean_per_dataset))
         fprintf('Mean (SD) = %.3f (%.3f)\n', mean(mean_per_dataset), std(mean_per_dataset))
         fprintf('Median (IQR) = %.3f (%.3f)\n', median(mean_per_dataset), iqr(mean_per_dataset))
-        fprintf('Coeffcient of Variation = %.3f %%\n', 100*std(mean_per_dataset) / mean(mean_per_dataset))
-        fprintf('MAD Coeffcient of Variation = %.3f %%\n', 100*mad(mean_per_dataset, 1) / median(mean_per_dataset))
+        % A coefficient of variation needs a ratio scale; on a log scale the
+        % mean can be negative and the ratio is meaningless.
+        if ~is_log
+            fprintf('Coeffcient of Variation = %.3f %%\n', 100*std(mean_per_dataset) / mean(mean_per_dataset))
+            fprintf('MAD Coeffcient of Variation = %.3f %%\n', 100*mad(mean_per_dataset, 1) / median(mean_per_dataset))
+        end
         fprintf('range = %.3f, min = %.3f, max = %.3f\n', range(mean_per_dataset), min(mean_per_dataset), max(mean_per_dataset))
 
         nexttile(tl)
@@ -130,161 +250,210 @@ if summary_flag
     fprintf('Levene Absolute: fstat = %.4f, df = [%d %d], p = %.4g\n', stats.fstat, stats.df(1), stats.df(2), p);
     flignerKilleen(participantMeans.("mean_" + response_name), extract(participant_id_global, 1));
 end
-%% Linear Mixed Effects Model
-formula_initial = ['R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-weight_initial = sqrt(data.n_steps);
 
-% Weighted LME Model
-opts = optimoptions('fminunc');
-opts.Display = 'off';
-lme_initial = fitlme(data, formula_initial, ...
-    'FitMethod', 'REML', ...
-    'Weight', weight_initial,...
-    'DummyVarCoding', 'effects', ...
-    'Optimizer', 'fminunc', ...
-    'OptimizerOptions', opts);
+function results = fit_response_model(data, spec)
+% RESULTS = FIT_RESPONSE_MODEL(DATA, SPEC)
+% Fits the final LME model of one response and prints its fixed effects and
+% variance decomposition.
+%
+% Input :
+%   data - the data table of measurements, after the cutoff.
+%   spec - struct with fields:
+%          name  - the response column name, e.g. 'log_R_H'.
+%          scale - "linear" or "log". Only "log" gets the ICC back-transformed
+%                  to the original scale.
+%
+% Output :
+%   results - struct with fields lme, beta4 (estimate, SE, t, p, CI of the
+%             effects-coded DatasetID 4), tau2, sigma2, ICC (model scale) and
+%             ICC_original (log scale only).
+%
+% Example usage :
+%   results = fit_response_model(data_final, struct('name', 'log_R_H', 'scale', "log"))
 
-% Test Cutoff of Unstable R
-% test_cutoff_unstable_R(data, lme_initial)
-idx = data.R_H <= 1;
-data_final = data(idx, :);
+    response_name = spec.name;
+    is_log = is_log_scale(spec);
 
-% Test Weight Scheme After Cutoff
-% test_weight_scheme(data_final, response_name)
+    formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
 
-% Final Weighted and Cutoff LME Model
-lme_final = fitlme(data_final, formula, ...
-    'FitMethod', 'REML', ...
-    'DummyVarCoding', 'effects');
+    % Final Cutoff LME Model
+    lme = fitlme(data, formula, ...
+        'FitMethod', 'REML', ...
+        'DummyVarCoding', 'effects');
 
-disp(lme_final)
-fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
-    height(data) - height(data_final), height(data), ...
-    100*(height(data) - height(data_final)) / height(data));
+    disp(lme)
 
-% Extract estimates and covariance for the three estimated DatasetID coefficients
-coefNames = lme_final.Coefficients.Name;
-idx = contains(coefNames, 'DatasetID');
+    % Extract estimates and covariance for the three estimated DatasetID coefficients
+    coefNames = lme.Coefficients.Name;
+    idx = contains(coefNames, 'DatasetID');
 
-b = lme_final.Coefficients.Estimate(idx);       % [b1; b2; b3]
-V = lme_final.CoefficientCovariance(idx, idx);  % 3x3 covariance submatrix
+    b = lme.Coefficients.Estimate(idx);       % [b1; b2; b3]
+    V = lme.CoefficientCovariance(idx, idx);  % 3x3 covariance submatrix
 
-% Contrast vector: beta4 = -(b1+b2+b3) = c' * b, where c = [-1;-1;-1]
-c = [-1; -1; -1];
+    % Contrast vector: beta4 = -(b1+b2+b3) = c' * b, where c = [-1;-1;-1]
+    c = [-1; -1; -1];
 
-beta4 = c' * b;
-se_beta4 = sqrt(c' * V * c);
+    beta4 = c' * b;
+    se_beta4 = sqrt(c' * V * c);
 
-df = lme_final.Coefficients.DF(find(idx,1));  % use same residual DF as other fixed effects
-tstat = beta4 / se_beta4;
-pval = 2 * (1 - tcdf(abs(tstat), df));
-ci_lower = beta4 - tinv(0.975, df) * se_beta4;
-ci_upper = beta4 + tinv(0.975, df) * se_beta4;
+    df = lme.Coefficients.DF(find(idx,1));  % use same residual DF as other fixed effects
+    tstat = beta4 / se_beta4;
+    pval = 2 * (1 - tcdf(abs(tstat), df));
+    ci_lower = beta4 - tinv(0.975, df) * se_beta4;
+    ci_upper = beta4 + tinv(0.975, df) * se_beta4;
 
-fprintf('\n--- Fixed Effects Values ---\n');
-for idx=2:4
-    fprintf('%s: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-        lme_final.Coefficients.Name{idx}, ...
-        lme_final.Coefficients.Estimate(idx), ...
-        lme_final.Coefficients.SE(idx), ...
-        lme_final.Coefficients.tStat(idx), ...
-        lme_final.Coefficients.pValue(idx), ...
-        lme_final.Coefficients.Lower(idx), ...
-        lme_final.Coefficients.Upper(idx));
+    fprintf('\n--- %s - Fixed Effects Values ---\n', response_name);
+    for idx=2:4
+        fprintf('%s: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
+            lme.Coefficients.Name{idx}, ...
+            lme.Coefficients.Estimate(idx), ...
+            lme.Coefficients.SE(idx), ...
+            lme.Coefficients.tStat(idx), ...
+            lme.Coefficients.pValue(idx), ...
+            lme.Coefficients.Lower(idx), ...
+            lme.Coefficients.Upper(idx));
+    end
+    fprintf('DatasetID_4: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
+        beta4, se_beta4, tstat, pval, ci_lower, ci_upper);
+
+    % Display metrics formatted for publication
+    [ICC, tau2, sigma2] = model_metrics(lme, "Final LME Model - " + response_name);
+    ICC = ICC(1); % ICC1 = tau2 / (tau2 + sigma2), the definition the bootstrap also uses
+
+    results.lme = lme;
+    results.beta4 = struct('Estimate', beta4, 'SE', se_beta4, 'tStat', tstat, ...
+                           'pValue', pval, 'Lower', ci_lower, 'Upper', ci_upper);
+    results.tau2 = tau2;
+    results.sigma2 = sigma2;
+    results.ICC = ICC;
+
+    if is_log
+        ICC_original = icc_original_scale(tau2, sigma2);
+        fprintf('ICC back-transformed to the original scale:          %8.4f\n', ICC_original);
+        results.ICC_original = ICC_original;
+    end
 end
-fprintf('DatasetID_4: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-    beta4, se_beta4, tstat, pval, ci_lower, ci_upper);
 
-% Display metrics formatted for publication
-[ICC_log, tau2, sigma2] = model_metrics(lme_final, "Final LME Model");
-ICC = (exp(tau2) - 1) / (exp(tau2 + sigma2) - 1);
-fprintf('ICC scaled:                                          %8.4f\n', ICC);
+function boot_results = bootstrap_response_model(data, spec, results, n_boot, boot_seed)
+% BOOT_RESULTS = BOOTSTRAP_RESPONSE_MODEL(DATA, SPEC, RESULTS, N_BOOT, BOOT_SEED)
+% Cluster (participant-level), stratified-by-dataset bootstrap of a fitted response
+% model: SE and percentile CIs of the fixed effects, variance components and ICC
+% (and of the original-scale ICC for a log-scale response). Prints the results
+% and saves them to Bootstrap_Results_<response>.mat.
+%
+% Input :
+%   data - the data table the model was fitted on.
+%   spec - struct with fields name (the response column) and scale ("linear"
+%          or "log").
+%   results - the output of fit_response_model for this response.
+%   n_boot - number of bootstrap replicates.
+%   boot_seed - the seed of the bootstrap random stream (see boot_stream).
+%
+% Example usage :
+%   boot = bootstrap_response_model(data_final, spec, results.log_R_H, 5000, 20261006)
 
-% Test Linear Mixed-Effects Model Assumptions
-% assumptions_check(lme_final, "Final LME - " + response_name + ":")
-% PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots", ".", "file_type", "pdf", "prepare","on", "append", "off")
-%% Cluster (Participant-Level), Stratified-by-Dataset Bootstrap for CIs
-if boot_flag
+    response_name = spec.name;
+    is_log = is_log_scale(spec);
+    lme = results.lme;
+    beta4 = results.beta4.Estimate;
+    tau2 = results.tau2;
+    sigma2 = results.sigma2;
+    ICC = results.ICC;
+    if is_log
+        ICC_original = results.ICC_original;
+    end
+
+    gcp; % start the parallel pool here, so toc times only the bootstrap
     tic
-    n_boot = 5000;
 
     % Preallocate storage
-    n_fixed      = height(lme_final.Coefficients) + 1;
-    beta_boot    = nan(n_boot, n_fixed); % fixed effects intercept point estimates (grand mean + dataset IDs)
-    tau2_boot    = nan(n_boot, 1); % participant-level random intercept variance
-    sigma2_boot  = nan(n_boot, 1); % residual variance
-    ICC_log_boot = nan(n_boot, 1); % ICC in log scale
+    n_fixed     = height(lme.Coefficients) + 1;
+    beta_boot   = nan(n_boot, n_fixed); % fixed effects intercept point estimates (grand mean + dataset IDs)
+    tau2_boot   = nan(n_boot, 1); % participant-level random intercept variance
+    sigma2_boot = nan(n_boot, 1); % residual variance
+    ICC_boot    = nan(n_boot, 1); % ICC on the model scale
+    fail_msg    = strings(n_boot, 1); % why a refit failed, "" if it did not
 
     parfor b = 1:n_boot
-        [beta_boot(b, :), tau2_boot(b), sigma2_boot(b), ICC_log_boot(b, :)] = boot_resampler(data_final, lme_final);
+        [beta_boot(b, :), tau2_boot(b), sigma2_boot(b), ICC_boot(b), fail_msg(b)] = ...
+            boot_resampler(data, lme, boot_stream(boot_seed, b));
     end
-    ICC_boot = (exp(tau2_boot) - 1) ./ (exp(tau2_boot + sigma2_boot) - 1);
     toc
-    %%    
+
     valid = ~any(isnan([beta_boot, tau2_boot, sigma2_boot]), 2);
-    fprintf('\n--- Bootstrapping Inferences Results ---\n')
-    % fprintf('Convergence warnings (discarded): %d / %d (%.1f%%)\n', n_failed_warning, n_boot, 100*n_failed_warning/n_boot);
-    fprintf('%.0f%% (of %d) bootstrap refits converged\n', 100*mean(valid), n_boot);
+    fprintf('\n--- %s - Bootstrapping Inferences Results ---\n', response_name)
+    fprintf('%.0f%% (of %d) bootstrap refits converged (seed %d)\n', 100*mean(valid), n_boot, boot_seed);
+    if any(~valid)
+        reasons = fail_msg(~valid);
+        reasons(reasons == "") = "<refit returned NaN without an error>";
+        [reasons, ~, k] = unique(reasons);
+        fprintf('Discarded refits by reason:\n');
+        for m = 1:numel(reasons)
+            fprintf('  %d x %s\n', sum(k == m), reasons(m));
+        end
+    end
 
-    beta_boot = beta_boot(valid,:);
-    tau2_boot = tau2_boot(valid);
-    sigma2_boot = sigma2_boot(valid);
-    ICC_log_boot = ICC_log_boot(valid);
-    ICC_boot = ICC_boot(valid);
-    
+    names = [lme.CoefficientNames 'DatasetID_4' 'tau2' 'sigma2' 'ICC'];
+    estimates = [lme.Coefficients.Estimate; beta4; tau2; sigma2; ICC];
+    draws = [beta_boot, tau2_boot, sigma2_boot, ICC_boot];
+    if is_log
+        names = [names 'ICC_original'];
+        estimates = [estimates; ICC_original];
+        draws = [draws, icc_original_scale(tau2_boot, sigma2_boot)];
+    end
+    draws = draws(valid, :);
+
     % Percentile method
-    CI_beta = prctile(beta_boot, [2.5 97.5], 1);
-    CI_tau2 = prctile(tau2_boot, [2.5 97.5]);
-    CI_sigma2 = prctile(sigma2_boot, [2.5 97.5]);
-    CI_ICC_log = prctile(ICC_log_boot, [2.5 97.5], 1);
-    CI_ICC = prctile(ICC_boot, [2.5 97.5], 1);
-    
-    SE_beta = std(beta_boot, 0, 1);
-    SE_tau2 = std(tau2_boot);
-    SE_sigma2 = std(sigma2_boot);
-    SE_ICC_log = std(ICC_log_boot, 0, 1);
-    SE_ICC = std(ICC_boot, 0, 1);
-
-    boot_inferences = table([lme_final.Coefficients.Estimate; beta4; tau2; sigma2; ICC_log; ICC], ...
-                       [mean(beta_boot, 1)'; mean(tau2_boot); mean(sigma2_boot); mean(ICC_log_boot); mean(ICC_boot)], ...
-                       [SE_beta'; SE_tau2; SE_sigma2; SE_ICC_log; SE_ICC], ...
-                       [CI_beta(1, :)'; CI_tau2(1); CI_sigma2(1); CI_ICC_log(1); CI_ICC(1)], ...
-                       [CI_beta(2, :)'; CI_tau2(2); CI_sigma2(2); CI_ICC_log(2); CI_ICC(2)], ...
+    CI = prctile(draws, [2.5 97.5], 1);
+    boot_inferences = table(estimates, mean(draws, 1)', std(draws, 0, 1)', CI(1, :)', CI(2, :)', ...
                        'VariableNames', {'LmeEstimate', 'BootEstimate' 'SE', 'CI_lower', 'CI_upper'}, ...
-                       'RowNames', [lme_final.CoefficientNames 'DatasetID_4' 'tau2' 'sigma2' 'ICC_log' 'ICC']);
+                       'RowNames', names);
     disp(boot_inferences)
 
-    % figure; 
-    % histogram(ICC_boot(:, 1), 40, DisplayName="ICC(1)");
-    % hold on
-    % histogram(ICC_boot(:, 2), 40, DisplayName="ICC(2)");
-    % xlabel('Bootstrapped ICC'); 
-    % ylabel('Frequency');
-    % title('Bootstrap Distribution of ICC');
-    % legend
+    ICC_draws = draws(:, strcmp(names, 'ICC'));
+    normality_check(ICC_draws, "Bootstrap ICC - " + response_name, 'anderson')
+    fprintf('\nICC (%s scale): Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
+            spec.scale, mean(ICC_draws), median(ICC_draws), ICC);
+    if is_log
+        ICC_original_draws = draws(:, strcmp(names, 'ICC_original'));
+        normality_check(ICC_original_draws, "Bootstrap ICC original scale - " + response_name, 'anderson')
+        fprintf('ICC (original scale): Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
+                mean(ICC_original_draws), median(ICC_original_draws), ICC_original);
+    end
 
-    normality_check(ICC_log_boot, "Bootstrap ICC_{log}", 'anderson')
-    normality_check(ICC_boot, "Bootstrap ICC", 'anderson')
-
-    fprintf('\nICC log: Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
-            mean(ICC_log_boot), median(ICC_log_boot), ICC_log);
-    fprintf('ICC: Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
-        mean(ICC_boot), median(ICC_boot), ICC);
-    
-    boot_results.beta = beta_boot;
-    boot_results.tau2 = tau2_boot;
-    boot_results.sigma2 = sigma2_boot;
-    boot_results.ICC_log = ICC_log_boot;
-    boot_results.ICC = ICC_boot;
+    boot_results.seed = boot_seed;
+    boot_results.n_boot = n_boot;
+    boot_results.valid = valid;
+    boot_results.fail_msg = fail_msg;
+    boot_results.beta = beta_boot(valid, :);
+    boot_results.tau2 = tau2_boot(valid);
+    boot_results.sigma2 = sigma2_boot(valid);
+    boot_results.ICC = ICC_draws;
+    if is_log
+        boot_results.ICC_original = ICC_original_draws;
+    end
     boot_results.boot_inferences = boot_inferences;
 
-    save('Bootstrap_Results', "boot_results")
+    save("Bootstrap_Results_" + response_name, "boot_results")
 end
 
-%% ----------------------------------------------------------------------------- 
-% Helper Functions
-% ------------------------------------------------------------------------------
+function ICC_original = icc_original_scale(tau2, sigma2)
+% ICC_ORIGINAL = ICC_ORIGINAL_SCALE(TAU2, SIGMA2)
+% Back-transforms the ICC of a model fitted on log(y) to the scale of y, assuming
+% normal random effects and residuals on the log scale (y is lognormal):
+%   ICC = (exp(tau2) - 1) / (exp(tau2 + sigma2) - 1)
+% Not valid for a model of an untransformed response. Element-wise.
+%
+% Input :
+%   tau2 - participant-level variance on the log scale.
+%   sigma2 - residual variance on the log scale.
+%
+% Example usage :
+%   ICC_original = icc_original_scale(0.070, 0.089)
+
+    ICC_original = (exp(tau2) - 1) ./ (exp(tau2 + sigma2) - 1);
+end
+
 function normality_check(varaiable, var_name, test_type)
 % TEST_NORMALITY(VAR, NAME, TEST_TYPE)
 % Normality test for variable. 
@@ -835,14 +1004,14 @@ function assumptions_check(model, model_name)
     lmm_full = fitlme(data, formula, ...
                         'FitMethod','REML', ...
                         'DummyVarCoding', 'effect', ...
-                        'Exclude', excluded);  % must use ML, not REML, to compare 
+                        'Exclude', excluded);  % REML is valid for this LRT: full and nested models have identical fixed effects (Pinheiro & Bates 2000, Sec. 2.4.1)
 
     % No Random Effects formula
     formula_noRE = model.Formula.FELinearFormula.char;
     lmm_reduced = fitlme(data, formula_noRE, ...
                             'FitMethod', 'REML', ...
                             'DummyVarCoding', 'effect', ...
-                            'Exclude', excluded);  % must use ML, not REML, to compare
+                            'Exclude', excluded);  % REML is valid for this LRT: full and nested models have identical fixed effects (Pinheiro & Bates 2000, Sec. 2.4.1)
     fprintf('\n--- %s - Likelehood Ratio Test With/Without Random Effects ---\n', model_name)
     results = compare(lmm_reduced, lmm_full, 'CheckNesting', true);
     disp(results);
@@ -1197,63 +1366,205 @@ function left_right_difference_check(data, var_name)
     normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
 end
 
-function [beta_boot, tau2_boot, sigma2_boot, ICC_boot, warn_flag] = boot_resampler(data, model)
+function [beta_boot, tau2_boot, sigma2_boot, ICC_boot, fail_msg, boot_data] = boot_resampler(data, model, stream)
+% [BETA, TAU2, SIGMA2, ICC, FAIL_MSG, BOOT_DATA] = BOOT_RESAMPLER(DATA, MODEL, STREAM)
+% One cluster bootstrap replicate: resamples participants with replacement within
+% each dataset, refits MODEL on the resample and returns its parameters.
+%
+% Input :
+%   data - the data table MODEL was fitted on, in the same row order.
+%   model - the fitted LME model.
+%   stream - the RandStream to draw participants from (see boot_stream).
+%
+% Output :
+%   beta - fixed effects, with the effects-coded last dataset appended.
+%   tau2, sigma2 - variance components.
+%   ICC - ICC1 = tau2 / (tau2 + sigma2) on the model scale.
+%   fail_msg - why the refit failed, "" if it did not. Parameters are NaN then.
+%   boot_data - the resampled table, with ParticipantIDOriginal.
+%
+% Example usage :
+%   [beta, tau2, sigma2, ICC] = boot_resampler(data, lme, boot_stream(1, 1))
+
+    assert(height(data) == height(model.ObservationInfo), ...
+        "data must be the table the model was fitted on.")
+
     % Initialize boot parameters
     n_fixed = height(model.Coefficients) + 1;
     beta_boot = nan(1, n_fixed); % fixed effects intercept point estimates (grand mean + dataset IDs)
     tau2_boot = nan; % participant-level random intercept variance
     sigma2_boot = nan; % residual variance
-    ICC_boot = nan(1, 2); % ICC
-    warn_flag = false; % flag indicating if a convergence warning was issued
+    ICC_boot = nan; % ICC
+    fail_msg = "";
 
     % Per-dataset sampling with replacements of participants
     datasets = unique(data.DatasetID);
-    boot_data = table();
+    boot_rows = [];
+    boot_participant_ids = [];
     for d = 1:numel(datasets)
-        idx = data.DatasetID == datasets(d);
-        this_dataset = data(idx, :);
-        this_dataset.ParticipantIDOriginal = data.ParticipantID(idx);
-        participants = unique(data.ParticipantID(idx));
+        dataset_rows = find(data.DatasetID == datasets(d));
+        participants = unique(data.ParticipantID(dataset_rows));
         n_participants = numel(participants);
-        sample_idx = randi(n_participants, n_participants, 1);
+        sample_idx = randi(stream, n_participants, n_participants, 1);
         sampled_participant_ids = participants(sample_idx);
 
         % Relabel participant IDS to avoid merging duplicates when fitting LME
-        [row, col] = find(data.ParticipantID(idx) == sampled_participant_ids');
-        this_boot = this_dataset(row, :);
-        this_boot.ParticipantID = categorical(col);
-        boot_data = [boot_data; this_boot]; %#ok<AGROW>
+        [row, col] = find(data.ParticipantID(dataset_rows) == sampled_participant_ids');
+        boot_rows = [boot_rows; dataset_rows(row)]; %#ok<AGROW>
+        boot_participant_ids = [boot_participant_ids; col]; %#ok<AGROW>
     end
-    % [last_warning, warnID] = lastwarn();
-    %
-    % if ~isempty(warnID) && ...
-    %         ~contains(last_warning, 'Posterior mode estimation of random effects did not converge.') && ...
-    %         ~contains(last_warning, 'Line search for posterior mode estimation of random effects did not converge.')
-    %
-    %     disp(warnID + ": " + last_warning)
-    %     warning('on','all');
-    % end
-    %
-    % if contains(warnID, 'lmeutils', IgnoreCase=true) || ...
-    %         contains(warnID, 'StandardGeneralizedLinearMixedModel', IgnoreCase=true) || ...
-    %         contains(last_warning, 'did not converge', IgnoreCase=true)
-    %     warn_flag = true;
-    %     warning('on','all');
-    %     continue  % discard this resample - convergence not trustworthy
-    % end
+    boot_data = data(boot_rows, :);
+    boot_data.ParticipantIDOriginal = boot_data.ParticipantID;
+    boot_data.ParticipantID = categorical(boot_participant_ids);
+
+    % Weights follow their rows, so a weighted model stays weighted (all ones if not)
+    weights = model.ObservationInfo.Weights(boot_rows);
 
     try
         lme_boot = fitlme(boot_data, char(model.Formula), ...
             'FitMethod', model.FitMethod, ...
-            'Weights', boot_data.Weight, ...
+            'Weights', weights, ...
             'DummyVarCoding', 'effects');
 
         % fixed effects
         beta_boot(1:(end-1)) = lme_boot.Coefficients.Estimate;
         beta_boot(end) = -sum(beta_boot(2:(end-1)));
-        [ICC_boot, tau2_boot, sigma2_boot] = model_metrics(lme_boot, Display="off");
+        [ICC, tau2_boot, sigma2_boot] = model_metrics(lme_boot, Display="off");
+        ICC_boot = ICC(1);
 
     catch ME
-        % do nothing and return nans of parameters.
+        % The caller discards this replicate; keep the reason so a systematic
+        % error cannot pass as a non-converged refit.
+        fail_msg = string(ME.message);
     end
+end
+
+function stream = boot_stream(seed, b)
+% STREAM = BOOT_STREAM(SEED, B)
+% Random stream of bootstrap replicate B. Every replicate uses its own substream
+% of one seeded generator, so replicate B draws the same participants on whichever
+% parfor worker runs it, and the whole bootstrap is reproducible from SEED.
+%
+% Example usage :
+%   stream = boot_stream(20261006, 1)
+
+    stream = RandStream('Threefry', 'Seed', seed);
+    stream.Substream = b;
+end
+
+function data = synthetic_lme_data(stream, n_per_dataset, dataset_means, tau2, sigma2)
+% DATA = SYNTHETIC_LME_DATA(STREAM, N_PER_DATASET, DATASET_MEANS, TAU2, SIGMA2)
+% Simulated table with the structure of the analysis data: participants nested in
+% datasets, contributing one or two legs, y = dataset mean + u + e with
+% u ~ N(0, tau2) per participant and e ~ N(0, sigma2) per leg.
+
+    DatasetID = [];
+    ParticipantID = [];
+    y = [];
+    for d = 1:numel(n_per_dataset)
+        for p = 1:n_per_dataset(d)
+            n_legs = 1 + (randi(stream, 4) > 1); % about 3/4 of participants are bilateral
+            u = sqrt(tau2) * randn(stream);
+            DatasetID = [DatasetID; repmat(d, n_legs, 1)]; %#ok<AGROW>
+            ParticipantID = [ParticipantID; repmat(p, n_legs, 1)]; %#ok<AGROW>
+            y = [y; dataset_means(d) + u + sqrt(sigma2) * randn(stream, n_legs, 1)]; %#ok<AGROW>
+        end
+    end
+    data = table(categorical(DatasetID), categorical(ParticipantID), y, ...
+                 'VariableNames', {'DatasetID', 'ParticipantID', 'y'});
+    data.n_steps = randi(stream, [5 100], height(data), 1);
+end
+
+function self_test()
+% SELF_TEST()
+% Checks the ICC back-transform and the bootstrap helpers on synthetic data with
+% known variance components. Needs no PROSTAnalyzer.mat. Errors at the first
+% failed check.
+%
+% Example usage :
+%   set self_test_flag = true at the top of the script and run it.
+
+    stream = RandStream('Threefry', 'Seed', 1);
+    fprintf('\n--- Radius_Mixed_Effects_Model self-test ---\n')
+
+    % ------------------------------------------------------------------
+    % ICC back-transform
+    % ------------------------------------------------------------------
+    ICC_original = icc_original_scale([0; 0.07; 0.2], [0.09; 0.089; 0.05]);
+    assert(isequal(size(ICC_original), [3 1]), "Back-transform is not element-wise.")
+    assert(ICC_original(1) == 0, "Back-transform of tau2 = 0 is not 0.")
+    fprintf('PASS: back-transform is element-wise and gives 0 for tau2 = 0\n')
+
+    % For lognormal y = exp(mu + u + e), the correlation between two legs of the
+    % same participant is the original-scale ICC by definition.
+    n = 2e5;
+    tau2 = 0.07;
+    sigma2 = 0.089;
+    u = sqrt(tau2) * randn(stream, n, 1);
+    y_left  = exp(-1.38 + u + sqrt(sigma2) * randn(stream, n, 1));
+    y_right = exp(-1.38 + u + sqrt(sigma2) * randn(stream, n, 1));
+    ICC_empirical = corr(y_left, y_right);
+    assert(abs(ICC_empirical - icc_original_scale(tau2, sigma2)) < 0.01, ...
+        "Back-transform %.4f does not match the simulated original-scale ICC %.4f.", ...
+        icc_original_scale(tau2, sigma2), ICC_empirical)
+    fprintf('PASS: back-transform %.4f matches simulated original-scale ICC %.4f\n', ...
+        icc_original_scale(tau2, sigma2), ICC_empirical)
+
+    % ------------------------------------------------------------------
+    % model_metrics
+    % ------------------------------------------------------------------
+    data = synthetic_lme_data(stream, [12 8 15 25], [-1.7 -1.2 -1.1 -1.45], tau2, sigma2);
+    formula = 'y ~ 1 + DatasetID + (1|DatasetID:ParticipantID)';
+    lme = fitlme(data, formula, 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+    lme_weighted = fitlme(data, formula, 'FitMethod', 'REML', 'DummyVarCoding', 'effects', ...
+                          'Weights', data.n_steps);
+
+    [ICC, tau2_hat, sigma2_hat] = model_metrics(lme, Display="off");
+    [psi, mse] = covarianceParameters(lme);
+    assert(isscalar(ICC), "Unweighted model gives more than one ICC.")
+    assert(tau2_hat == psi{1}(1, 1) && sigma2_hat == mse, "Variance components differ from covarianceParameters.")
+    assert(abs(ICC - tau2_hat / (tau2_hat + sigma2_hat)) < 1e-12, "ICC is not tau2 / (tau2 + sigma2).")
+    assert(numel(model_metrics(lme_weighted, Display="off")) == 2, "Weighted model does not give ICC1 and ICC2.")
+    fprintf('PASS: model_metrics ICC1 = tau2 / (tau2 + sigma2); weighted model adds ICC2\n')
+
+    % ------------------------------------------------------------------
+    % Bootstrap resampler
+    % ------------------------------------------------------------------
+    [beta, tau2_boot, sigma2_boot, ICC_boot, fail_msg, boot_data] = boot_resampler(data, lme, boot_stream(1, 1));
+    assert(fail_msg == "", "Bootstrap refit failed: %s", fail_msg)
+    assert(all(isfinite([beta tau2_boot sigma2_boot ICC_boot])), "Bootstrap refit returned non-finite parameters.")
+    assert(isscalar(ICC_boot), "Bootstrap ICC is not a scalar.")
+    assert(numel(beta) == height(lme.Coefficients) + 1, "Wrong number of fixed effects.")
+    assert(abs(beta(end) + sum(beta(2:end-1))) < 1e-12, "Last dataset effect is not minus the sum of the others.")
+    fprintf('PASS: resampler refits an unweighted model\n')
+
+    [~, ~, ~, ICC_weighted, fail_weighted] = boot_resampler(data, lme_weighted, boot_stream(1, 1));
+    assert(fail_weighted == "", "Weighted bootstrap refit failed: %s", fail_weighted)
+    assert(isscalar(ICC_weighted) && isfinite(ICC_weighted), "Weighted bootstrap ICC is not a finite scalar.")
+    fprintf('PASS: resampler refits a weighted model\n')
+
+    for d = categories(data.DatasetID)'
+        original = data(data.DatasetID == d{1}, :);
+        resampled = boot_data(boot_data.DatasetID == d{1}, :);
+        assert(numel(unique(resampled.ParticipantID)) == numel(unique(original.ParticipantID)), ...
+            "Dataset %s: resample has a different number of participants.", d{1})
+        for g = unique(resampled.ParticipantID)'
+            legs = resampled(resampled.ParticipantID == g, :);
+            assert(isscalar(unique(legs.ParticipantIDOriginal)), ...
+                "Dataset %s: a resampled participant merges several originals.", d{1})
+            assert(height(legs) == sum(original.ParticipantID == legs.ParticipantIDOriginal(1)), ...
+                "Dataset %s: a resampled participant does not carry all its legs.", d{1})
+        end
+    end
+    fprintf('PASS: resampling is stratified by dataset and keeps participants whole\n')
+
+    assert(isequal(boot_resampler(data, lme, boot_stream(1, 1)), beta), "Same substream gives different results.")
+    assert(~isequal(boot_resampler(data, lme, boot_stream(1, 2)), beta), "Different substreams give the same results.")
+    fprintf('PASS: replicates are reproducible per substream\n')
+
+    [~, tau2_bad, sigma2_bad, ICC_bad, fail_bad] = boot_resampler(removevars(data, 'y'), lme, boot_stream(1, 1));
+    assert(fail_bad ~= "" && all(isnan([tau2_bad sigma2_bad ICC_bad])), "A failed refit was not reported.")
+    fprintf('PASS: a failed refit returns NaN and its error message\n')
+
+    fprintf('All self-tests passed.\n')
 end
