@@ -120,7 +120,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                 "The chosen variable must be of numeric type but is of type %s", var.Properties.VariableTypes));
     end
     value = var.(var_name);
-    value_name = replace(var_name, "_", " ");
+    value_name = replace(replace(var_name, "_", " "), "rms", "RMS");
     value_units = var.Properties.VariableUnits;
     value_type = var.Properties.VariableDescriptions;
 
