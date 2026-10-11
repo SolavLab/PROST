@@ -17,9 +17,10 @@ set(groot, 'defaultLegendFontSize', 14);
 
 boot_flag = false; % run the bootstrap SE/CI computation
 summary_flag = false; % calculate summary statistics of the data
-cutoff_test_flag = false; % test the R_H cutoff of unstable radii on the initial model
-weight_test_flag = true; % test the weight scheme of each response model
+cutoff_test_flag = true; % test the R_H cutoff of unstable radii on the initial model
+weight_test_flag = false; % test the weight scheme of each response model
 assumptions_flag = false; % test the LME assumptions of each response model
+loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see boot_stream)
 n_boot = 5000; % number of bootstrap replicates
@@ -45,17 +46,12 @@ data = build_analysis_table(PROSTAnalyzer);
 % Defined on R_H whatever the analyzed response: the cutoff flags degenerate arc
 % fits, which are a property of the leg, not of the response.
 formula_initial = ['R_H ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-weight_initial = sqrt(data.n_steps);
 
-% Weighted LME Model
-opts = optimoptions('fminunc');
-opts.Display = 'off';
+% Unweighted LME Model, specified as the final models: the cutoff is tested on the
+% model that is reported, and the weight scheme is only tested after the cutoff.
 lme_initial = fitlme(data, formula_initial, ...
     'FitMethod', 'REML', ...
-    'Weight', weight_initial,...
-    'DummyVarCoding', 'effects', ...
-    'Optimizer', 'fminunc', ...
-    'OptimizerOptions', opts);
+    'DummyVarCoding', 'effects');
 
 % Test Cutoff of Unstable R
 if cutoff_test_flag
@@ -84,6 +80,11 @@ for spec = responses
     end
 
     results.(spec.name) = fit_response_model(data_final, spec);
+
+    % Sensitivity of the ICC to Single Participants
+    if loo_flag
+        results.(spec.name).loo = icc_leave_one_out(results.(spec.name).lme, "Final LME - " + spec.name);
+    end
 
     % Test Linear Mixed-Effects Model Assumptions
     if assumptions_flag
@@ -613,6 +614,61 @@ function [ICC, tau2, sigma2] = model_metrics(model, name, opts)
     end
 end
 
+function loo = icc_leave_one_out(model, model_name)
+% LOO = ICC_LEAVE_ONE_OUT(MODEL, MODEL_NAME)
+% Sensitivity of the ICC to single participants: refits MODEL with each
+% participant left out in turn, with the same formula, fit method, weights and
+% exclusions. Prints the most influential participants and the range of the ICC,
+% and plots its distribution. Participants with nearly flat ROS legs just below
+% the R_H cutoff can move the ICC much more than the rest.
+%
+% Input :
+%   model - the fitted mixed effects model.
+%   model_name - the name of the model for printing.
+%
+% Output :
+%   loo - table with one row per participant: ParticipantIDGlobal, ICC1_Without
+%         (ICC1 of the refit without the participant) and Delta_ICC1 (its
+%         difference from the ICC1 of MODEL).
+%
+% Example usage :
+%   loo = icc_leave_one_out(results.log_R_H.lme, "Final LME - log_R_H")
+
+    data = model.Variables;
+    weight = model.ObservationInfo.Weights;
+    excluded = model.ObservationInfo.Excluded;
+    formula = model.Formula.char;
+    ICC_all = model_metrics(model, Display="off");
+    ICC_all = ICC_all(1);
+
+    participants = unique(data.ParticipantIDGlobal(~excluded));
+    ICC_without = nan(numel(participants), 1);
+    for k = 1:numel(participants)
+        keep = data.ParticipantIDGlobal ~= participants(k);
+        lme_k = fitlme(data(keep, :), formula, ...
+                       'FitMethod', model.FitMethod, ...
+                       'Weights', weight(keep), ...
+                       'DummyVarCoding', 'effects', ...
+                       'Exclude', excluded(keep));
+        ICC_k = model_metrics(lme_k, Display="off");
+        ICC_without(k) = ICC_k(1);
+    end
+
+    loo = table(participants, ICC_without, ICC_without - ICC_all, ...
+        'VariableNames', {'ParticipantIDGlobal', 'ICC1_Without', 'Delta_ICC1'});
+    [~, order] = sort(abs(loo.Delta_ICC1), 'descend');
+    fprintf('\n--- %s - Leave-One-Participant-Out ICC1 (ICC1 = %.4f) --- \n', model_name, ICC_all)
+    disp(loo(order(1:10), :))
+    fprintf('ICC1 range when one participant is left out: %.4f - %.4f\n', min(ICC_without), max(ICC_without));
+
+    figure(Name="Leave-One-Participant-Out ICC: " + model_name)
+    histogram(ICC_without, 40);
+    xline(ICC_all, 'r', LineWidth=1.5);
+    xlabel('ICC(1) without one participant'); ylabel('Participants');
+    title("Leave-One-Participant-Out ICC: " + model_name, Interpreter='none');
+    grid on
+end
+
 function test_weight_scheme(data, response_name)
 % TEST_WEIGHT_SCHEME(DATA, RESPONSE_NAME) 
 % Tests which weights to use for the LMM fit. The optimal weights are those that 
@@ -1083,57 +1139,93 @@ function assumptions_check(model, model_name)
 end
 
 function test_cutoff_unstable_R(data, model)
-% TEST_CUTOFF_UNSTABLE_R(DATA, LMM)
+% TEST_CUTOFF_UNSTABLE_R(DATA, MODEL)
 % Tests what cutoff for unstable radius estimate of ROS. Some outlier radii are
-% driving the model. Prints results to command window.
+% driving the model. Prints results to command window and plots the diagnostics
+% in one figure.
+%
+% A nearly flat arc gives an ill-conditioned R, which is a property of the leg,
+% so the cutoff is judged on the arc geometry. The model is used to find the
+% outliers at the leg and participant levels and to test how sensitive the ICC
+% is to the cutoff. The refits inherit the weights, formula and fit method of
+% MODEL, so pass a model specified as the final models.
 %
 % Input :
 %   data - the data table of measurements.
 %   model - the mixed effects model to test.
 %
 % Example usage :
-%   test_cutoff_unstable_R(data, lmm)
+%   test_cutoff_unstable_R(data, lme_initial)
 
     response_name = model.ResponseName;
     weight = model.ObservationInfo.Weights;
     formula = model.Formula.char;
     excluded = model.ObservationInfo.Excluded;
     fit_method = model.FitMethod;
+    is_degenerate = data.R_H > 1; % the applied cutoff
 
     figure(Name="Radius Instability Threshold")
     tl = tiledlayout('TileSpacing', 'compact', 'Padding', 'compact');
 
     % ------------------------------------------------------------------
-    % Outlier/Influence Detection with Standardized Residuals
+    % Number of Steps: are the large radii from legs with few steps?
     % ------------------------------------------------------------------
+    nexttile(tl)
+    gscatter(data.n_steps, data.R_H, data.DatasetID);
+    yline(1, '--k', 'R_H = 1', HandleVisibility='off');
+    set(gca, 'YScale', 'log');
+    xlabel('n\_steps'); ylabel('R\_H');
+    title('R\_H vs Number of Steps (by Dataset)');
+    grid on
+
+    nexttile(tl)
+    histogram(data.n_steps, 30);
+    xlabel('n\_steps'); ylabel('Legs');
+    title('Number of Steps Distribution');
+    grid on
+
+    [rho_steps, p_steps] = corr(data.n_steps, data.ArcSpanDeg, 'Type', 'Spearman');
+    fprintf('Spearman correlation: n_steps vs arc span: rho=%.3f, p=%.4f\n', rho_steps, p_steps);
+
+    % ------------------------------------------------------------------
+    % Outlier/Influence Detection at the Leg and Participant Levels
+    % ------------------------------------------------------------------
+    % Both levels are needed: when both legs of a participant are degenerate, the
+    % random intercept absorbs them, so their residuals look normal and only the
+    % participant's random effect (BLUP) is extreme.
     std_resid = residuals(model, 'ResidualType', 'Standardized');
     nexttile(tl)
     qqplot(std_resid);
     hold on
-    title('Standardized Residuals Q-Q (leverage-adjusted)');
+    % Mark the legs of the applied cutoff at their Q-Q positions
+    [resid_sorted, sort_idx] = sort(std_resid);
+    normal_quantiles = norminv(((1:numel(resid_sorted))' - 0.5) / numel(resid_sorted));
+    marked = is_degenerate(sort_idx);
+    plot(normal_quantiles(marked), resid_sorted(marked), 'ro', MarkerSize=8, LineWidth=1.2)
+    title('Standardized Residuals Q-Q (red: R\_H > 1)');
     [max_val, row_idx] = max(abs(std_resid));
     fprintf('Largest standardized residual: %.2f at row %d\n', max_val, row_idx);
     disp(data(row_idx, :))  % inspect the specific observation
+    fprintf('Arc span: %.4f degrees (%.4f rad)\n', data.ArcSpanDeg(row_idx), data.ArcSpanRad(row_idx))
+
+    [blup, ~, blup_stats] = randomEffects(model);
+    blup_z = blup ./ std(blup);
+    nexttile(tl)
+    qqplot(blup_z);
+    title('Participant Random Effects Q-Q (BLUP / SD)');
+
+    fprintf('\n--- Participants with the Largest |BLUP| / SD --- \n')
+    blup_group = string(blup_stats.Level); % "<DatasetID> <ParticipantID>"
+    leg_group = string(data.DatasetID) + " " + string(data.ParticipantID);
+    [~, order] = sort(abs(blup_z), 'descend');
+    for k = order(1:5)'
+        fprintf('Participant %s: BLUP = %.3f (%.1f SD)\n', blup_group(k), blup(k), blup_z(k));
+        disp(data(leg_group == blup_group(k), {'DatasetID','ParticipantIDGlobal','Leg','R_H','ArcSpanDeg','n_steps'}))
+    end
 
     % ------------------------------------------------------------------
     % Degenerate Arc Theory Check
     % ------------------------------------------------------------------
-    % Check the arc span for the fitted arc
-    fprintf('Arc span: %.4f degrees (%.4f rad)\n', data.ArcSpanDeg(row_idx), data.ArcSpanRad(row_idx))
-    
-    % Simple proxy check: compare RMS/R ratio across all data.
-    fprintf('\n--- RMS vs R Ratio Check --- \n')
-    fprintf(['A flat/degenerate arc typically shows a LOW RMS relative to a ' ...
-             'large R (points can lie close to many different large-radius circles))\n'])
-
-    data.RMS_to_R_ratio = data.RMS ./ data.R;
-    [~, idx] = sort(data.RMS_to_R_ratio);
-    disp(data(idx(1:10), {'DatasetID','ParticipantIDGlobal','Leg','R','RMS','n_steps'}))
-
-    % If row row_idx appears among the LOWEST ratios, that supports the degenerate-arc theory
-    fprintf('Row %d RMS/R ratio: %.5f (rank %d of %d)\n', ...
-        row_idx, data.RMS_to_R_ratio(row_idx), find(idx==row_idx), height(data));
-    
     % Flag any observation where R is implausibly large relative to anatomical scale
     threshold = median(data.(response_name)) + 5*iqr(data.(response_name)); % or another defensible cutoff
     suspect_rows = data(data.(response_name) > threshold, :);
@@ -1142,24 +1234,35 @@ function test_cutoff_unstable_R(data, model)
     fprintf('%d observations exceed threshold R_H = %.3f (median(R_H) + 5*iqr(data.R_H))\n', height(suspect_rows), threshold);
     
     % ------------------------------------------------------------------
-    % Direct Empirical Check: does small arc span predict implausible/unstable
-    % R?
+    % Direct Empirical Check: does arc span predict R?
     % ------------------------------------------------------------------
     % Direct nonlinear fit of R vs arc span in radians, testing the geometric 
-    % model: R ≈ L / (2*sin(theta/2)), solve for implied chord length L
+    % model: R_H ≈ L_H / (2*sin(theta/2)), solve for implied chord length L
     modelfun = @(b, theta) b(1) ./ (2*sin(theta/2));
     theta_rad = data.ArcSpanRad;
-    b0 = 300; % initial guess for L (mm), rough anatomical chord length
+    b0 = 0.3; % initial guess for L_H (=L/H; unitless), rough anatomical chord length
     mdl_geom = fitnlm(theta_rad, data.R_H, modelfun, b0);
     disp(mdl_geom)
-    % If this fits well (residuals small, L in a plausible anatomical range,
-    % e.g., ~200-500 mm for a foot/shank-scale chord), it directly CONFIRMS
-    % the mechanism: for small theta R ~ L / theta so R is inversely proportional
-    % to the arc span => small arc spans give way to larger circles as the
-    % circular fitting is less accurate.
+    % For small theta R_H ~ L_H / theta, so R is inversely proportional to the arc
+    % span: R becomes ill-conditioned as theta -> 0, where a small change in the
+    % curvature of a nearly flat arc gives a large change in R.
+    
+    % Calculate arc span for R_H = 1 - limit to physiological radius
+    arc_span_physiological_rad = 2*asin(0.5*mdl_geom.Coefficients.Estimate(1)); % radians, for L_H = computed b1 and R_H = 1.
+    arc_span_physiological_deg = rad2deg(arc_span_physiological_rad);
+    fprintf('Physiological arc span corresponding to R_H = 1: %.3f degrees (%.3f rad)\n', arc_span_physiological_deg, arc_span_physiological_rad);
+
+    % Agreement of the applied cutoff with the equivalent arc span rule
+    is_narrow = data.ArcSpanDeg < arc_span_physiological_deg;
+    fprintf('\n--- R_H > 1 vs Arc Span < %.3f Degrees --- \n', arc_span_physiological_deg)
+    fprintf('Both: %d, only R_H > 1: %d, only arc span: %d, neither: %d\n', ...
+        sum(is_degenerate & is_narrow), sum(is_degenerate & ~is_narrow), ...
+        sum(~is_degenerate & is_narrow), sum(~is_degenerate & ~is_narrow));
+    disp(data(xor(is_degenerate, is_narrow), {'DatasetID','ParticipantIDGlobal','Leg','R_H','ArcSpanDeg','n_steps'}))
+
     nexttile(tl)
     scatter(data.ArcSpanDeg, data.R_H, 15, 'filled');
-    xlabel('Arc Span (rad)'); ylabel('R\_H');
+    ylabel('R\_H');
     title('R\_H vs Arc Span — check for instability at low span');
     hold on;
     scatter(data.ArcSpanDeg(row_idx), data.R_H(row_idx), 100, 'r', 'filled');
@@ -1167,7 +1270,11 @@ function test_cutoff_unstable_R(data, model)
     x_deg = rad2deg(x_rad);
     y_pred = predict(mdl_geom, x_rad);
     plot(x_deg, y_pred, 'k', LineWidth=1.5)
-   
+    xline(arc_span_physiological_deg, '--r', ...
+        sprintf('%.2f%s / %.2f rad', arc_span_physiological_deg, char(176), arc_span_physiological_rad));
+    yline(1, '--k', 'R_H = 1');
+    label_arc_span_axis(gca)
+
     % Quantify: correlation between span and |R_H deviation from Dataset median|
     dataset_medians = grpstats(data.R_H, data.DatasetID, 'median');
     [G,~] = findgroups(data.DatasetID);
@@ -1178,13 +1285,19 @@ function test_cutoff_unstable_R(data, model)
     % ------------------------------------------------------------------
     % Sensitivity Sweep for Arc Span Threshold
     % ------------------------------------------------------------------
-    % Candidate thresholds informed by the visual elbow (~10-15°) in plot
+    % Candidate thresholds informed by the visual elbow (~10-15°) in plot. The first
+    % rule is the uncut data and the last the applied R_H <= 1 cutoff, placed at its
+    % equivalent arc span.
     candidate_thresholds =  [3, 5, 8, 10, 12, 15, 20];  % degrees
+    rule_names = ["None", string(candidate_thresholds) + char(176), "R_H <= 1"];
+    rule_deg = [0, candidate_thresholds, arc_span_physiological_deg];
+    rule_idx = [true(height(data), 1), data.ArcSpanDeg >= candidate_thresholds, ~is_degenerate];
     sensitivity_results = table();
-    
-    for th_deg = candidate_thresholds
+
+    for k = 1:numel(rule_names)
+        th_deg = rule_deg(k);
         th_rad = deg2rad(th_deg);
-        idx = data.ArcSpanDeg >= th_deg;
+        idx = rule_idx(:, k);
         data_filt = data(idx, :);
         weight_filt = weight(idx);
         excluded_filt = excluded(idx);
@@ -1198,7 +1311,7 @@ function test_cutoff_unstable_R(data, model)
                             'DummyVarCoding', 'effects', ...
                             'Exclude', excluded_filt);
 
-        ICC_filt = model_metrics(lme_filt, Display="off");
+        [ICC_filt, tau2_filt, sigma2_filt] = model_metrics(lme_filt, Display="off");
 
         resid_filt = residuals(lme_filt, 'ResidualType', 'Pearson');
         [~, p_ad, adstat] = adtest(resid_filt);
@@ -1216,24 +1329,34 @@ function test_cutoff_unstable_R(data, model)
         ICC_alt = model_metrics(lme_alt, Display="off");
 
         sensitivity_results = [sensitivity_results; ...
-            table(th_deg, th_rad, n_filtered, ICC_filt(1), ICC_alt(1), adstat, p_ad, ...
-            'VariableNames', {'ThresholdDeg', 'ThresholdRad', 'N_Filtered', 'ICC1', 'ICC1_alt', 'AD_Statistic', 'Pvalue'})];
+            table(rule_names(k), th_deg, th_rad, n_filtered, tau2_filt, sigma2_filt, ICC_filt(1), ICC_alt(1), adstat, p_ad, ...
+            'VariableNames', {'Rule', 'ThresholdDeg', 'ThresholdRad', 'N_Filtered', 'Tau2', 'Sigma2', 'ICC1', 'ICC1_alt', 'AD_Statistic', 'Pvalue'})];
     end
 
     disp(sensitivity_results)
 
+    is_span_rule = sensitivity_results.Rule ~= "R_H <= 1";
     nexttile(tl)
     hold on
-    plot(sensitivity_results.ThresholdDeg, sensitivity_results.ICC1, '-o');
+    plot(sensitivity_results.ThresholdDeg(is_span_rule), sensitivity_results.ICC1(is_span_rule), '-o', ...
+        DisplayName='Arc span threshold');
+    plot(sensitivity_results.ThresholdDeg(~is_span_rule), sensitivity_results.ICC1(~is_span_rule), 'rp', ...
+        MarkerSize=14, MarkerFaceColor='r', DisplayName='R_H \leq 1');
     ylabel('ICC(1)');
     title('LMM - ICC vs Arc Span Threshold');
+    label_arc_span_axis(gca)
+    xlabel(['Arc span threshold [' char(176) ' / rad]'])
+    legend(Location='best')
+    grid on
 
     % ------------------------------------------------------------------
-    % Sanity check for better optimizer for 5 and 8 degrees
+    % Sanity check for better optimizer for 5 and 8 degrees and R_H <= 1
     % ------------------------------------------------------------------
     formula_noRE = model.Formula.FELinearFormula.char;
-    for th_deg = [5, 8]
-        idx = data.ArcSpanDeg >= th_deg;
+    check_names = ["5 degrees", "8 degrees", "R_H <= 1"];
+    check_idx = [data.ArcSpanDeg >= 5, data.ArcSpanDeg >= 8, ~is_degenerate];
+    for k = 1:numel(check_names)
+        idx = check_idx(:, k);
         data_filt = data(idx, :);
         weight_filt = weight(idx);
         excluded_filt = excluded(idx);
@@ -1267,16 +1390,51 @@ function test_cutoff_unstable_R(data, model)
                          'Exclude', excluded_filt, ...
                          'DummyVarCoding','effects');
 
-        fprintf('\n--- Threshold %d degrees ---\n', th_deg);
+        % Likelihood ratio test of tau^2 = 0 (the REML likelihoods are comparable,
+        % as the fixed effects are the same). tau^2 = 0 lies on the boundary of the
+        % parameter space, so the reference distribution is the 50:50 mixture of
+        % chi2_0 and chi2_1 (Self & Liang 1987): p = 0.5 * P(chi2_1 > LRT).
+        LRT = 2*(max(lmm_qn.LogLikelihood, lmm_fu.LogLikelihood) - lmm_noRE.LogLikelihood);
+        p_boundary = 0.5 * chi2cdf(LRT, 1, 'upper');
+
+        fprintf('\n--- Threshold %s ---\n', check_names(k));
         fprintf('Quasi-Newton: LogLik=%.6f, ICC=%.4f\n', lmm_qn.LogLikelihood, ICC_qn);
         fprintf('fminunc:      LogLik=%.6f, ICC=%.4f\n', lmm_fu.LogLikelihood, ICC_fu);
         fprintf('No random effect: LogLik=%.6f\n', lmm_noRE.LogLikelihood);
+        fprintf('LRT of tau^2 = 0: %.3f, p = %.4g (boundary-corrected)\n', LRT, p_boundary);
     end
 
     % If lmm_qn (or lmm_fu)'s LogLik is only trivially higher than lmm_noRE's
     % that supports tau^2=0 genuinely being close to the true optimum at this 
-    % threshold. If one of them is MEANINGFULLY higher, that one is the correct 
+    % threshold. If one of them is MEANINGFULLY higher, that one is the correct
     % answer and the other optimizer failed to find it.
+end
+
+function label_arc_span_axis(ax)
+% LABEL_ARC_SPAN_AXIS(AX)
+% Labels an x axis that is plotted in degrees with both units: each tick shows
+% the value in degrees and, on a second line, in radians. The labels follow the
+% axis limits, so they stay correct after zooming or panning.
+%
+% Input :
+%   ax - axes whose x data are arc spans in degrees.
+%
+% Example usage :
+%   scatter(data.ArcSpanDeg, data.R_H); label_arc_span_axis(gca)
+
+    ax.XAxis.TickLabelInterpreter = 'tex';
+    % Tick values stay automatic; only their labels are rewritten on each change
+    ax.XAxis.LimitsChangedFcn = @(ruler, ~) relabel_arc_span_ticks(ruler);
+    relabel_arc_span_ticks(ax.XAxis)
+    xlabel(ax, "Arc span [" + char(176) + " / rad]")
+end
+
+function relabel_arc_span_ticks(ruler)
+% RELABEL_ARC_SPAN_TICKS(RULER)
+% Writes the degree/radian tick labels of LABEL_ARC_SPAN_AXIS for the current ticks.
+
+    ticks = ruler.TickValues(:);
+    ruler.TickLabels = compose("%g" + char(176) + "\\newline%.2f", ticks, deg2rad(ticks));
 end
 
 function [pval, stat, df] = flignerKilleen(data, group)
