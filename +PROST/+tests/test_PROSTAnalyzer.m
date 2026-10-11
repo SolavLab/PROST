@@ -2,7 +2,7 @@ clearvars -except -regexp ^Dataset_\d+$
 close all
 clc
 
-%% Setup
+% Setup
 script_full_path = mfilename('fullpath'); % Full path of this script (MATLAB editor, VS Code, and batch)
 if isempty(script_full_path)
     script_full_path = matlab.desktop.editor.getActiveFilename; % Fallback: evaluating a selection in the MATLAB editor
@@ -147,7 +147,7 @@ function test_summary_table(PROSTAnalyzer, dataset_to_load_name, dataset_to_load
     assert(PROSTAnalyzer.SummaryTable.Mass_mean(row_number) == mean)
     assert(PROSTAnalyzer.SummaryTable.Mass_std(row_number) == std)
 
-    assert(PROSTAnalyzer.SummaryTable.Speed_categories(row_number) == dataset_to_load.Experiment_protocol.speed_categories)
+    assert(isequal(PROSTAnalyzer.SummaryTable.Speed_categories{row_number}, dataset_to_load.Experiment_protocol.speed_categories))
     assert(PROSTAnalyzer.SummaryTable.N_participants(row_number) == dataset_to_load.Experiment_protocol.num_participants)
     assert(PROSTAnalyzer.SummaryTable.N_steps(row_number) == dataset_to_load.Experiment_protocol.num_steps)
     assert(PROSTAnalyzer.SummaryTable.N_forceplates(row_number) == dataset_to_load.Lab_system.num_forceplates)
