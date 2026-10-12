@@ -115,8 +115,6 @@ function data = build_analysis_table(analyzer)
 
     % Read from IPDTable
     radius = table2array(analyzer.get_IPD_samples("Radius"));
-    horizontal = table2array(analyzer.get_IPD_samples("Center_horizontal"));
-    vertical = table2array(analyzer.get_IPD_samples("Center_vertical"));
     residual = table2array(analyzer.get_IPD_samples("Residual_rms"));
     predictors = analyzer.get_predictors();
     body_height = PROST.utils.convert_units(predictors.Height, "m", "mm");
@@ -143,10 +141,6 @@ function data = build_analysis_table(analyzer)
     data.R = radius;
     data.R_H = radius ./ body_height;
     data.log_R_H = log(data.R_H);
-    data.Cx = horizontal;
-    data.Cy = vertical;
-    data.Cx_H = horizontal ./ body_height;
-    data.Cy_H = vertical ./ body_height;
     data.AngleStartDeg = angle_start;
     data.AngleStartRad = deg2rad(angle_start);
     data.AngleEndDeg = angle_end;
