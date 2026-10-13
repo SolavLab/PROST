@@ -1,7 +1,10 @@
 function correlations = compute_correlations(predictors, responses)
 %COMPUTE_CORRELATIONS computes pairwise Spearman, Pearson and R^2 correlation 
-% coefficients between numeric predictors and responses. Also computes pairwise 
-% Wilcoxon rank-sum test between categorical predictors and responses.
+% coefficients between numeric predictors and responses. Also computes pairwise
+% Wilcoxon rank-sum test between categorical predictors and responses, with the
+% Mann-Whitney U and the rank-biserial correlation r_rb (equal to Cliff's delta)
+% as effect size. W, U, z and r_rb all refer to the first category, so a
+% positive r_rb means the first category tends to have larger responses.
 %
 % Input :
 %   predictors - table of all predictors data.
@@ -41,7 +44,7 @@ function correlations = compute_correlations(predictors, responses)
     end
 
     numeric_variable_names = {'Spearman_rho', 'Spearman_p', 'Pearson_r', 'Pearson_p', 'Rsquared', 'FitSlope', 'FitIntercept', 'FitRMSE'};
-    categorical_variable_names = {'Wilcoxon_H', 'Wilcoxon_p', 'Wilcoxon_z', 'Wilcoxon_Ranksum'};
+    categorical_variable_names = {'Wilcoxon_H', 'Wilcoxon_p', 'Wilcoxon_z', 'Wilcoxon_W', 'MannWhitney_U', 'Wilcoxon_r_rb'};
     n_numeric_variables = numel(numeric_variable_names);
     n_categorical_variables = numel(categorical_variable_names);
     for r=1:numel(response_names)
@@ -85,7 +88,9 @@ function correlations = compute_correlations(predictors, responses)
             p_wilcoxon = zeros(n_categorical_predictors, 1);
             h_wilcoxon = zeros(n_categorical_predictors, 1);
             z_wilcoxon = zeros(n_categorical_predictors, 1);
-            ranksum_wilcoxon = zeros(n_categorical_predictors, 1);
+            w_wilcoxon = zeros(n_categorical_predictors, 1);
+            u_mannwhitney = zeros(n_categorical_predictors, 1);
+            r_rb_wilcoxon = zeros(n_categorical_predictors, 1);
             for p=1:n_categorical_predictors
                 predictor = categorical(categorical_predictors{:, p});
                 predictor_categories = categories(predictor, OutputType="categorical");
@@ -93,12 +98,20 @@ function correlations = compute_correlations(predictors, responses)
                 y2 = responses(predictor == predictor_categories(2), r);
                 [p_wilcoxon(p), h_wilcoxon(p), stat] = ranksum(y1, y2);
                 z_wilcoxon(p) = stat.zval;
-                ranksum_wilcoxon(p) = stat.ranksum;
+                w_wilcoxon(p) = stat.ranksum; % rank sum of y1 (ranksum returns it for X)
+                % ranksum drops NaNs, so count only the samples it used
+                n1 = sum(~isnan(y1));
+                n2 = sum(~isnan(y2));
+                u_mannwhitney(p) = stat.ranksum - n1*(n1 + 1)/2;
+                % Rank-biserial correlation (Glass, 1965; Kerby, 2014)
+                r_rb_wilcoxon(p) = 2*u_mannwhitney(p)/(n1*n2) - 1;
             end
             correlations.(response_names(r)).Categorical.Wilcoxon_H = h_wilcoxon;
             correlations.(response_names(r)).Categorical.Wilcoxon_p = p_wilcoxon;
             correlations.(response_names(r)).Categorical.Wilcoxon_z = z_wilcoxon;
-            correlations.(response_names(r)).Categorical.Wilcoxon_Ranksum = ranksum_wilcoxon;
+            correlations.(response_names(r)).Categorical.Wilcoxon_W = w_wilcoxon;
+            correlations.(response_names(r)).Categorical.MannWhitney_U = u_mannwhitney;
+            correlations.(response_names(r)).Categorical.Wilcoxon_r_rb = r_rb_wilcoxon;
         end
         % correlations.(response_names(r)).Categorical = table(...
         %                             h_wilcoxon, p_wilcoxon, ...
