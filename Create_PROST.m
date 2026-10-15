@@ -28,7 +28,7 @@ for idx = 1:length(dataset_list)
     if ~exist(var_name, "var")
         file_name = fullfile(dataset_dir, var_name + ".mat");
         load(file_name)
-        loaded_files(end+1, 1) = file_name; %#ok<SAGROW>
+        loaded_files(end+1, 1) = fullfile("example_datasets", var_name + ".mat"); %#ok<SAGROW>
     else
         workspace_datasets(end+1, 1) = var_name; %#ok<SAGROW>
     end
