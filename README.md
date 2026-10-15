@@ -73,16 +73,6 @@ Run `Plot_PROST.m` to generate comprehensive analysis plots:
 Plot_PROST
 ```
 
-### 4. Correlation Analysis
-
-Run `Correlation_Analysis.m` for detailed correlation studies:
-
-```matlab
-Correlation_Analysis
-```
-
-This script computes Pearson and Spearman correlations, performs PCA analysis, and generates relationship plots.
-
 ## Core Components
 
 ### PROSTAnalyzer Class
@@ -151,7 +141,6 @@ analyzer.plot_predictors_vs_responses(["Height" "Mass"], "Radius", ...
 PROST/
 ├── Create_PROST.m                 # Main setup script
 ├── Plot_PROST.m                   # Plotting script
-├── Correlation_Analysis.m         # Correlation analysis script
 ├── Count_Valid_Participants_Steps.m
 ├── +PROST/                        # Main package namespace
 │   ├── PROSTDatasetList.m         # Dataset list class
@@ -281,7 +270,7 @@ Author: Chen Reichsbouscher
 
 For bug reports, feature requests, or questions:
 - Check existing documentation in the source code
-- Review example scripts: `Create_PROST.m`, `Plot_PROST.m`, `Correlation_Analysis.m`
+- Review example scripts: `Create_PROST.m`, `Plot_PROST.m`
 - Run unit tests to verify installation
 
 ## Version History
