@@ -19,11 +19,18 @@ warning('off', 'backtrace')
 %% Load Datasets
 dataset_list = ["Dataset_1"; "Dataset_2"; "Dataset_3"; "Dataset_4"];
 
+% Datasets kept from the workspace may differ from the files on disk, so only the
+% loaded files are hashed in the provenance
+loaded_files = strings(0, 1);
+workspace_datasets = strings(0, 1);
 for idx = 1:length(dataset_list)
     var_name = dataset_list(idx);
     if ~exist(var_name, "var")
         file_name = fullfile(dataset_dir, var_name + ".mat");
         load(file_name)
+        loaded_files(end+1, 1) = file_name; %#ok<SAGROW>
+    else
+        workspace_datasets(end+1, 1) = var_name; %#ok<SAGROW>
     end
 end
 
@@ -63,5 +70,7 @@ PROSTAnalyzer.create_IPD_table();
 
 %% Save PROST Object
 fprintf("Saving PROSTAnalyzer object...\n");
-save("PROSTAnalyzer.mat","PROSTAnalyzer")
+PROSTAnalyzer_provenance = PROST.utils.provenance(loaded_files);
+PROSTAnalyzer_provenance.workspace_datasets = workspace_datasets; % used as found in the workspace, not hashed
+save("PROSTAnalyzer.mat", "PROSTAnalyzer", "PROSTAnalyzer_provenance")
 fprintf("PROSTAnalyzer object saved.\n");

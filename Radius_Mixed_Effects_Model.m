@@ -22,8 +22,15 @@ weight_test_flag = false; % test the weight scheme of each response model
 assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
+save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see boot_stream)
 n_boot = 5000; % number of bootstrap replicates
+
+% The saved file is the record of the reported results: a partial run must not
+% overwrite a complete one.
+if save_flag && ~(boot_flag && loo_flag)
+    error("save_flag needs boot_flag and loo_flag: the saved file must hold the complete reported results.")
+end
 
 % Responses to model. 'scale' decides which ICC back-transform applies:
 %   "log"    - the ICC is also back-transformed to the original scale
@@ -94,6 +101,13 @@ for spec = responses
     if boot_flag
         results.(spec.name).boot = bootstrap_response_model(data_final, spec, results.(spec.name), n_boot, boot_seed);
     end
+end
+
+% Distinct variable names, so loading the file next to other results cannot clash
+if save_flag
+    saved.radius_lme_results = results;
+    saved.radius_lme_provenance = PROST.utils.provenance();
+    save("Radius_Mixed_Effects_Results", "-struct", "saved")
 end
 
 % PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots", ".", "file_type", "pdf", "prepare","on", "append", "off")
@@ -333,8 +347,7 @@ function boot_results = bootstrap_response_model(data, spec, results, n_boot, bo
 % BOOT_RESULTS = BOOTSTRAP_RESPONSE_MODEL(DATA, SPEC, RESULTS, N_BOOT, BOOT_SEED)
 % Cluster (participant-level), stratified-by-dataset bootstrap of a fitted response
 % model: SE and percentile CIs of the fixed effects, variance components and ICC
-% (and of the original-scale ICC for a log-scale response). Prints the results
-% and saves them to Bootstrap_Results_<response>.mat.
+% (and of the original-scale ICC for a log-scale response). Prints the results.
 %
 % Input :
 %   data - the data table the model was fitted on.
@@ -428,8 +441,6 @@ function boot_results = bootstrap_response_model(data, spec, results, n_boot, bo
         boot_results.ICC_original = ICC_original_draws;
     end
     boot_results.boot_inferences = boot_inferences;
-
-    save("Bootstrap_Results_" + response_name, "boot_results")
 end
 
 function ICC_original = icc_original_scale(tau2, sigma2)
