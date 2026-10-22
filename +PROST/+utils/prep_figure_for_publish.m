@@ -1,7 +1,7 @@
 function prep_figure_for_publish(fig, opts)
 %PREP_FIGURE_FOR_PUBLISH prepares the figure for publishing.
 %   1. Removes all titles from the figure.
-%   2. Sets font to "Times New Roman", 12 pt.
+%   2. Sets font to "Times New Roman", 10 pt (default).
 %   3. Sets figure size and paper size.
 %
 % Input :
@@ -9,7 +9,7 @@ function prep_figure_for_publish(fig, opts)
 %
 %   Default values for optional Name-Value pairs:
 %       FontUnits        = "points"
-%       FontSize         = 12 (pt)
+%       FontSize         = 10 (pt)
 %       FontName         = "Times New Roman"
 %       FigUnits         = "points"
 %       FigWidth         = 468 (pt)
@@ -22,7 +22,7 @@ function prep_figure_for_publish(fig, opts)
     arguments
         fig
         opts.FontUnits        (1, 1) string = "points"
-        opts.FontSize         (1, 1) double = 12
+        opts.FontSize         (1, 1) double = 10
         opts.FontName         (1, 1) string = "Times New Roman"
         opts.FigUnits         (1, 1) string = "points"
         opts.FigWidth         {mustBeScalarOrEmpty} = []
@@ -128,6 +128,9 @@ function prep_figure_for_publish(fig, opts)
     for k = 1:numel(tl)
         tl(k).Title.Visible = "off";
         tl(k).Subtitle.Visible = "off";
+        % Shared layout labels belong to the layout, not to any axes (their
+        % FontSize is always in points; layout text has no FontUnits)
+        set([tl(k).XLabel tl(k).YLabel], FontSize=opts.FontSize, FontName=opts.FontName)
     end
 
     % Shorten y label
