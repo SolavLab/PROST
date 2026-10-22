@@ -14,7 +14,8 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
 %                 sub-folders, set to ".".
 %
 % Name-Value pair options :   
-%   file_type - the file type to save. Default: "pdf".
+%   file_type - the file type(s) to save, as a string or a string array (e.g.
+%               ["pdf" "svg" "jpeg" "fig"]). Default: "pdf".
 %   append - whether to append this figure to an existing file with the same 
 %            name in the file path. Specified as 'on' or 'off', or as numeric or 
 %            logical 1 (true) or 0 (false). A value of 'on' is equivalent to 
@@ -22,6 +23,9 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: false.
+%   overwrite - whether to replace an existing file with the same name instead
+%               of saving a new file with an incremented "_a", "_b", ... suffix.
+%               Ignored when append is on. Default: false.
 %   prepare - whether to prepare the figure for publication by setting size and 
 %          fonts. Specified as 'on' or 'off', or as numeric or logical 1 (true) 
 %          or 0 (false). A value of 'on' is equivalent to true, and 'off' is 
@@ -43,8 +47,9 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
         sub_folders     {mustBeTextOrEmpty(sub_folders)} = []
     end
     arguments
-        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
+        opts.file_type  (1, :) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
         opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
+        opts.overwrite  (1, 1) matlab.lang.OnOffSwitchState = false
     end
     arguments
         prep_opts.prepare          (1, 1) matlab.lang.OnOffSwitchState = true
@@ -54,6 +59,7 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
     % Prepare input arguments    
     file_type = opts.file_type;
     append = opts.append;
+    overwrite = opts.overwrite;
     prepare = prep_opts.prepare;
     prepare_options = prep_opts.prepare_options;
 
@@ -94,7 +100,7 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
         % Define file path for saving
         file_path = fullfile(figures_folder, sub_folder);
 
-        PROST.utils.save_figure(f, file_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options)
+        PROST.utils.save_figure(f, file_path, file_type=file_type, append=append, overwrite=overwrite, prepare=prepare, prepare_options=prepare_options)
     end
 
     fprintf("All figures saved.\n");

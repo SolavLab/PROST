@@ -7,7 +7,9 @@ function save_figure(fig, file_path, opts, prep_opts)
 %               the folder selection dialog box.
 %
 % Name-Value pair options :
-%   file_type - the file type to save. Default: "pdf".
+%   file_type - the file type(s) to save, as a string or a string array (e.g.
+%               ["pdf" "svg" "jpeg" "fig"]). The figure is prepared once and saved
+%               in each type. Default: "pdf".
 %   append - whether to append this figure to an existing file with the same 
 %            name in the file path. Specified as 'on' or 'off', or as numeric or 
 %            logical 1 (true) or 0 (false). A value of 'on' is  equivalent to 
@@ -15,6 +17,9 @@ function save_figure(fig, file_path, opts, prep_opts)
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: 'off'.
+%   overwrite - whether to replace an existing file with the same name instead
+%               of saving a new file with an incremented "_a", "_b", ... suffix.
+%               Ignored when append is on. Default: 'off'.
 %   prepare - whether to prepare the figure for publication. Specified as 'on' 
 %             or 'off', or as numeric or logical 1 (true) or 0 (false). A value 
 %             of 'on' is equivalent to true, and 'off' is equivalent to false. 
@@ -29,6 +34,7 @@ function save_figure(fig, file_path, opts, prep_opts)
 %   save_figure(f, "C:/path/to/folder", file_type="pdf", append=true)
 %   save_figure(f, "C:/path/to/folder", file_type="png")
 %   save_figure(f, [], file_type="png")
+%   save_figure(f, "C:/path/to/folder", file_type=["pdf" "svg" "jpeg" "fig"], overwrite=true)
 %   save_figure(f)
 
     arguments
@@ -36,8 +42,9 @@ function save_figure(fig, file_path, opts, prep_opts)
         file_path       {mustBeScalarOrEmpty(file_path)} = []
     end
     arguments
-        opts.file_type  (1, 1) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
+        opts.file_type  (1, :) string {mustBeMember(opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "pdf"
         opts.append     (1, 1) matlab.lang.OnOffSwitchState = false
+        opts.overwrite  (1, 1) matlab.lang.OnOffSwitchState = false
     end
     arguments
         prep_opts.prepare          (1, 1) matlab.lang.OnOffSwitchState = true
@@ -45,8 +52,9 @@ function save_figure(fig, file_path, opts, prep_opts)
     end
 
    % Prepare input arguments
-   file_type = convertCharsToStrings(opts.file_type);
+   file_types = unique(convertCharsToStrings(opts.file_type), "stable");
    append = logical(opts.append);
+   overwrite = logical(opts.overwrite);
    prepare = logical(prep_opts.prepare);
    prep_options = prep_opts.prepare_options;
 
@@ -67,28 +75,7 @@ function save_figure(fig, file_path, opts, prep_opts)
         base_name = sprintf('Figure%d', fig.Number);
     end
 
-    % Full file path
-    file_name = fullfile(file_path, base_name + "." + file_type);
-
-    % If file exists and not appending, create incremented suffix
-    if ~append && isfile(file_name)
-        letters = ['a':'z'];
-        for k = 1:numel(letters)
-            candidate_name = sprintf('%s_%s.%s', base_name, letters(k), file_type);
-            candidate_path = fullfile(file_path, candidate_name);
-            if ~isfile(candidate_path)
-                file_name = candidate_path;
-                break
-            end
-        end
-
-        % Safeguard
-        if isfile(file_name)
-            error('No available filename suffix remaining.')
-        end
-    end
-
-    % Prepare figure for publish
+    % Prepare figure for publish once, so every file type shows the same figure
     if prepare
         name_value = {};
         if ~isempty(prep_options)
@@ -97,42 +84,69 @@ function save_figure(fig, file_path, opts, prep_opts)
         PROST.utils.prep_figure_for_publish(fig, name_value{:})
     end
 
-    % Save based on file type
-    if strcmpi(file_type, "fig")
-        savefig(fig, file_name);
-    else
-        export_options = {'Resolution', 300};
-        print_options = {'-r300'};
-        switch file_type
-            case "pdf"
-                if append
-                    export_options = [export_options {'ContentType', 'vector', 'Append', true}];
-                    exportgraphics(fig, file_name, export_options{:})
-                else
+    for file_type = file_types
+        % Full file path
+        file_name = fullfile(file_path, base_name + "." + file_type);
+
+        if overwrite && ~append && isfile(file_name)
+            delete(file_name)
+        end
+
+        % If file exists and not appending, create incremented suffix
+        if ~append && isfile(file_name)
+            letters = ['a':'z'];
+            for k = 1:numel(letters)
+                candidate_name = sprintf('%s_%s.%s', base_name, letters(k), file_type);
+                candidate_path = fullfile(file_path, candidate_name);
+                if ~isfile(candidate_path)
+                    file_name = candidate_path;
+                    break
+                end
+            end
+
+            % Safeguard
+            if isfile(file_name)
+                error('No available filename suffix remaining.')
+            end
+        end
+
+        % Save based on file type
+        if strcmpi(file_type, "fig")
+            savefig(fig, file_name);
+        else
+            export_options = {'Resolution', 300};
+            print_options = {'-r300'};
+            switch file_type
+                case "pdf"
+                    if append
+                        export_options = [export_options {'ContentType', 'vector', 'Append', true}];
+                        exportgraphics(fig, file_name, export_options{:})
+                    else
+                        print_options = [print_options {'-vector'}];
+                        print(fig, file_name, "-d" + file_type, print_options{:})
+                    end
+                case "svg"
                     print_options = [print_options {'-vector'}];
                     print(fig, file_name, "-d" + file_type, print_options{:})
-                end
-            case "svg"
-                print_options = [print_options {'-vector'}];
-                print(fig, file_name, "-d" + file_type, print_options{:})
-            case ["eps" "epsc" "eps2" "epsc2"]
-                print_options = [print_options {'-vector'}];
-                if append
-                    print_options = [print_options {'-append'}];
-                end
-                print(fig, file_name, "-d" + file_type, print_options{:})
-            case "gif"           
-                export_options = [export_options {'Append', append}];
-                exportgraphics(fig, file_name, export_options{:})
-            case ["jpeg" "jpg"]
-                print(fig, file_name, '-djpeg', print_options{:})
-            case ["meta" "emf"]
-                print_options = [print_options {'-vector'}];
-                print(fig, file_name, "-dmeta", print_options{:})
-            case ["tiff" "tif"]
-                print(fig, file_name, "-dtiff", print_options{:})
-            otherwise
-                print(fig, file_name, "-d" + file_type, print_options{:})
+                case ["eps" "epsc" "eps2" "epsc2"]
+                    print_options = [print_options {'-vector'}];
+                    if append
+                        print_options = [print_options {'-append'}];
+                    end
+                    print(fig, file_name, "-d" + file_type, print_options{:})
+                case "gif"           
+                    export_options = [export_options {'Append', append}];
+                    exportgraphics(fig, file_name, export_options{:})
+                case ["jpeg" "jpg"]
+                    print(fig, file_name, '-djpeg', print_options{:})
+                case ["meta" "emf"]
+                    print_options = [print_options {'-vector'}];
+                    print(fig, file_name, "-dmeta", print_options{:})
+                case ["tiff" "tif"]
+                    print(fig, file_name, "-dtiff", print_options{:})
+                otherwise
+                    print(fig, file_name, "-d" + file_type, print_options{:})
+            end
         end
-    end 
+    end
 end

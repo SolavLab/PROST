@@ -40,8 +40,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               - 'on' - show the figure.
 %               - 'off' - save the figure.
 %          Default: "on".
-%   file_type - the type to save the figure if saved. 
-%               Default: 'fig'.
+%   file_type - the type(s) to save the figure in if saved, as a string or a
+%               string array (e.g. ["pdf" "svg" "jpeg" "fig"]). Default: 'fig'.
 %   append - if show = 'off', whether to append this figure to an existing file
 %            with the same name in the file path. Specified as 'on' or 'off', or 
 %            as numeric or logical 1 (true) or 0 (false). A value of 'on' is 
@@ -49,6 +49,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %               - 'on' - append the figure.
 %               - 'off' - save the figure in a new file.
 %            Default: false.
+%   overwrite - whether to replace an existing file with the same name instead
+%               of saving a new file with an incremented "_a", "_b", ... suffix.
+%               Ignored when append is on. Default: false.
 %   prepare - if show = 'off', whether to prepare figures for publication when
 %             saving. This sets figure size and fonts according to preset
 %             values. Specified as 'on' or 'off', or as numeric or logical 1 
@@ -82,7 +85,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     arguments
         save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
         save_opts.append         (1, 1) matlab.lang.OnOffSwitchState = false
-        save_opts.file_type      (1, 1) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
+        save_opts.overwrite      (1, 1) matlab.lang.OnOffSwitchState = false
+        save_opts.file_type      (1, :) string {mustBeMember(save_opts.file_type, ["fig" "jpg"  "jpeg" "png" "tif" "tiff" "tiffn" "gif" "pdf" "emf" "meta" "eps" "epsc" "eps2" "epsc2" "svg"])} = "fig"
         save_opts.prepare        (1, 1) matlab.lang.OnOffSwitchState = true
         save_opts.prepare_options = struct([])
     end
@@ -98,6 +102,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     show = save_opts.show;
     file_type = save_opts.file_type;
     append = save_opts.append;
+    overwrite = save_opts.overwrite;
     prepare = save_opts.prepare;
     prepare_options = save_opts.prepare_options;
     
@@ -339,9 +344,9 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     % Save figures
     if ~show
         figure_path = fullfile(obj.Toolbox_root, "figures/ROS Analysis/Stat Plots");
-        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options);
+        PROST.utils.save_figure(fig_data, figure_path, file_type=file_type, append=append, overwrite=overwrite, prepare=prepare, prepare_options=prepare_options);
         if qqplot_flag
-            PROST.utils.save_figure(fig_qq, figure_path, file_type=file_type, append=append, prepare=prepare, prepare_options=prepare_options);
+            PROST.utils.save_figure(fig_qq, figure_path, file_type=file_type, append=append, overwrite=overwrite, prepare=prepare, prepare_options=prepare_options);
         end
         fprintf("Saved figures...\n")
     end
