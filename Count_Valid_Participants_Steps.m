@@ -78,33 +78,7 @@ end
 % and step). Speed is a trial property copied into each of its steps, so
 % step-level statistics weight participants by their step counts; the
 % participant-level mean +- SD is printed alongside for that reason.
-dataset_col = [];
-participant_col = [];
-category_col = strings(0, 1);
-speed_col = [];
-for dd = 1:numel(PROSTAnalyzer.DataRecords)
-    data = PROSTAnalyzer.DataRecords(dd).Data;
-    for pp = 1:numel(data)
-        if ~data(pp).Is_included
-            continue
-        end
-        for side = ["right", "left"]
-            if ~data(pp).Uniform_data.(side).Is_included
-                continue
-            end
-            steps = data(pp).Uniform_data.(side).step;
-            steps = steps([steps.Is_included]);
-            speeds = [steps.speed];
-            n_steps = numel(steps);
-            dataset_col = [dataset_col; repmat(PROSTAnalyzer.DataRecords(dd).Dataset_id, n_steps, 1)]; %#ok<AGROW>
-            participant_col = [participant_col; repmat(pp, n_steps, 1)]; %#ok<AGROW>
-            category_col = [category_col; string({speeds.speed_category})']; %#ok<AGROW>
-            speed_col = [speed_col; [speeds.value]']; %#ok<AGROW>
-        end
-    end
-end
-speed_table = table(dataset_col, participant_col, category_col, speed_col, ...
-    VariableNames=["Dataset_id", "Participant", "Speed_category", "Speed"]);
+speed_table = PROSTAnalyzer.get_step_speeds();
 
 fprintf("\n--- Walking speed of valid steps [km/h] ---\n")
 fprintf("NaN speeds: %d of %d steps\n", sum(isnan(speed_table.Speed)), height(speed_table))
@@ -117,7 +91,7 @@ for dd = [unique(speed_table.Dataset_id)' 0]
         label = "Dataset " + dd;
     end
     v = speed_table.Speed(rows);
-    participant_means = groupsummary(speed_table(rows, :), ["Dataset_id", "Participant"], "mean", "Speed").mean_Speed;
+    participant_means = groupsummary(speed_table(rows, :), ["Dataset_id", "Participant_id"], "mean", "Speed").mean_Speed;
     fprintf("%s: n = %d steps, %.2f +- %.2f (%.2f-%.2f); participant level: %.2f +- %.2f (n = %d)\n", ...
         label, numel(v), mean(v, "omitnan"), std(v, "omitnan"), min(v), max(v), ...
         mean(participant_means, "omitnan"), std(participant_means, "omitnan"), numel(participant_means))

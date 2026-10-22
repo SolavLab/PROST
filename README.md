@@ -95,6 +95,7 @@ The main analysis class located at `+PROST/@PROSTAnalyzer/PROSTAnalyzer.m`.
 - `plot_cop()`: Plot center of pressure trajectories
 - `plot_predictors_vs_responses()`: Scatter plots of predictor-response relationships
 - `plot_stats()`: Display statistical summaries
+- `plot_speed_distribution()`: Histograms of measured walking speed per dataset and speed condition
 
 ### PROSTDatasetList Class
 
@@ -157,6 +158,7 @@ PROST/
 │   │   ├── plot_cop.m
 │   │   ├── plot_predictors_vs_responses.m
 │   │   ├── plot_stats.m
+│   │   ├── plot_speed_distribution.m
 │   │   ├── create_IPD_table.m
 │   │   └── private/               # Private methods
 │   ├── +utils/                    # Utility functions
@@ -210,6 +212,7 @@ PROST/
 | `plot_cop()` | Plot center of pressure trajectories |
 | `plot_predictors_vs_responses()` | Scatter plots with trend lines |
 | `plot_stats()` | Display statistical summaries and distributions |
+| `plot_speed_distribution()` | Histograms of measured walking speed per dataset, optionally split by speed condition with nominal-speed marks |
 
 ### Data Access Methods
 
@@ -219,6 +222,7 @@ PROST/
 | `get_dataset_name()` | Get name of a dataset |
 | `get_good_steps()` | Retrieve valid/clean steps |
 | `get_IPD_samples()` | Extract samples from IPD table |
+| `get_step_speeds()` | Measured walking speed of every valid step |
 | `get_predictors()` | Get predictor variables |
 | `get_responses()` | Get response variables |
 

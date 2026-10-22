@@ -168,6 +168,7 @@ classdef PROSTAnalyzer < handle
         % [predictors, names, units, types] = get_predictors(obj, list);
         % [responses, names, units, types] = get_responses(obj, list);
         % [IPD_samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, varargin);
+        % speed_table = get_step_speeds(obj, dataset_ids);
         % tf = has_medial(obj, dataset_id);
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
         % tf = is_in_IPD_table(obj, dataset_id, participant_id, side);
@@ -175,6 +176,7 @@ classdef PROSTAnalyzer < handle
         % plot_cop(obj, dataset_id, participant_id, side, step_number)
         % plot_predictors_vs_responses(obj, predictors_list, responses_list, number_of_axes_in_fig, show, file_type);
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
+        % [fig, speed_table] = plot_speed_distribution(obj, dataset_ids, opts, save_opts);
         % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
         % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);
