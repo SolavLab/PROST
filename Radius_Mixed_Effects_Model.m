@@ -23,7 +23,7 @@ assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
-boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see boot_stream)
+boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see PROST.utils.boot_stream)
 n_boot = 5000; % number of bootstrap replicates
 
 % The saved file is the record of the reported results: a partial run must not
@@ -355,7 +355,7 @@ function boot_results = bootstrap_response_model(data, spec, results, n_boot, bo
 %          or "log").
 %   results - the output of fit_response_model for this response.
 %   n_boot - number of bootstrap replicates.
-%   boot_seed - the seed of the bootstrap random stream (see boot_stream).
+%   boot_seed - the seed of the bootstrap random stream (see PROST.utils.boot_stream).
 %
 % Example usage :
 %   boot = bootstrap_response_model(data_final, spec, results.log_R_H, 5000, 20261006)
@@ -374,19 +374,19 @@ function boot_results = bootstrap_response_model(data, spec, results, n_boot, bo
     gcp; % start the parallel pool here, so toc times only the bootstrap
     tic
 
-    % Preallocate storage
-    n_fixed     = height(lme.Coefficients) + 1;
-    beta_boot   = nan(n_boot, n_fixed); % fixed effects intercept point estimates (grand mean + dataset IDs)
-    tau2_boot   = nan(n_boot, 1); % participant-level random intercept variance
-    sigma2_boot = nan(n_boot, 1); % residual variance
-    ICC_boot    = nan(n_boot, 1); % ICC on the model scale
-    fail_msg    = strings(n_boot, 1); % why a refit failed, "" if it did not
+    % lme_refit picks the weights of the resampled rows by row number
+    assert(height(data) == height(lme.ObservationInfo), ...
+        "data must be the table the model was fitted on.")
 
-    parfor b = 1:n_boot
-        [beta_boot(b, :), tau2_boot(b), sigma2_boot(b), ICC_boot(b), fail_msg(b)] = ...
-            boot_resampler(data, lme, boot_stream(boot_seed, b));
-    end
+    % Columns: fixed effects (grand mean + dataset IDs), tau2, sigma2, ICC
+    n_fixed = height(lme.Coefficients) + 1;
+    [boot_draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, boot_rows) ...
+        lme_refit(boot_data, boot_rows, lme), n_boot, boot_seed, NStat=n_fixed + 3, Parallel=true);
     toc
+    beta_boot   = boot_draws(:, 1:n_fixed);
+    tau2_boot   = boot_draws(:, n_fixed + 1); % participant-level random intercept variance
+    sigma2_boot = boot_draws(:, n_fixed + 2); % residual variance
+    ICC_boot    = boot_draws(:, n_fixed + 3); % ICC on the model scale
 
     valid = ~any(isnan([beta_boot, tau2_boot, sigma2_boot]), 2);
     fprintf('\n--- %s - Bootstrapping Inferences Results ---\n', response_name)
@@ -1529,90 +1529,39 @@ function left_right_difference_check(data, var_name)
     normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
 end
 
-function [beta_boot, tau2_boot, sigma2_boot, ICC_boot, fail_msg, boot_data] = boot_resampler(data, model, stream)
-% [BETA, TAU2, SIGMA2, ICC, FAIL_MSG, BOOT_DATA] = BOOT_RESAMPLER(DATA, MODEL, STREAM)
-% One cluster bootstrap replicate: resamples participants with replacement within
-% each dataset, refits MODEL on the resample and returns its parameters.
+function stat = lme_refit(boot_data, boot_rows, model)
+% STAT = LME_REFIT(BOOT_DATA, BOOT_ROWS, MODEL)
+% Statistic of one cluster bootstrap replicate (see PROST.utils.cluster_bootstrap):
+% refits MODEL on the resample and returns its parameters. An error of the refit
+% propagates, so cluster_bootstrap records it as the reason of a failed replicate.
 %
 % Input :
-%   data - the data table MODEL was fitted on, in the same row order.
+%   boot_data - the resampled table, with a new ID per drawn participant
+%               (see PROST.utils.cluster_resample).
+%   boot_rows - the rows of the table MODEL was fitted on in the resample.
 %   model - the fitted LME model.
-%   stream - the RandStream to draw participants from (see boot_stream).
 %
 % Output :
-%   beta - fixed effects, with the effects-coded last dataset appended.
-%   tau2, sigma2 - variance components.
-%   ICC - ICC1 = tau2 / (tau2 + sigma2) on the model scale.
-%   fail_msg - why the refit failed, "" if it did not. Parameters are NaN then.
-%   boot_data - the resampled table, with ParticipantIDOriginal.
+%   stat - [beta, tau2, sigma2, ICC]: the fixed effects with the effects-coded
+%          last dataset appended, the variance components and ICC1 =
+%          tau2 / (tau2 + sigma2) on the model scale.
 %
 % Example usage :
-%   [beta, tau2, sigma2, ICC] = boot_resampler(data, lme, boot_stream(1, 1))
-
-    assert(height(data) == height(model.ObservationInfo), ...
-        "data must be the table the model was fitted on.")
-
-    % Initialize boot parameters
-    n_fixed = height(model.Coefficients) + 1;
-    beta_boot = nan(1, n_fixed); % fixed effects intercept point estimates (grand mean + dataset IDs)
-    tau2_boot = nan; % participant-level random intercept variance
-    sigma2_boot = nan; % residual variance
-    ICC_boot = nan; % ICC
-    fail_msg = "";
-
-    % Per-dataset sampling with replacements of participants
-    datasets = unique(data.DatasetID);
-    boot_rows = [];
-    boot_participant_ids = [];
-    for d = 1:numel(datasets)
-        dataset_rows = find(data.DatasetID == datasets(d));
-        participants = unique(data.ParticipantID(dataset_rows));
-        n_participants = numel(participants);
-        sample_idx = randi(stream, n_participants, n_participants, 1);
-        sampled_participant_ids = participants(sample_idx);
-
-        % Relabel participant IDS to avoid merging duplicates when fitting LME
-        [row, col] = find(data.ParticipantID(dataset_rows) == sampled_participant_ids');
-        boot_rows = [boot_rows; dataset_rows(row)]; %#ok<AGROW>
-        boot_participant_ids = [boot_participant_ids; col]; %#ok<AGROW>
-    end
-    boot_data = data(boot_rows, :);
-    boot_data.ParticipantIDOriginal = boot_data.ParticipantID;
-    boot_data.ParticipantID = categorical(boot_participant_ids);
+%   [boot_data, boot_rows] = PROST.utils.cluster_resample(data, PROST.utils.boot_stream(1, 1));
+%   stat = lme_refit(boot_data, boot_rows, lme)
 
     % Weights follow their rows, so a weighted model stays weighted (all ones if not)
     weights = model.ObservationInfo.Weights(boot_rows);
 
-    try
-        lme_boot = fitlme(boot_data, char(model.Formula), ...
-            'FitMethod', model.FitMethod, ...
-            'Weights', weights, ...
-            'DummyVarCoding', 'effects');
+    lme_boot = fitlme(boot_data, char(model.Formula), ...
+        'FitMethod', model.FitMethod, ...
+        'Weights', weights, ...
+        'DummyVarCoding', 'effects');
 
-        % fixed effects
-        beta_boot(1:(end-1)) = lme_boot.Coefficients.Estimate;
-        beta_boot(end) = -sum(beta_boot(2:(end-1)));
-        [ICC, tau2_boot, sigma2_boot] = model_metrics(lme_boot, Display="off");
-        ICC_boot = ICC(1);
-
-    catch ME
-        % The caller discards this replicate; keep the reason so a systematic
-        % error cannot pass as a non-converged refit.
-        fail_msg = string(ME.message);
-    end
-end
-
-function stream = boot_stream(seed, b)
-% STREAM = BOOT_STREAM(SEED, B)
-% Random stream of bootstrap replicate B. Every replicate uses its own substream
-% of one seeded generator, so replicate B draws the same participants on whichever
-% parfor worker runs it, and the whole bootstrap is reproducible from SEED.
-%
-% Example usage :
-%   stream = boot_stream(20261006, 1)
-
-    stream = RandStream('Threefry', 'Seed', seed);
-    stream.Substream = b;
+    beta_boot = lme_boot.Coefficients.Estimate';
+    beta_boot(end + 1) = -sum(beta_boot(2:end));
+    [ICC, tau2_boot, sigma2_boot] = model_metrics(lme_boot, Display="off");
+    stat = [beta_boot, tau2_boot, sigma2_boot, ICC(1)];
 end
 
 function data = synthetic_lme_data(stream, n_per_dataset, dataset_means, tau2, sigma2)
@@ -1693,18 +1642,19 @@ function self_test()
     % ------------------------------------------------------------------
     % Bootstrap resampler
     % ------------------------------------------------------------------
-    [beta, tau2_boot, sigma2_boot, ICC_boot, fail_msg, boot_data] = boot_resampler(data, lme, boot_stream(1, 1));
-    assert(fail_msg == "", "Bootstrap refit failed: %s", fail_msg)
-    assert(all(isfinite([beta tau2_boot sigma2_boot ICC_boot])), "Bootstrap refit returned non-finite parameters.")
-    assert(isscalar(ICC_boot), "Bootstrap ICC is not a scalar.")
-    assert(numel(beta) == height(lme.Coefficients) + 1, "Wrong number of fixed effects.")
+    n_fixed = height(lme.Coefficients) + 1;
+    [boot_data, boot_rows] = PROST.utils.cluster_resample(data, PROST.utils.boot_stream(1, 1));
+    stat = lme_refit(boot_data, boot_rows, lme);
+    assert(numel(stat) == n_fixed + 3, "Wrong number of bootstrap parameters.")
+    assert(all(isfinite(stat)), "Bootstrap refit returned non-finite parameters.")
+    beta = stat(1:n_fixed);
     assert(abs(beta(end) + sum(beta(2:end-1))) < 1e-12, "Last dataset effect is not minus the sum of the others.")
-    fprintf('PASS: resampler refits an unweighted model\n')
+    fprintf('PASS: lme_refit refits an unweighted model\n')
 
-    [~, ~, ~, ICC_weighted, fail_weighted] = boot_resampler(data, lme_weighted, boot_stream(1, 1));
-    assert(fail_weighted == "", "Weighted bootstrap refit failed: %s", fail_weighted)
-    assert(isscalar(ICC_weighted) && isfinite(ICC_weighted), "Weighted bootstrap ICC is not a finite scalar.")
-    fprintf('PASS: resampler refits a weighted model\n')
+    stat_weighted = lme_refit(boot_data, boot_rows, lme_weighted);
+    assert(all(isfinite(stat_weighted)), "Weighted bootstrap refit returned non-finite parameters.")
+    assert(~isequal(stat_weighted, stat), "Weights were not applied to the refit.")
+    fprintf('PASS: lme_refit refits a weighted model\n')
 
     for d = categories(data.DatasetID)'
         original = data(data.DatasetID == d{1}, :);
@@ -1721,12 +1671,16 @@ function self_test()
     end
     fprintf('PASS: resampling is stratified by dataset and keeps participants whole\n')
 
-    assert(isequal(boot_resampler(data, lme, boot_stream(1, 1)), beta), "Same substream gives different results.")
-    assert(~isequal(boot_resampler(data, lme, boot_stream(1, 2)), beta), "Different substreams give the same results.")
-    fprintf('PASS: replicates are reproducible per substream\n')
+    refit = @(boot_data, boot_rows) lme_refit(boot_data, boot_rows, lme);
+    draws = PROST.utils.cluster_bootstrap(data, refit, 3, 1, NStat=n_fixed + 3);
+    assert(isequal(draws(1, :), stat), "Replicate 1 differs from substream 1.")
+    assert(isequal(PROST.utils.cluster_bootstrap(data, refit, 3, 1, NStat=n_fixed + 3, Parallel=true), draws), ...
+        "Parallel replicates differ from serial ones.")
+    assert(~isequal(draws(2, :), draws(1, :)), "Different substreams give the same results.")
+    fprintf('PASS: replicates are reproducible per substream, serially and in parallel\n')
 
-    [~, tau2_bad, sigma2_bad, ICC_bad, fail_bad] = boot_resampler(removevars(data, 'y'), lme, boot_stream(1, 1));
-    assert(fail_bad ~= "" && all(isnan([tau2_bad sigma2_bad ICC_bad])), "A failed refit was not reported.")
+    [draws_bad, fail_bad] = PROST.utils.cluster_bootstrap(removevars(data, 'y'), refit, 2, 1, NStat=n_fixed + 3);
+    assert(all(fail_bad ~= "") && all(isnan(draws_bad), 'all'), "A failed refit was not reported.")
     fprintf('PASS: a failed refit returns NaN and its error message\n')
 
     fprintf('All self-tests passed.\n')
