@@ -21,6 +21,7 @@ cutoff_test_flag = true; % test the R_H cutoff of unstable radii on the initial 
 weight_test_flag = false; % test the weight scheme of each response model
 assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
+per_dataset_icc_flag = true; % ICC of each dataset on its own (bootstrap CIs need boot_flag), with a forest plot
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see PROST.utils.boot_stream)
@@ -100,6 +101,13 @@ for spec = responses
 
     if boot_flag
         results.(spec.name).boot = bootstrap_response_model(data_final, spec, results.(spec.name), n_boot, boot_seed);
+    end
+
+    % Per-dataset ICC: the pooled ICC is a dataset-weighted summary under
+    % dataset-dependent residual variance, so each dataset is also fitted alone
+    if per_dataset_icc_flag
+        results.(spec.name).per_dataset = per_dataset_icc(data_final, spec, n_boot, boot_seed, boot_flag);
+        plot_icc_forest(results.(spec.name), spec)
     end
 end
 
@@ -458,6 +466,185 @@ function ICC_original = icc_original_scale(tau2, sigma2)
 %   ICC_original = icc_original_scale(0.070, 0.089)
 
     ICC_original = (exp(tau2) - 1) ./ (exp(tau2 + sigma2) - 1);
+end
+
+function per_dataset = per_dataset_icc(data, spec, n_boot, boot_seed, do_boot)
+% PER_DATASET = PER_DATASET_ICC(DATA, SPEC, N_BOOT, BOOT_SEED, DO_BOOT)
+% Fits the response of SPEC to each dataset alone, with only the participant
+% random intercept, and reports its variance components and ICC. With DO_BOOT,
+% adds participant-cluster bootstrap SEs and percentile CIs.
+% All datasets are resampled in one stratified bootstrap, not one bootstrap per
+% dataset: a replicate then draws each dataset from its own segment of the
+% random stream, so the datasets are resampled independently and quantities that
+% pair draws across datasets (differences, heterogeneity) are valid. Separate
+% calls with one seed would reuse the same random numbers in every dataset.
+%
+% Input :
+%   data - the data table of measurements, after the cutoff.
+%   spec - struct with fields name (the response column) and scale ("linear"
+%          or "log"). Only "log" gets the ICC back-transformed to the original scale.
+%   n_boot - number of bootstrap replicates.
+%   boot_seed - the seed of the bootstrap random stream (see PROST.utils.boot_stream).
+%   do_boot - whether to run the bootstrap.
+%
+% Output :
+%   per_dataset - struct with fields:
+%                 table - one row per dataset: counts, tau2, sigma2, ICC (and
+%                         ICC_original for log), and with DO_BOOT the SE, CI and
+%                         share of converged and of boundary (tau2 = 0) replicates.
+%                 boot  - with DO_BOOT, the valid draws of tau2, sigma2 and ICC
+%                         per dataset (n_boot x n_datasets each, NaN if failed).
+%
+% Example usage :
+%   per_dataset = per_dataset_icc(data_final, struct('name', 'log_R_H', 'scale', "log"), 5000, 20261006, true)
+
+    response_name = spec.name;
+    is_log = is_log_scale(spec);
+    datasets = categories(removecats(data.DatasetID));
+    n_datasets = numel(datasets);
+
+    % Point estimates. Fitted outside a try, so a systematic error stops here
+    % instead of passing silently as failed bootstrap refits.
+    stat = per_dataset_icc_refit(data, response_name, datasets, false);
+    estimates = reshape(stat, 3, n_datasets)'; % rows: datasets; columns: tau2, sigma2, ICC
+
+    n_participants = zeros(n_datasets, 1);
+    n_legs = zeros(n_datasets, 1);
+    n_bilateral = zeros(n_datasets, 1);
+    for d = 1:n_datasets
+        legs_per_participant = countcats(removecats(data.ParticipantID(data.DatasetID == datasets{d})));
+        legs_per_participant = legs_per_participant(legs_per_participant > 0);
+        n_participants(d) = numel(legs_per_participant);
+        n_legs(d) = sum(legs_per_participant);
+        n_bilateral(d) = sum(legs_per_participant == 2);
+    end
+
+    T = table(string(datasets), n_participants, n_legs, n_bilateral, ...
+              estimates(:, 1), estimates(:, 2), estimates(:, 3), ...
+              'VariableNames', {'DatasetID', 'n_participants', 'n_legs', 'n_bilateral', 'tau2', 'sigma2', 'ICC'});
+    if is_log
+        T.ICC_original = icc_original_scale(T.tau2, T.sigma2);
+    end
+
+    per_dataset = struct();
+    if do_boot
+        gcp; % start the parallel pool here, so toc times only the bootstrap
+        tic
+        [boot_draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, ~) ...
+            per_dataset_icc_refit(boot_data, response_name, datasets, true), ...
+            n_boot, boot_seed, NStat=3*n_datasets, Parallel=true);
+        toc
+        if all(fail_msg ~= "")
+            error("Every per-dataset bootstrap replicate failed: %s", fail_msg(1))
+        end
+
+        tau2_boot   = boot_draws(:, 1:3:end);
+        sigma2_boot = boot_draws(:, 2:3:end);
+        ICC_boot    = boot_draws(:, 3:3:end);
+        valid = ~isnan(ICC_boot);
+
+        ICC_CI = prctile(ICC_boot, [2.5 97.5], 1)'; % prctile ignores NaN per column
+        T.ICC_SE = std(ICC_boot, 0, 1, 'omitnan')';
+        T.ICC_CI_lower = ICC_CI(:, 1);
+        T.ICC_CI_upper = ICC_CI(:, 2);
+        if is_log
+            ICC_original_boot = icc_original_scale(tau2_boot, sigma2_boot);
+            ICC_original_CI = prctile(ICC_original_boot, [2.5 97.5], 1)';
+            T.ICC_original_CI_lower = ICC_original_CI(:, 1);
+            T.ICC_original_CI_upper = ICC_original_CI(:, 2);
+        end
+        T.pct_converged = 100*mean(valid, 1)';
+        % Replicates at the boundary tau2 = 0 pile up at ICC = 0 and make the
+        % percentile CI less reliable; reported so their share can be judged
+        T.pct_boundary = 100*(sum(valid & ICC_boot < 1e-6, 1) ./ sum(valid, 1))';
+
+        per_dataset.boot = struct('seed', boot_seed, 'n_boot', n_boot, 'fail_msg', fail_msg, ...
+                                  'tau2', tau2_boot, 'sigma2', sigma2_boot, 'ICC', ICC_boot);
+    end
+    per_dataset.table = T;
+
+    fprintf('\n--- %s - Per-Dataset ICC (participant random intercept only) ---\n', response_name)
+    disp(T)
+end
+
+function stat = per_dataset_icc_refit(data, response_name, datasets, catch_errors)
+% STAT = PER_DATASET_ICC_REFIT(DATA, RESPONSE_NAME, DATASETS, CATCH_ERRORS)
+% Fits RESPONSE_NAME ~ 1 + (1|ParticipantID) to each dataset of DATA alone and
+% returns [tau2, sigma2, ICC1] per dataset, concatenated in the order of DATASETS.
+% Used both for the point estimates and as the statistic of a bootstrap replicate.
+%
+% Input :
+%   data - the data table, or a resample of it (see PROST.utils.cluster_resample).
+%   response_name - the response column name.
+%   datasets - cellstr of the dataset IDs, fixing the order of the output.
+%   catch_errors - true: a failed fit gives NaN for its dataset only, so one
+%                  dataset cannot discard the replicate of the others; false:
+%                  the error propagates.
+%
+% Example usage :
+%   stat = per_dataset_icc_refit(data_final, 'log_R_H', {'1' '2' '3' '4'}, false)
+
+    formula = [response_name ' ~ 1 + (1|ParticipantID)'];
+    stat = nan(1, 3*numel(datasets));
+    for d = 1:numel(datasets)
+        try
+            lme = fitlme(data(data.DatasetID == datasets{d}, :), formula, 'FitMethod', 'REML');
+            [ICC, tau2, sigma2] = model_metrics(lme, Display="off");
+            stat(3*d - 2:3*d) = [tau2, sigma2, ICC(1)];
+        catch ME
+            if ~catch_errors
+                rethrow(ME)
+            end
+        end
+    end
+end
+
+function plot_icc_forest(results, spec)
+% PLOT_ICC_FOREST(RESULTS, SPEC)
+% Forest plot of the per-dataset ICCs with their bootstrap CIs, and the pooled
+% ICC of the final model below them. Marker area is proportional to the number of
+% participants. CIs are drawn only when the bootstrap was run.
+%
+% Input :
+%   results - the results of one response: fields ICC, per_dataset, and
+%             optionally boot (the pooled bootstrap).
+%   spec - struct with fields name and scale.
+%
+% Example usage :
+%   plot_icc_forest(results.log_R_H, struct('name', 'log_R_H', 'scale', "log"))
+
+    T = results.per_dataset.table;
+    n_datasets = height(T);
+    has_ci = ismember('ICC_CI_lower', T.Properties.VariableNames);
+
+    figure
+    hold on
+    y = n_datasets + 1:-1:2;
+    if has_ci
+        errorbar(T.ICC, y, [], [], T.ICC - T.ICC_CI_lower, T.ICC_CI_upper - T.ICC, ...
+                 'k', 'LineStyle', 'none', 'CapSize', 0)
+    end
+    scatter(T.ICC, y, 20 + 4*T.n_participants, 'k', 's', 'filled')
+
+    % Pooled ICC: final model, dataset fixed effect
+    pooled = results.ICC;
+    if isfield(results, 'boot')
+        ci = results.boot.boot_inferences{'ICC', {'CI_lower', 'CI_upper'}};
+        patch([ci(1) pooled ci(2) pooled], [1 1.2 1 0.8], 'k')
+    else
+        plot(pooled, 1, 'kd', 'MarkerFaceColor', 'k')
+    end
+    xline(pooled, ':')
+
+    labels = ["Dataset " + T.DatasetID + " (n = " + T.n_participants + ")"; "Pooled"];
+    yticks(1:n_datasets + 1)
+    yticklabels(flip(labels))
+    ylim([0.5 n_datasets + 1.5])
+    xlim([0 1])
+    xlabel(sprintf("ICC (%s scale)", spec.scale))
+    title(sprintf("Per-dataset ICC - %s", spec.name), 'Interpreter', 'none')
+    box on
+    hold off
 end
 
 function normality_check(varaiable, var_name, test_type)
@@ -1682,6 +1869,37 @@ function self_test()
     [draws_bad, fail_bad] = PROST.utils.cluster_bootstrap(removevars(data, 'y'), refit, 2, 1, NStat=n_fixed + 3);
     assert(all(fail_bad ~= "") && all(isnan(draws_bad), 'all'), "A failed refit was not reported.")
     fprintf('PASS: a failed refit returns NaN and its error message\n')
+
+    % ------------------------------------------------------------------
+    % Per-dataset ICC
+    % ------------------------------------------------------------------
+    datasets = categories(data.DatasetID);
+    stat_pd = per_dataset_icc_refit(data, 'y', datasets, false);
+    assert(numel(stat_pd) == 3*numel(datasets) && all(isfinite(stat_pd)), ...
+        "Per-dataset refit did not return [tau2, sigma2, ICC] per dataset.")
+    lme_4 = fitlme(data(data.DatasetID == datasets{4}, :), 'y ~ 1 + (1|ParticipantID)', 'FitMethod', 'REML');
+    assert(abs(stat_pd(end) - model_metrics(lme_4, Display="off")) < 1e-12, ...
+        "Per-dataset ICC differs from a direct fit of that dataset.")
+    data_bad = data;
+    data_bad.y(data_bad.DatasetID == datasets{2}) = NaN; % fitlme errors with no usable rows
+    stat_bad = per_dataset_icc_refit(data_bad, 'y', datasets, true);
+    assert(all(isnan(stat_bad(4:6))) && isequal(stat_bad([1:3 7:end]), stat_pd([1:3 7:end])), ...
+        "A failed dataset fit did not give NaN for that dataset only.")
+    fprintf('PASS: per-dataset ICC matches a direct fit; a failed dataset NaNs only itself\n')
+
+    % One stratified bootstrap: the datasets of a replicate are resampled from
+    % different random numbers. Same-size strata would draw identical index
+    % vectors if the stream restarted per dataset.
+    data_eq = synthetic_lme_data(stream, [20 20], [0 0], tau2, sigma2);
+    [boot_eq, ~] = PROST.utils.cluster_resample(data_eq, PROST.utils.boot_stream(1, 1));
+    drawn = cell(1, 2);
+    for d = 1:2
+        stratum = boot_eq(boot_eq.DatasetID == string(d), :);
+        [~, first_leg] = unique(stratum.ParticipantID); % one row per draw, in draw order
+        drawn{d} = double(string(stratum.ParticipantIDOriginal(first_leg)));
+    end
+    assert(~isequal(drawn{1}, drawn{2}), "Strata of one replicate reuse the same random numbers.")
+    fprintf('PASS: strata of one bootstrap replicate are resampled independently\n')
 
     fprintf('All self-tests passed.\n')
 end
