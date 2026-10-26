@@ -22,6 +22,7 @@ weight_test_flag = false; % test the weight scheme of each response model
 assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 per_dataset_icc_flag = true; % ICC of each dataset on its own (bootstrap CIs need boot_flag), with a forest plot
+covariate_flag = true; % side, anthropometric, speed and scaling models of log_R_H (bootstrap CIs need boot_flag)
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see PROST.utils.boot_stream)
@@ -37,6 +38,62 @@ end
 %   "log"    - the ICC is also back-transformed to the original scale
 %   "linear" - the model-scale ICC is already on the original scale
 responses = struct('name', {'R_H', 'log_R_H'}, 'scale', {"linear", "log"});
+
+% Covariate models (review 1a, 1b, 4). Each adds fixed effects to
+%   response ~ 1 + DatasetID + terms + (1|DatasetID:ParticipantID)
+% Fields:
+%   terms    - added fixed effects; a "_c" suffix is the column centred within
+%              dataset (centring leaves the slopes unchanged, as DatasetID is in
+%              the model, and keeps the intercept at the dataset mean).
+%   complete - columns that must be non-missing: defines the rows. A model and its
+%              baseline must share them, so their tau2 compare on the same legs.
+%   datasets - datasets used ([] = all).
+%   cut      - apply the R_H <= 1 cutoff.
+%   baseline - model whose tau2 the pseudo-R2 = 1 - tau2/tau2_baseline refers to,
+%              and against which the ML likelihood-ratio test of the added terms runs.
+% Height enters as log H: since log R_H = log R - log H, the model of log R_H with
+% log H is the model of log R with the log H slope shifted by exactly 1, so every
+% other estimate, tau2 and the pseudo-R2 do not depend on the height normalization.
+% The anthropometric block is tested against the side-only model, so its test and
+% pseudo-R2 isolate the anthropometrics.
+anthro_rows = ["Leg" "Age" "Sex" "Height" "Mass" "Leg_length"];
+anthro_terms = ["Leg" "Age_c" "Sex" "log_H_c" "Mass_c"];
+covariate_models = [ ...
+    struct('name', 'base_cc',       'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+           'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', '')
+    struct('name', 'side',          'response', 'log_R_H', 'terms', "Leg", ...
+           'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'base_cc')
+    struct('name', 'anthro',        'response', 'log_R_H', 'terms', anthro_terms, ...
+           'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'side')
+    struct('name', 'anthro_leglen', 'response', 'log_R_H', 'terms', ["Leg" "Age_c" "Sex" "log_L_c" "Mass_c"], ...
+           'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'side')
+    % Slope heterogeneity: one slope per dataset, tested against the common slope
+    struct('name', 'anthro_het',    'response', 'log_R_H', 'terms', [anthro_terms ...
+                                                                      "Age_c:DatasetID" "Sex:DatasetID" "log_H_c:DatasetID" "Mass_c:DatasetID"], ...
+           'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'anthro')
+    % Dataset 4 alone: the largest dataset, with a precise ICC, so its pseudo-R2
+    % does not average over datasets with different variance components
+    struct('name', 'base_D4',       'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+           'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', '')
+    struct('name', 'side_D4',       'response', 'log_R_H', 'terms', "Leg", ...
+           'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'base_D4')
+    struct('name', 'anthro_D4',     'response', 'log_R_H', 'terms', anthro_terms, ...
+           'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'side_D4')
+    struct('name', 'speed_D4',      'response', 'log_R_H', 'terms', "v_star_c", ...
+           'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'base_D4')
+    struct('name', 'base_D34',      'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+           'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', '')
+    struct('name', 'speed_D34',     'response', 'log_R_H', 'terms', "v_star_c", ...
+           'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', 'base_D34')
+    struct('name', 'speed_D34_het', 'response', 'log_R_H', 'terms', ["v_star_c" "v_star_c:DatasetID"], ...
+           'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', 'speed_D34')
+    % Scaling: slope 1 = r proportional to H, slope 0 = r unrelated to H. The
+    % cutoff selects on r/H, so the slope is also reported without it.
+    struct('name', 'scaling',       'response', 'log_R',   'terms', "log_H_c", ...
+           'complete', "Height", 'datasets', [], 'cut', true, 'baseline', '')
+    struct('name', 'scaling_nocut', 'response', 'log_R',   'terms', "log_H_c", ...
+           'complete', "Height", 'datasets', [], 'cut', false, 'baseline', '')
+    ]';
 
 if self_test_flag
     self_test()
@@ -111,6 +168,28 @@ for spec = responses
     end
 end
 
+%% Covariate Models: Side, Anthropometrics, Speed and Scaling
+% How much of the between-participant variance tau2 the covariates explain
+if covariate_flag
+    results.covariate_models = struct();
+    for model_spec = covariate_models
+        if model_spec.cut
+            model_data = covariate_model_data(data_final, model_spec);
+        else
+            model_data = covariate_model_data(data, model_spec);
+        end
+        baseline = struct([]);
+        if ~isempty(model_spec.baseline)
+            baseline = results.covariate_models.(model_spec.baseline);
+        end
+        results.covariate_models.(model_spec.name) = fit_covariate_model(model_data, model_spec, baseline, height(data));
+        if boot_flag
+            results.covariate_models.(model_spec.name).boot = bootstrap_covariate_model(model_data, ...
+                results.covariate_models.(model_spec.name), baseline, n_boot, boot_seed);
+        end
+    end
+end
+
 % Distinct variable names, so loading the file next to other results cannot clash
 if save_flag
     saved.radius_lme_results = results;
@@ -163,6 +242,9 @@ function data = build_analysis_table(analyzer)
     data.R = radius;
     data.R_H = radius ./ body_height;
     data.log_R_H = log(data.R_H);
+    data.log_R = log(radius); % with log_H, the scaling model of r on H
+    data.log_H = log(body_height);
+    data.log_L = log(data.Leg_length);
     data.AngleStartDeg = angle_start;
     data.AngleStartRad = deg2rad(angle_start);
     data.AngleEndDeg = angle_end;
@@ -187,6 +269,183 @@ function data = build_analysis_table(analyzer)
             data.n_steps(idx) = sum([steps.Is_included]);
         end
     end
+
+    % Mean measured speed of the valid steps of each leg, and its dimensionless
+    % (Froude) form v* = v / sqrt(g * leg length), comparable across body sizes
+    speeds = analyzer.get_step_speeds();
+    speeds.Side = categorical(speeds.Side);
+    leg_speed = groupsummary(speeds, ["Dataset_id" "Participant_id" "Side"], @(v) mean(v, "omitnan"), "Speed");
+    leg_speed = renamevars(leg_speed, "fun1_Speed", "Speed");
+    keys = table(double(string(data.DatasetID)), double(string(data.ParticipantID)), data.Leg, ...
+                 'VariableNames', {'Dataset_id', 'Participant_id', 'Side'});
+    [found, loc] = ismember(keys, leg_speed(:, ["Dataset_id" "Participant_id" "Side"]));
+    assert(all(found), "Some legs of the analysis table have no valid steps in get_step_speeds.")
+    data.Speed = leg_speed.Speed(loc); % [km/hour]
+    speed_mps = PROST.utils.convert_units(data.Speed, "km", "m") ./ PROST.utils.convert_units(1, "hour", "second");
+    data.v_star = speed_mps ./ sqrt(9.81 * data.Leg_length); % Leg_length [m]
+end
+
+function data = covariate_model_data(data, spec)
+% DATA = COVARIATE_MODEL_DATA(DATA, SPEC)
+% The rows of one covariate model: its datasets, complete on SPEC.complete, with
+% unused categories removed (effects coding needs every level present) and the
+% "_c" terms added as their column centred within dataset.
+%
+% Example usage :
+%   model_data = covariate_model_data(data_final, covariate_models(3))
+
+    if ~isempty(spec.datasets)
+        data = data(ismember(double(string(data.DatasetID)), spec.datasets), :);
+    end
+    keep = true(height(data), 1);
+    for column = spec.complete
+        keep = keep & ~ismissing(data.(column));
+    end
+    data = data(keep, :);
+    data.DatasetID = removecats(data.DatasetID);
+    if ismember("Sex", data.Properties.VariableNames)
+        data.Sex = removecats(data.Sex);
+    end
+
+    for term = spec.terms(endsWith(spec.terms, "_c"))
+        column = extractBefore(term, strlength(term) - 1);
+        dataset_mean = groupsummary(data, "DatasetID", "mean", column);
+        [~, loc] = ismember(data.DatasetID, dataset_mean.DatasetID);
+        data.(term) = data.(column) - dataset_mean.("mean_" + column)(loc);
+    end
+end
+
+function results = fit_covariate_model(data, spec, baseline, n_all)
+% RESULTS = FIT_COVARIATE_MODEL(DATA, SPEC, BASELINE, N_ALL)
+% Fits one covariate model, prints its fixed effects and variance components and,
+% if it has a baseline, the level-2 pseudo-R2 = 1 - tau2 / tau2_baseline: the
+% share of the between-participant variance that the added terms explain. It is
+% negative when tau2 grows.
+%
+% Input :
+%   data - the rows of the model (see covariate_model_data).
+%   spec - one element of covariate_models.
+%   baseline - the results of the baseline model, or struct([]) for none. Must
+%              have been fitted on the same rows.
+%   n_all - number of legs before the cutoff and complete-case selection.
+%
+% Example usage :
+%   r = fit_covariate_model(model_data, spec, results.covariate_models.base_cc, height(data))
+
+    fixed = string(spec.response) + " ~ 1";
+    if numel(categories(data.DatasetID)) > 1 % a single dataset has no dataset effect
+        fixed = fixed + " + DatasetID";
+    end
+    formula = strjoin([fixed, spec.terms, ...
+                       "(1|DatasetID:ParticipantID)"], " + ");
+    lme = fitlme(data, formula, 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+    [ICC, tau2, sigma2] = model_metrics(lme, Display="off");
+
+    n_participants = height(unique(data(:, ["DatasetID" "ParticipantID"])));
+    fprintf('\n=== Covariate model %s: %s ===\n', spec.name, formula)
+    fprintf('%d legs of %d participants (%d of %d legs without the cutoff/complete-case/dataset selection)\n', ...
+        height(data), n_participants, n_all - height(data), n_all)
+    disp(lme.Coefficients(:, {'Name', 'Estimate', 'SE', 'tStat', 'DF', 'pValue', 'Lower', 'Upper'}))
+    fprintf('tau2 = %.4f, sigma2 = %.4f, ICC = %.4f\n', tau2, sigma2, ICC(1))
+
+    results.formula = formula;
+    results.lme = lme;
+    results.n_legs = height(data);
+    results.n_participants = n_participants;
+    results.tau2 = tau2;
+    results.sigma2 = sigma2;
+    results.ICC = ICC(1);
+    results.pseudo_R2 = NaN;
+    if ~isempty(baseline)
+        assert(isequal(baseline.lme.ObservationInfo.Excluded, lme.ObservationInfo.Excluded) && ...
+               baseline.n_legs == height(data), "The model and its baseline must be fitted on the same rows.")
+        results.pseudo_R2 = 1 - tau2 / baseline.tau2;
+        fprintf('Level-2 pseudo-R2 vs %s: 1 - %.4f/%.4f = %.3f\n', spec.baseline, tau2, baseline.tau2, results.pseudo_R2)
+
+        % Joint test of the added terms. REML likelihoods are not comparable
+        % between different fixed effects, so both models are refitted with ML.
+        lme_ml = fitlme(data, formula, 'FitMethod', 'ML', 'DummyVarCoding', 'effects');
+        lme_base_ml = fitlme(data, char(baseline.lme.Formula), 'FitMethod', 'ML', 'DummyVarCoding', 'effects');
+        lrt = compare(lme_base_ml, lme_ml);
+        results.lrt = struct('LRStat', lrt.LRStat(2), 'deltaDF', lrt.deltaDF(2), 'pValue', lrt.pValue(2));
+        fprintf('ML likelihood-ratio test vs %s: LR = %.3f, df = %d, p = %.4g\n', ...
+            spec.baseline, lrt.LRStat(2), lrt.deltaDF(2), lrt.pValue(2))
+    end
+
+    % Scaling: test the slope of log H against proportional scaling as well
+    is_slope = strcmp(lme.CoefficientNames, 'log_H_c');
+    if any(is_slope)
+        slope = lme.Coefficients.Estimate(is_slope);
+        t1 = (slope - 1) / lme.Coefficients.SE(is_slope);
+        p1 = 2 * tcdf(-abs(t1), lme.Coefficients.DF(is_slope));
+        fprintf('Scaling slope of log r on log H = %.3f [%.3f, %.3f]; vs 1: t = %.3f, p = %.4g\n', ...
+            slope, lme.Coefficients.Lower(is_slope), lme.Coefficients.Upper(is_slope), t1, p1)
+    end
+end
+
+function boot_results = bootstrap_covariate_model(data, results, baseline, n_boot, boot_seed)
+% BOOT_RESULTS = BOOTSTRAP_COVARIATE_MODEL(DATA, RESULTS, BASELINE, N_BOOT, BOOT_SEED)
+% Cluster (participant-level), stratified-by-dataset bootstrap of a covariate
+% model: SE and percentile CIs of its fixed effects, variance components, ICC and,
+% with a baseline, of the pseudo-R2. The baseline is refitted on the same resample
+% so the pseudo-R2 of a replicate compares the two models on the same legs. With
+% the same seed every model on the same rows gets the same resamples.
+%
+% Example usage :
+%   boot = bootstrap_covariate_model(model_data, results.covariate_models.anthro, ...
+%                                    results.covariate_models.base_cc, 5000, 20261006)
+
+    lme = results.lme;
+    lme_base = [];
+    if ~isempty(baseline)
+        lme_base = baseline.lme;
+    end
+    n_fixed = height(lme.Coefficients);
+
+    gcp;
+    tic
+    [draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, ~) ...
+        covariate_refit(boot_data, lme, lme_base), n_boot, boot_seed, NStat=n_fixed + 4, Parallel=true);
+    toc
+
+    valid = ~any(isnan(draws(:, 1:n_fixed + 3)), 2);
+    fprintf('\n--- %s - Bootstrap (%.0f%% of %d refits converged, seed %d) ---\n', ...
+        results.formula, 100*mean(valid), n_boot, boot_seed)
+    names = [lme.CoefficientNames 'tau2' 'sigma2' 'ICC' 'pseudo_R2'];
+    estimates = [lme.Coefficients.Estimate; results.tau2; results.sigma2; results.ICC; results.pseudo_R2];
+    draws = draws(valid, :);
+    CI = prctile(draws, [2.5 97.5], 1);
+    boot_inferences = table(estimates, mean(draws, 1)', std(draws, 0, 1)', CI(1, :)', CI(2, :)', ...
+        'VariableNames', {'LmeEstimate', 'BootEstimate', 'SE', 'CI_lower', 'CI_upper'}, 'RowNames', names);
+    disp(boot_inferences)
+
+    boot_results.seed = boot_seed;
+    boot_results.n_boot = n_boot;
+    boot_results.valid = valid;
+    boot_results.fail_msg = fail_msg;
+    boot_results.draws = draws;
+    boot_results.names = names;
+    boot_results.boot_inferences = boot_inferences;
+end
+
+function stat = covariate_refit(boot_data, lme, lme_base)
+% STAT = COVARIATE_REFIT(BOOT_DATA, LME, LME_BASE)
+% Statistic of one bootstrap replicate of a covariate model: [beta, tau2, sigma2,
+% ICC, pseudo_R2]. pseudo_R2 is NaN without a baseline (LME_BASE = []). The models
+% are unweighted, so no weights are carried over.
+%
+% Example usage :
+%   stat = covariate_refit(boot_data, lme, lme_base)
+
+    lme_boot = fitlme(boot_data, char(lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+    [ICC, tau2, sigma2] = model_metrics(lme_boot, Display="off");
+    pseudo_R2 = NaN;
+    if ~isempty(lme_base)
+        lme_base_boot = fitlme(boot_data, char(lme_base.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+        [~, tau2_base] = model_metrics(lme_base_boot, Display="off");
+        pseudo_R2 = 1 - tau2 / tau2_base;
+    end
+    stat = [lme_boot.Coefficients.Estimate', tau2, sigma2, ICC(1), pseudo_R2];
 end
 
 function is_log = is_log_scale(spec)
@@ -1909,6 +2168,38 @@ function self_test()
     end
     assert(~isequal(drawn{1}, drawn{2}), "Strata of one replicate reuse the same random numbers.")
     fprintf('PASS: strata of one bootstrap replicate are resampled independently\n')
+
+    % ------------------------------------------------------------------
+    % Covariate models
+    % ------------------------------------------------------------------
+    % A participant-level covariate x carries half of tau2: y gains beta*x with
+    % beta^2 * var(x) = tau2/2, so the pseudo-R2 should be near 0.5.
+    data_cov = synthetic_lme_data(stream, [60 60 80 120], [-1.7 -1.2 -1.1 -1.45], tau2/2, sigma2);
+    [~, ~, participant] = unique(data_cov(:, {'DatasetID', 'ParticipantID'}));
+    x_participant = randn(stream, max(participant), 1);
+    beta_x = sqrt(tau2/2);
+    data_cov.x = x_participant(participant);
+    data_cov.y = data_cov.y + beta_x * data_cov.x;
+    spec_base = struct('name', 'base', 'response', 'y', 'terms', {strings(1, 0)}, ...
+                       'complete', "x", 'datasets', [], 'cut', true, 'baseline', '');
+    spec_x = spec_base;
+    spec_x.name = 'x_model';
+    spec_x.terms = "x_c";
+    spec_x.baseline = 'base';
+    base = fit_covariate_model(covariate_model_data(data_cov, spec_base), spec_base, struct([]), height(data_cov));
+    x_data = covariate_model_data(data_cov, spec_x);
+    assert(all(abs(groupsummary(x_data, "DatasetID", "mean", "x_c").mean_x_c) < 1e-12), ...
+        "The _c column is not centred within dataset.")
+    with_x = fit_covariate_model(x_data, spec_x, base, height(data_cov));
+    beta_hat = with_x.lme.Coefficients.Estimate(strcmp(with_x.lme.CoefficientNames, 'x_c'));
+    assert(abs(beta_hat - beta_x) < 0.05, "Covariate slope %.3f is not near the simulated %.3f.", beta_hat, beta_x)
+    assert(with_x.pseudo_R2 > 0.2 && with_x.pseudo_R2 < 0.8, "Pseudo-R2 %.3f is not near the simulated 0.5.", with_x.pseudo_R2)
+    [boot_cov, ~] = PROST.utils.cluster_resample(x_data, PROST.utils.boot_stream(1, 1));
+    stat_cov = covariate_refit(boot_cov, with_x.lme, base.lme);
+    assert(numel(stat_cov) == height(with_x.lme.Coefficients) + 4 && all(isfinite(stat_cov)), ...
+        "covariate_refit did not return [beta, tau2, sigma2, ICC, pseudo_R2].")
+    fprintf('PASS: covariate slope %.3f (simulated %.3f), pseudo-R2 %.3f (simulated 0.5)\n', ...
+        beta_hat, beta_x, with_x.pseudo_R2)
 
     fprintf('All self-tests passed.\n')
 end
