@@ -26,9 +26,9 @@ function save_figure(fig, file_path, opts, prep_opts)
 %               - 'on' - prepare figure for publication.
 %               - 'off' - keep settings as-is.
 %          Default: 'on'.
-%   prep_options - a struct containing the Name-Value pair options of the
-%                  PROST.utils.prep_figure_for_publish function. The format is: 
-%                  prep_options.name=value.
+%   prepare_options - a struct containing the Name-Value pair options of the
+%                     PROST.utils.prep_figure_for_publish function. The format is:
+%                     prepare_options.name=value.
 %
 % Example :
 %   save_figure(f, "C:/path/to/folder", file_type="pdf", append=true)
