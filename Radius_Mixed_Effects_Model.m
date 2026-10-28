@@ -23,6 +23,7 @@ assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 per_dataset_icc_flag = true; % ICC of each dataset on its own (bootstrap CIs need boot_flag), with a forest plot
 covariate_flag = true; % side, anthropometric, speed and scaling models of log_R_H (bootstrap CIs need boot_flag)
+covariate_diagnostics_flag = false; % assumption checks of the covariate models and the per-dataset ICC models
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see PROST.utils.boot_stream)
@@ -168,6 +169,11 @@ for spec = responses
     end
 end
 
+% Assumption checks of the per-dataset ICC models
+if covariate_diagnostics_flag
+    per_dataset_diagnostics(data_final, 'log_R_H')
+end
+
 %% Covariate Models: Side, Anthropometrics, Speed and Scaling
 % How much of the between-participant variance tau2 the covariates explain
 if covariate_flag
@@ -183,6 +189,9 @@ if covariate_flag
             baseline = results.covariate_models.(model_spec.baseline);
         end
         results.covariate_models.(model_spec.name) = fit_covariate_model(model_data, model_spec, baseline, height(data));
+        if covariate_diagnostics_flag && ismember(model_spec.name, ["anthro" "anthro_D4" "speed_D34" "speed_D4" "scaling"])
+            covariate_diagnostics(model_data, results.covariate_models.(model_spec.name), baseline, model_spec)
+        end
         if boot_flag
             results.covariate_models.(model_spec.name).boot = bootstrap_covariate_model(model_data, ...
                 results.covariate_models.(model_spec.name), baseline, n_boot, boot_seed);
@@ -426,6 +435,119 @@ function boot_results = bootstrap_covariate_model(data, results, baseline, n_boo
     boot_results.draws = draws;
     boot_results.names = names;
     boot_results.boot_inferences = boot_inferences;
+end
+
+function covariate_diagnostics(data, results, baseline, spec)
+% COVARIATE_DIAGNOSTICS(DATA, RESULTS, BASELINE, SPEC)
+% Assumption checks of one covariate model, beyond what the case bootstrap makes
+% robust: normality of the residuals and random effects, residuals vs fitted and
+% homoscedasticity across datasets, linearity in each continuous covariate
+% (marginal residuals vs the covariate, and the CI of an added quadratic term),
+% collinearity (VIF), and the leave-one-participant-out range of the pseudo-R2.
+% Prints the results and plots the residual figures.
+%
+% Example usage :
+%   covariate_diagnostics(model_data, results.covariate_models.anthro, ...
+%                         results.covariate_models.side, covariate_models(3))
+
+    lme = results.lme;
+    name = "Covariate model " + spec.name;
+    fprintf('\n===== Diagnostics: %s =====\n', name)
+
+    % Normality
+    res = residuals(lme, 'ResidualType', 'Pearson');
+    normality_check(res, name + " Residual [-]", 'anderson')
+    normality_check(randomEffects(lme), name + " Random Effects [-]", 'anderson')
+
+    % Residuals vs fitted, and equal residual variance across datasets
+    figure(Name=name + " Residuals vs Fitted")
+    scatter(fitted(lme), res, 15, data.DatasetID, 'filled')
+    yline(0, '--r')
+    xlabel('Fitted values [-]')
+    ylabel('Pearson residuals [-]')
+    title(name + " Residuals vs Fitted", 'Interpreter', 'none')
+    if numel(categories(data.DatasetID)) > 1
+        p = vartestn(res, data.DatasetID, "Display", "off", "TestType", "BrownForsythe");
+        fprintf('Brown-Forsythe test of equal residual variance across datasets: p = %.4g\n', p)
+    end
+
+    % Linearity: marginal residuals (response - fixed part) carry both the leg
+    % and the participant deviations, so a missed curve in a participant-level
+    % covariate shows in them as well
+    res_marginal = residuals(lme, 'Conditional', false);
+    continuous = spec.terms(endsWith(spec.terms, "_c") & ~contains(spec.terms, ":"));
+    for term = continuous
+        figure(Name=name + " Marginal Residuals vs " + term)
+        scatter(data.(term), res_marginal, 15, data.DatasetID, 'filled')
+        hold on
+        [x_sorted, order] = sort(data.(term));
+        plot(x_sorted, smoothdata(res_marginal(order), 'loess', ceil(0.3*height(data))), 'r-', 'LineWidth', 1.5)
+        yline(0, '--k')
+        xlabel(term, 'Interpreter', 'none')
+        ylabel('Marginal residuals [-]')
+        title(name + " Marginal Residuals vs " + term, 'Interpreter', 'none')
+
+        data_q = data;
+        data_q.quad = data.(term).^2;
+        formula_q = replace(char(lme.Formula), ' + (', ' + quad + ('); % fixed terms precede the random ones
+        lme_q = fitlme(data_q, formula_q, 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+        q = lme_q.Coefficients(strcmp(lme_q.CoefficientNames, 'quad'), :);
+        fprintf('Quadratic term in %s: %.4g, 95%% CI [%.4g, %.4g]\n', term, q.Estimate, q.Lower, q.Upper)
+    end
+
+    % Collinearity of the fixed effects (excluding the intercept)
+    X = designMatrix(lme, 'Fixed');
+    X = X(:, 2:end);
+    if size(X, 2) > 1
+        vif = diag(inv(corrcoef(X)))';
+        fprintf('VIF: %s\n', strjoin(string(lme.CoefficientNames(2:end)) + " = " + compose("%.2f", vif), ', '))
+    end
+
+    % Influence of single participants on the pseudo-R2
+    if ~isempty(baseline)
+        participant = findgroups(data.DatasetID, data.ParticipantID);
+        n_participants = max(participant);
+        pseudo_R2 = nan(n_participants, 1);
+        for k = 1:n_participants
+            keep = participant ~= k;
+            lme_k = fitlme(data(keep, :), char(lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+            lme_base_k = fitlme(data(keep, :), char(baseline.lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
+            [~, tau2_k] = model_metrics(lme_k, Display="off");
+            [~, tau2_base_k] = model_metrics(lme_base_k, Display="off");
+            pseudo_R2(k) = 1 - tau2_k / tau2_base_k;
+        end
+        [~, k_max] = max(abs(pseudo_R2 - results.pseudo_R2));
+        first = find(participant == k_max, 1);
+        fprintf('Leave-one-participant-out pseudo-R2: %.3f to %.3f (full %.3f); largest change %.3f without dataset %s participant %s\n', ...
+            min(pseudo_R2), max(pseudo_R2), results.pseudo_R2, pseudo_R2(k_max) - results.pseudo_R2, ...
+            string(data.DatasetID(first)), string(data.ParticipantID(first)))
+    end
+end
+
+function per_dataset_diagnostics(data, response_name)
+% PER_DATASET_DIAGNOSTICS(DATA, RESPONSE_NAME)
+% Normality of the residuals and random effects, and residuals vs fitted, of the
+% per-dataset ICC models (response ~ 1 + (1|ParticipantID), one per dataset).
+% With few participants (Dataset 1) the checks have little power.
+%
+% Example usage :
+%   per_dataset_diagnostics(data_final, 'log_R_H')
+
+    for d = categories(data.DatasetID)'
+        data_d = data(data.DatasetID == d{1}, :);
+        lme = fitlme(data_d, [response_name ' ~ 1 + (1|ParticipantID)'], 'FitMethod', 'REML');
+        name = "Per-dataset ICC model, Dataset " + d{1} + " - " + response_name;
+        fprintf('\n===== Diagnostics: %s (%d legs) =====\n', name, height(data_d))
+        res = residuals(lme, 'ResidualType', 'Pearson');
+        normality_check(res, name + " Residual [-]", 'anderson')
+        normality_check(randomEffects(lme), name + " Random Effects [-]", 'anderson')
+        figure(Name=name + " Residuals vs Fitted")
+        scatter(fitted(lme), res, 15, 'filled')
+        yline(0, '--r')
+        xlabel('Fitted values [-]')
+        ylabel('Pearson residuals [-]')
+        title(name + " Residuals vs Fitted", 'Interpreter', 'none')
+    end
 end
 
 function stat = covariate_refit(boot_data, lme, lme_base)
