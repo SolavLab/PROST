@@ -11,6 +11,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 % Name-Value pair options :
 %   number_of_axes_in_fig - number of axes per figure to plot.
 %   normalizer_name - variable name by which we normalize the responses.
+%   coverage - the minimal fraction of legs shown within the y-axis limits, in
+%              (0, 1]; at most floor((1 - coverage)*n) legs fall outside the
+%              limits. Legs outside the limits are drawn as open markers on the
+%              axis edge. Display only: the correlations are computed on all legs.
+%              The limits are one-sided from 0 for non-negative responses and
+%              otherwise the shortest window that excludes the most extreme legs
+%              in either tail. Use 1 to show all legs. Default: 0.95.
 %   show - a value denoting whether to show the figures or save them. Specified 
 %          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
 %          value of 'on' is equivalent to true, and 'off' is equivalent to false.
@@ -57,6 +64,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
         predictors_list            {mustBeTextOrEmpty} = []
         responses_list             {mustBeTextOrEmpty} = []
         opts.normalizer_name       {mustBeTextScalarOrEmpty} = []
+        opts.coverage              (1, 1) double {mustBeInRange(opts.coverage, 0, 1, "exclude-lower")} = 0.95
     end
      arguments
         save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
@@ -73,7 +81,8 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
 
     % Prep Input Arguments
     normalizer_name = opts.normalizer_name;
-    
+    coverage = opts.coverage;
+
     show = save_opts.show;
     file_type = save_opts.file_type;
     append = save_opts.append;
@@ -202,7 +211,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end
             
             % Plot values for comparison
-            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name);
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit);
 
             txt = sprintf(" R^2 = %.2g\n" + ...
                           " Spearman: \\rho = %.2g, p = %.2g\n" + ...
@@ -272,7 +281,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end
             
             % Plot values for comparison
-            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name);
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit);
 
             % Wilcoxon \ Mann-Whitney U-test
             txt = sprintf(" Wilcoxon: H = %d, p = %.2g\n r_{rb} = %.2f", ...
@@ -298,6 +307,13 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             % Increment counter
             axes_counter = axes_counter + 1;
         end % p_idx=1:n_categorical_predictores
+
+        % Limit the y-axes to the coverage fraction of legs
+        [n_below, n_above] = clip_to_coverage(obj, findobj(tl, 'Type', 'axes'), y, coverage);
+        if n_below + n_above > 0
+            tl.Subtitle.String = sprintf("Filter: %s | %d legs above / %d below the y-axis limits (coverage %.2g)", ...
+                                         filter, n_above, n_below, coverage);
+        end
 
         % Save figure and create legend
         % Dummy plots for legend in last axes
@@ -350,14 +366,15 @@ function mustBeTextOrEmpty(value)
     mustBeText(value);
 end
 
-function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, response_name)
+function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, response_name, y_unit)
     arguments
         obj
-        ax 
+        ax
         y_m             (1, 1) double
         y_range         (1, 2) double
         normalizer_name {mustBeTextScalarOrEmpty} = []
         response_name   (1, 1) string = "Radius"
+        y_unit          (1, 1) string = "mm"
     end
 
     h = gobjects(0);
@@ -374,7 +391,14 @@ function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, resp
         paper_colors = paper_colors(2:end, :);
 
         if response_name == "Radius"
-            % comparative values from papers (normalized by body height):
+            % Median height-normalised radii of measured ROS of able-bodied walking.
+            % Ankle-foot ROS (CoP in the shank, knee-ankle, CS, as in PROST):
+            % Hansen & Childress, 2004 (A) "Effects of shoe heel height..." and Hansen
+            % & Meier, 2010 "Roll-over shapes of the ankle-foot and knee-ankle-foot
+            % systems of able-bodied children". Knee-ankle-foot ROS (CoP in a
+            % hip-ankle CS, not directly comparable to PROST): Hansen et al., 2004 (B)
+            % "Roll-over shapes of human locomotor systems: effects of walking speed"
+            % and Hansen & Childress, 2005 "Effects of adding weight to the torso...".
             hansen_effects_2004_radius = 0.19;
             hansen_roll_over_2010_radius = 0.22;
             hansen_roll_over_2004_radius = 0.15;
@@ -385,12 +409,89 @@ function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, resp
             h = [h yline(ax, hansen_roll_over_2004_radius, Color=paper_colors(3, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
             h = [h yline(ax, hansen_effects_2005_radius,   Color=paper_colors(4, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
         elseif response_name == "Center_horizontal"
-            % comparative values from papers (normalized by body height):
+            % Median height-normalised centre horizontal coordinates of measured
+            % knee-ankle-foot ROS of able-bodied walking (CoP in a hip-ankle CS, not
+            % directly comparable to the shank-based PROST ankle-foot ROS): Hansen et
+            % al., 2004 (B) "Roll-over shapes of human locomotor systems: effects of
+            % walking speed" and Hansen & Childress, 2005 "Effects of adding weight to
+            % the torso...".
             hansen_roll_over_2004_center_hor = 0.006;
             hansen_effects_2005_center_hor = 0.011;
 
             h = [h yline(ax, hansen_roll_over_2004_center_hor, Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
             h = [h yline(ax, hansen_effects_2005_center_hor,   Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
         end
+    elseif isempty(normalizer_name) && response_name == "Center_horizontal"
+        paper_colors = orderedcolors("gem");
+        paper_colors = paper_colors(2:end, :);
+
+        % Arc-centre offsets anterior to the tibial axis imposed on rigid arc feet
+        % (design values, not measured ROS): Adamczyk et al., 2006, p. 3957 and
+        % Adamczyk & Kuo, 2013, p. 2725. In m:
+        adamczyk_advantages_2006_center_hor = 0.076;
+        adamczyk_mechanical_2013_center_hor = 0.058;
+        to_unit = @(v) PROST.utils.convert_units(v, "m", y_unit);
+
+        h = [h yline(ax, to_unit(adamczyk_advantages_2006_center_hor), Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Adamczyk, 2006")];
+        h = [h yline(ax, to_unit(adamczyk_mechanical_2013_center_hor), Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Adamczyk, 2013")];
+    end
+end
+
+function [n_below, n_above] = clip_to_coverage(obj, axs, y, coverage)
+%CLIP_TO_COVERAGE sets common y-axis limits on axs that show at least the
+% coverage fraction of y, and draws the markers outside them as open markers on
+% the axis edge. One-sided from 0 for non-negative y, otherwise the shortest
+% window of the coverage fraction, wherever the excluded samples fall. The
+% limits are widened to keep the comparison lines in view and rounded outward to
+% a round step. At most floor((1 - coverage)*n) samples fall outside the limits.
+% Changes only the display, never the plotted statistics.
+    y = y(~isnan(y));
+    n_below = 0;
+    n_above = 0;
+    if coverage == 1 || isempty(y)
+        return
+    end
+
+    % Order statistics, so at most floor((1 - coverage)*n) samples fall outside
+    y = sort(y);
+    n = numel(y);
+    n_out = floor((1 - coverage)*n);
+    if y(1) >= 0
+        lim = [0 y(n - n_out)];
+    else
+        % Shortest window holding n - n_out samples: the excluded samples are the
+        % most extreme ones, split between the tails as the data dictate
+        width = y(n - n_out:n) - y(1:n_out + 1);
+        [~, i_start] = min(width);
+        lim = [y(i_start) y(i_start + n - n_out - 1)];
+    end
+    lines = findobj(axs, 'Type', 'constantline', 'InterceptAxis', 'y');
+    lim = [min([lim(1) lines.Value]) max([lim(2) lines.Value])];
+
+    % Round outward to a 1-2-2.5-5 step giving about 6 intervals, independent of
+    % the figure size. Widening only reduces the number of samples outside.
+    raw_step = diff(lim)/6;
+    magnitude = 10^floor(log10(raw_step));
+    nice_steps = [1 2 2.5 5 10]*magnitude;
+    tick_step = nice_steps(find(nice_steps >= raw_step, 1));
+    lim = [floor(lim(1)/tick_step) ceil(lim(2)/tick_step)]*tick_step;
+
+    n_below = sum(y < lim(1));
+    n_above = sum(y > lim(2));
+    for ax = axs(:)'
+        markers = findobj(ax, 'Type', 'line');
+        markers = markers(~strcmp(get(markers, {'Marker'}), 'none'));
+        for l = markers'
+            out = l.YData < lim(1) | l.YData > lim(2);
+            if ~any(out)
+                continue
+            end
+            line(ax, l.XData(out), min(max(l.YData(out), lim(1)), lim(2)), ...
+                 LineStyle="none", Marker=l.Marker, MarkerSize=obj.MARKER_SIZE, ...
+                 MarkerEdgeColor=l.Color, MarkerFaceColor="none", Clipping="off", ...
+                 HandleVisibility="off");
+            l.YData(out) = NaN;
+        end
+        ylim(ax, lim);
     end
 end
