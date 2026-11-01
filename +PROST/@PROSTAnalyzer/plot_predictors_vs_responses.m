@@ -445,39 +445,11 @@ function [n_below, n_above] = clip_to_coverage(obj, axs, y, coverage)
 % limits are widened to keep the comparison lines in view and rounded outward to
 % a round step. At most floor((1 - coverage)*n) samples fall outside the limits.
 % Changes only the display, never the plotted statistics.
-    y = y(~isnan(y));
-    n_below = 0;
-    n_above = 0;
-    if coverage == 1 || isempty(y)
+    lines = findobj(axs, 'Type', 'constantline', 'InterceptAxis', 'y');
+    [lim, n_below, n_above] = coverage_limits(y, coverage, false, [lines.Value]);
+    if isempty(lim)
         return
     end
-
-    % Order statistics, so at most floor((1 - coverage)*n) samples fall outside
-    y = sort(y);
-    n = numel(y);
-    n_out = floor((1 - coverage)*n);
-    if y(1) >= 0
-        lim = [0 y(n - n_out)];
-    else
-        % Shortest window holding n - n_out samples: the excluded samples are the
-        % most extreme ones, split between the tails as the data dictate
-        width = y(n - n_out:n) - y(1:n_out + 1);
-        [~, i_start] = min(width);
-        lim = [y(i_start) y(i_start + n - n_out - 1)];
-    end
-    lines = findobj(axs, 'Type', 'constantline', 'InterceptAxis', 'y');
-    lim = [min([lim(1) lines.Value]) max([lim(2) lines.Value])];
-
-    % Round outward to a 1-2-2.5-5 step giving about 6 intervals, independent of
-    % the figure size. Widening only reduces the number of samples outside.
-    raw_step = diff(lim)/6;
-    magnitude = 10^floor(log10(raw_step));
-    nice_steps = [1 2 2.5 5 10]*magnitude;
-    tick_step = nice_steps(find(nice_steps >= raw_step, 1));
-    lim = [floor(lim(1)/tick_step) ceil(lim(2)/tick_step)]*tick_step;
-
-    n_below = sum(y < lim(1));
-    n_above = sum(y > lim(2));
     for ax = axs(:)'
         markers = findobj(ax, 'Type', 'line');
         markers = markers(~strcmp(get(markers, {'Marker'}), 'none'));

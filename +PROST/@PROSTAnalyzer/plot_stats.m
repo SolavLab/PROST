@@ -34,6 +34,11 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
 %                      Either logical 1 (true) to plot the QQ or logical 0 
 %                      (false) otherwise.
 %                      Default: false.
+%   coverage - the minimal fraction of legs shown within the x-axis limits of
+%              each tile, in (0, 1]; at most floor((1 - coverage)*n) legs fall
+%              outside them. Display only: the histogram, fits and stats use
+%              all legs. Ignored for function_type "icdf".
+%              Default: 1 (full range).
 %   show - a value denoting whether to show the figures or save them. Specified 
 %          as 'on' or 'off', or as numeric or logical 1 (true) or 0 (false). A 
 %          value of 'on' is equivalent to true, and 'off' is equivalent to false.
@@ -81,6 +86,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         distnames               (1, :) {mustBeValidDistributionOrEmpty(distnames)} = []
         opts.function_type      {mustBeTextScalar, mustBeMember(opts.function_type, ["pdf" "cdf" "icdf" "survivor" "cumhazard" "count" "probability" "countdensity" "cumcount" "percentage"])} = "count"
         opts.qq_plot            (1, 1) logical = false
+        opts.coverage           (1, 1) double {mustBeInRange(opts.coverage, 0, 1, "exclude-lower")} = 1
     end
     arguments
         save_opts.show           (1, 1) matlab.lang.OnOffSwitchState =  true
@@ -98,6 +104,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     % Prep Input Arguments
     function_type = opts.function_type;
     qq_plot = opts.qq_plot;
+    coverage = opts.coverage;
 
     show = save_opts.show;
     file_type = save_opts.file_type;
@@ -199,14 +206,32 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     function_type_map = dictionary("count", "Count of Observations", ...
                              "probability", "Relative Probability", ...
                              "percentage", "Relative Percentage", ...
-                             "countdensity", "Density of Observations", ...
-                             "cumcount", "Cummulative Count", ...
-                             "pdf", "Probability Density Function", ...
-                             "cdf", "Cummulative Distribution Function", ...
-                             "icdf", "Inverse Cummulative Distribution Function", ...
+                             "countdensity", "Count Density", ...
+                             "cumcount", "Cumulative Count", ...
+                             "pdf", "Probability Density", ...
+                             "cdf", "Cumulative Distribution Function", ...
+                             "icdf", "Inverse Cumulative Distribution Function", ...
                              "survivor", "Survivor Function", ...
                              "cumhazard", "Cumulative Hazard Function");
-    
+
+    % Units of each function type: densities carry the inverse unit of the
+    % variable, the icdf the variable's own unit, the rest are dimensionless
+    if string(value_units) == "-"
+        density_units = "-";
+    else
+        density_units = "1/" + string(value_units);
+    end
+    function_units_map = dictionary("count", "-", ...
+                             "probability", "-", ...
+                             "percentage", "%", ...
+                             "countdensity", density_units, ...
+                             "cumcount", "-", ...
+                             "pdf", density_units, ...
+                             "cdf", "-", ...
+                             "icdf", string(value_units), ...
+                             "survivor", "-", ...
+                             "cumhazard", "-");
+
     fig_name = "Stat Plots: " + value_name;
     if ~strcmp(category_name, "Category")
         fig_name = fig_name + " (By " + category_name + ")";
@@ -246,11 +271,11 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             title(ax_data, category_titles(cat_idx))
 
             if function_type == "icdf"
-                xlabel(ax_data, "probability")
+                xlabel(ax_data, "Probability [-]")
             else
                 xlabel(ax_data, value_name + " [" + value_units + "]")
             end
-            ylabel(ax_data, function_type_map(function_type))
+            ylabel(ax_data, function_type_map(function_type) + " [" + function_units_map(function_type) + "]")
             legend(ax_data, Location='best');
         end
 
@@ -263,6 +288,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
             title(tl_qq_inner, category_titles(cat_idx), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
         end
 
+        h = gobjects(0);
         if hist_flag
             hist_property_cell = namedargs2cell(hist_opts);
             h = histogram(ax_data, value_i, hist_property_cell{:});
@@ -276,6 +302,28 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         stats_i.(category_name) = string(category_options{cat_idx});
         stats.(matlab.lang.makeValidName(category_labels(cat_idx))) = stats_i;
         txt = sprintf(" n = %d", stats_i.summary.n);
+
+        % Limit the x-axis to the coverage fraction of legs; two-sided, since a
+        % window from 0 would leave empty space left of the distribution
+        x_lim = [];
+        if dataplot_flag && function_type ~= "icdf"
+            [x_lim, n_below, n_above] = coverage_limits(value_i, coverage, true);
+            if ~isempty(x_lim) && hist_flag
+                % Snap outward to bin edges, so each leg is counted either in a
+                % visible bin or in an overflow bin, never in both
+                edges = h.BinEdges;
+                i_lo = find(edges <= x_lim(1), 1, 'last');
+                i_hi = find(edges >= x_lim(2), 1);
+                if isempty(i_lo), i_lo = 1; end
+                if isempty(i_hi), i_hi = numel(edges); end
+                x_lim = edges([i_lo i_hi]);
+                n_below = sum(h.BinCounts(1:i_lo - 1));
+                n_above = sum(h.BinCounts(i_hi:end));
+            end
+            if ~isempty(x_lim)
+                txt = txt + sprintf(" (%d below / %d above x-limits)", n_below, n_above);
+            end
+        end
         text(ax_data, 0.01, 1, txt, ...
             Units="normalized", ...
             FontSize=obj.FONT_SIZE_TEXT, ...
@@ -339,6 +387,10 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                     end % if qq_flag
             end % for distname=distnames
         end % if dist_flag
+
+        if ~isempty(x_lim)
+            show_overflow(ax_data, x_lim, n_below, n_above, h);
+        end
     end % for cat_idx=1:n_categories
 
     % Save figures
@@ -350,6 +402,64 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         end
         fprintf("Saved figures...\n")
     end
+end
+
+function show_overflow(ax, x_lim, n_below, n_above, h)
+%SHOW_OVERFLOW limits ax to x_lim and, for a histogram h, draws the legs beyond
+% each limit as one hollow overflow bin just past that edge, with an x-tick label
+% giving its range (as mplhep's flow="show"). The overflow bins use the scaling
+% of h, so for a pdf the visible and overflow bins together integrate to 1.
+% Skipped for cumulative normalizations, where an overflow bin has no meaning.
+    % Trim curves to the limits so they do not run into the overflow bins
+    for l = findobj(ax, 'Type', 'line')'
+        l.YData(l.XData < x_lim(1) | l.XData > x_lim(2)) = NaN;
+    end
+
+    full_lim = x_lim;
+    overflow_ticks = [];
+    overflow_labels = strings(0);
+    if ~isempty(h) && ~ismember(h.Normalization, ["cdf" "cumcount"])
+        w = h.BinWidth;
+        gap = w/2;
+        filled = h.BinCounts > 0;
+        scale = sum(h.Values(filled))/sum(h.BinCounts(filled));
+        color = ax.ColorOrder(h.SeriesIndex, :);
+
+        % Keep only the bins inside the limits, at their normalized heights, so
+        % the gaps stay empty. x_lim lies on bin edges (snapped by the caller).
+        inside = h.BinEdges >= x_lim(1) & h.BinEdges <= x_lim(2);
+        heights = h.Values(inside(1:end - 1) & inside(2:end));
+        h.Normalization = "count";
+        set(h, BinEdges=h.BinEdges(inside), BinCounts=heights);
+        counts = [n_below n_above];
+        symbols = ["<" ">"];
+        for s = 1:2
+            if counts(s) == 0
+                continue
+            end
+            edges = sort(x_lim(s) + (2*s - 3)*[gap gap + w]);
+            histogram(ax, BinEdges=edges, BinCounts=counts(s)*scale, ...
+                      FaceColor="none", EdgeColor=color, LineWidth=h.LineWidth, ...
+                      HandleVisibility="off");
+            full_lim(s) = edges(s);
+            % Label the bin's range, not its size: a number on the bar would be
+            % read against the y-axis, which a count or percentage is not
+            overflow_ticks(end + 1) = mean(edges); %#ok<AGROW>
+            overflow_labels(end + 1) = sprintf("%s%g", symbols(s), x_lim(s)); %#ok<AGROW>
+        end
+    end
+    xlim(ax, full_lim);
+
+    % Keep ticks off the gaps, which have no x scale, and mark the overflow bins
+    % by their ranges
+    ticks = ax.XTick;
+    ticks = ticks(ticks >= x_lim(1) & ticks <= x_lim(2));
+    labels = string(ax.XAxis.TickLabelFormat);
+    labels = compose(labels, ticks);
+    [ticks, order] = sort([ticks overflow_ticks]);
+    labels = [labels overflow_labels];
+    ax.XTick = ticks;
+    ax.XTickLabel = labels(order);
 end
 
 % ------------ Helper functions for validation
