@@ -106,7 +106,7 @@ if ~exist("PROSTAnalyzer", "var")
 end
 
 %% Create Table for Statistical Analysis
-data = build_analysis_table(PROSTAnalyzer);
+data = PROST.lme.build_analysis_table(PROSTAnalyzer);
 
 %% Initial Model and Cutoff of Unstable R
 % Defined on R_H whatever the analyzed response: the cutoff flags degenerate arc
@@ -137,7 +137,7 @@ fprintf('Excluded %d of %d observations (%.1f%%) with R_H > 1\n', ...
 results = struct();
 for spec = responses
     if summary_flag
-        describe_response(data_final, spec)
+        PROST.lme.describe_response(data_final, spec)
     end
 
     % Test Weight Scheme After Cutoff
@@ -145,33 +145,33 @@ for spec = responses
         test_weight_scheme(data_final, spec.name)
     end
 
-    results.(spec.name) = fit_response_model(data_final, spec);
+    results.(spec.name) = PROST.lme.fit_response_model(data_final, spec);
 
     % Sensitivity of the ICC to Single Participants
     if loo_flag
-        results.(spec.name).loo = icc_leave_one_out(results.(spec.name).lme, "Final LME - " + spec.name);
+        results.(spec.name).loo = PROST.lme.icc_leave_one_out(results.(spec.name).lme, "Final LME - " + spec.name);
     end
 
     % Test Linear Mixed-Effects Model Assumptions
     if assumptions_flag
-        assumptions_check(results.(spec.name).lme, "Final LME - " + spec.name + ":")
+        PROST.lme.assumptions_check(results.(spec.name).lme, "Final LME - " + spec.name + ":")
     end
 
     if boot_flag
-        results.(spec.name).boot = bootstrap_response_model(data_final, spec, results.(spec.name), n_boot, boot_seed);
+        results.(spec.name).boot = PROST.lme.bootstrap_response_model(data_final, spec, results.(spec.name), n_boot, boot_seed);
     end
 
     % Per-dataset ICC: the pooled ICC is a dataset-weighted summary under
     % dataset-dependent residual variance, so each dataset is also fitted alone
     if per_dataset_icc_flag
-        results.(spec.name).per_dataset = per_dataset_icc(data_final, spec, n_boot, boot_seed, boot_flag);
-        plot_icc_forest(results.(spec.name), spec)
+        results.(spec.name).per_dataset = PROST.lme.per_dataset_icc(data_final, spec, n_boot, boot_seed, boot_flag);
+        PROST.lme.plot_icc_forest(results.(spec.name), spec)
     end
 end
 
 % Assumption checks of the per-dataset ICC models
 if covariate_diagnostics_flag
-    per_dataset_diagnostics(data_final, 'log_R_H')
+    PROST.lme.per_dataset_diagnostics(data_final, 'log_R_H')
 end
 
 %% Covariate Models: Side, Anthropometrics, Speed and Scaling
@@ -180,20 +180,20 @@ if covariate_flag
     results.covariate_models = struct();
     for model_spec = covariate_models
         if model_spec.cut
-            model_data = covariate_model_data(data_final, model_spec);
+            model_data = PROST.lme.covariate_model_data(data_final, model_spec);
         else
-            model_data = covariate_model_data(data, model_spec);
+            model_data = PROST.lme.covariate_model_data(data, model_spec);
         end
         baseline = struct([]);
         if ~isempty(model_spec.baseline)
             baseline = results.covariate_models.(model_spec.baseline);
         end
-        results.covariate_models.(model_spec.name) = fit_covariate_model(model_data, model_spec, baseline, height(data));
+        results.covariate_models.(model_spec.name) = PROST.lme.fit_covariate_model(model_data, model_spec, baseline, height(data));
         if covariate_diagnostics_flag && ismember(model_spec.name, ["anthro" "anthro_D4" "speed_D34" "speed_D4" "scaling"])
-            covariate_diagnostics(model_data, results.covariate_models.(model_spec.name), baseline, model_spec)
+            PROST.lme.covariate_diagnostics(model_data, results.covariate_models.(model_spec.name), baseline, model_spec)
         end
         if boot_flag
-            results.covariate_models.(model_spec.name).boot = bootstrap_covariate_model(model_data, ...
+            results.covariate_models.(model_spec.name).boot = PROST.lme.bootstrap_covariate_model(model_data, ...
                 results.covariate_models.(model_spec.name), baseline, n_boot, boot_seed);
         end
     end
@@ -206,1051 +206,11 @@ if save_flag
     save("Radius_Mixed_Effects_Results", "-struct", "saved")
 end
 
-% PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots", ".", "file_type", "pdf", "prepare","on", "append", "off")
+% PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots\Radius", ".", "file_type", "pdf", "prepare","on", "append", "off")
 
 %% -----------------------------------------------------------------------------
 % Helper Functions
 % ------------------------------------------------------------------------------
-function data = build_analysis_table(analyzer)
-% DATA = BUILD_ANALYSIS_TABLE(ANALYZER)
-% Builds the table for statistical analysis from the IPD table of the analyzer:
-% one row per leg with its IDs, predictors, fitted ROS parameters (absolute and
-% normalized by height) and the number of included steps.
-%
-% Input :
-%   analyzer - the PROSTAnalyzer object.
-%
-% Example usage :
-%   data = build_analysis_table(PROSTAnalyzer)
-
-    % Read from IPDTable
-    radius = table2array(analyzer.get_IPD_samples("Radius"));
-    residual = table2array(analyzer.get_IPD_samples("Residual_rms"));
-    predictors = analyzer.get_predictors();
-    body_height = PROST.utils.convert_units(predictors.Height, "m", "mm");
-    angle_start = table2array(analyzer.get_IPD_samples("Ang_start"));
-    angle_end = table2array(analyzer.get_IPD_samples("Ang_end"));
-    arc_span = table2array(analyzer.get_IPD_samples("Arc_length"));
-
-    % Create table for statistical analysis
-    data = table;
-
-    % Random and Fixed Effects Parameters
-    data.DatasetID = table2array(analyzer.get_IPD_samples("Dataset_id"));
-    data.ParticipantID = table2array(analyzer.get_IPD_samples("Participant_id"));
-    data.ParticipantIDGlobal = data.DatasetID.*1000 + data.ParticipantID;
-    data.Leg = categorical(table2array(analyzer.get_IPD_samples("Side")));
-    data.DatasetID = categorical(data.DatasetID);
-    data.ParticipantID = categorical(data.ParticipantID);
-    data.ParticipantIDGlobal = categorical(data.ParticipantIDGlobal);
-
-    % Predictors
-    data = [data predictors];
-
-    % Parameters to analyze
-    data.R = radius;
-    data.R_H = radius ./ body_height;
-    data.log_R_H = log(data.R_H);
-    data.log_R = log(radius); % with log_H, the scaling model of r on H
-    data.log_H = log(body_height);
-    data.log_L = log(data.Leg_length);
-    data.AngleStartDeg = angle_start;
-    data.AngleStartRad = deg2rad(angle_start);
-    data.AngleEndDeg = angle_end;
-    data.AngleEndRad = deg2rad(angle_end);
-    data.ArcSpanDeg = arc_span;
-    data.ArcSpanRad = deg2rad(arc_span);
-
-    % Parameters for weights from RMS and Number of Steps
-    data.RMS = residual; % RMS radial residual
-
-    % Compute number of steps for each leg
-    for dataset_id=1:4
-        dataset = analyzer.get_dataset(dataset_id);
-        dataset_idx = find(dataset_id == double(string(data.DatasetID)));
-        for idx = dataset_idx'
-            participant_id = double(string(data.ParticipantID(idx)));
-            side = data.Leg(idx);
-            steps = dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).step;
-            if isempty(steps) || ~dataset.Data(participant_id == [dataset.Data.Participant_id]).Uniform_data.(string(side)).Is_included
-                error("Side not included even though it is in table")
-            end
-            data.n_steps(idx) = sum([steps.Is_included]);
-        end
-    end
-
-    % Mean measured speed of the valid steps of each leg, and its dimensionless
-    % (Froude) form v* = v / sqrt(g * leg length), comparable across body sizes
-    speeds = analyzer.get_step_speeds();
-    speeds.Side = categorical(speeds.Side);
-    leg_speed = groupsummary(speeds, ["Dataset_id" "Participant_id" "Side"], @(v) mean(v, "omitnan"), "Speed");
-    leg_speed = renamevars(leg_speed, "fun1_Speed", "Speed");
-    keys = table(double(string(data.DatasetID)), double(string(data.ParticipantID)), data.Leg, ...
-                 'VariableNames', {'Dataset_id', 'Participant_id', 'Side'});
-    [found, loc] = ismember(keys, leg_speed(:, ["Dataset_id" "Participant_id" "Side"]));
-    assert(all(found), "Some legs of the analysis table have no valid steps in get_step_speeds.")
-    data.Speed = leg_speed.Speed(loc); % [km/hour]
-    speed_mps = PROST.utils.convert_units(data.Speed, "km", "m") ./ PROST.utils.convert_units(1, "hour", "second");
-    data.v_star = speed_mps ./ sqrt(9.81 * data.Leg_length); % Leg_length [m]
-end
-
-function data = covariate_model_data(data, spec)
-% DATA = COVARIATE_MODEL_DATA(DATA, SPEC)
-% The rows of one covariate model: its datasets, complete on SPEC.complete, with
-% unused categories removed (effects coding needs every level present) and the
-% "_c" terms added as their column centred within dataset.
-%
-% Example usage :
-%   model_data = covariate_model_data(data_final, covariate_models(3))
-
-    if ~isempty(spec.datasets)
-        data = data(ismember(double(string(data.DatasetID)), spec.datasets), :);
-    end
-    keep = true(height(data), 1);
-    for column = spec.complete
-        keep = keep & ~ismissing(data.(column));
-    end
-    data = data(keep, :);
-    data.DatasetID = removecats(data.DatasetID);
-    if ismember("Sex", data.Properties.VariableNames)
-        data.Sex = removecats(data.Sex);
-    end
-
-    for term = spec.terms(endsWith(spec.terms, "_c"))
-        column = extractBefore(term, strlength(term) - 1);
-        dataset_mean = groupsummary(data, "DatasetID", "mean", column);
-        [~, loc] = ismember(data.DatasetID, dataset_mean.DatasetID);
-        data.(term) = data.(column) - dataset_mean.("mean_" + column)(loc);
-    end
-end
-
-function results = fit_covariate_model(data, spec, baseline, n_all)
-% RESULTS = FIT_COVARIATE_MODEL(DATA, SPEC, BASELINE, N_ALL)
-% Fits one covariate model, prints its fixed effects and variance components and,
-% if it has a baseline, the level-2 pseudo-R2 = 1 - tau2 / tau2_baseline: the
-% share of the between-participant variance that the added terms explain. It is
-% negative when tau2 grows.
-%
-% Input :
-%   data - the rows of the model (see covariate_model_data).
-%   spec - one element of covariate_models.
-%   baseline - the results of the baseline model, or struct([]) for none. Must
-%              have been fitted on the same rows.
-%   n_all - number of legs before the cutoff and complete-case selection.
-%
-% Example usage :
-%   r = fit_covariate_model(model_data, spec, results.covariate_models.base_cc, height(data))
-
-    fixed = string(spec.response) + " ~ 1";
-    if numel(categories(data.DatasetID)) > 1 % a single dataset has no dataset effect
-        fixed = fixed + " + DatasetID";
-    end
-    formula = strjoin([fixed, spec.terms, ...
-                       "(1|DatasetID:ParticipantID)"], " + ");
-    lme = fitlme(data, formula, 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-    [ICC, tau2, sigma2] = model_metrics(lme, Display="off");
-
-    n_participants = height(unique(data(:, ["DatasetID" "ParticipantID"])));
-    fprintf('\n=== Covariate model %s: %s ===\n', spec.name, formula)
-    fprintf('%d legs of %d participants (%d of %d legs without the cutoff/complete-case/dataset selection)\n', ...
-        height(data), n_participants, n_all - height(data), n_all)
-    disp(lme.Coefficients(:, {'Name', 'Estimate', 'SE', 'tStat', 'DF', 'pValue', 'Lower', 'Upper'}))
-    fprintf('tau2 = %.4f, sigma2 = %.4f, ICC = %.4f\n', tau2, sigma2, ICC(1))
-
-    results.formula = formula;
-    results.lme = lme;
-    results.n_legs = height(data);
-    results.n_participants = n_participants;
-    results.tau2 = tau2;
-    results.sigma2 = sigma2;
-    results.ICC = ICC(1);
-    results.pseudo_R2 = NaN;
-    if ~isempty(baseline)
-        assert(isequal(baseline.lme.ObservationInfo.Excluded, lme.ObservationInfo.Excluded) && ...
-               baseline.n_legs == height(data), "The model and its baseline must be fitted on the same rows.")
-        results.pseudo_R2 = 1 - tau2 / baseline.tau2;
-        fprintf('Level-2 pseudo-R2 vs %s: 1 - %.4f/%.4f = %.3f\n', spec.baseline, tau2, baseline.tau2, results.pseudo_R2)
-
-        % Joint test of the added terms. REML likelihoods are not comparable
-        % between different fixed effects, so both models are refitted with ML.
-        lme_ml = fitlme(data, formula, 'FitMethod', 'ML', 'DummyVarCoding', 'effects');
-        lme_base_ml = fitlme(data, char(baseline.lme.Formula), 'FitMethod', 'ML', 'DummyVarCoding', 'effects');
-        lrt = compare(lme_base_ml, lme_ml);
-        results.lrt = struct('LRStat', lrt.LRStat(2), 'deltaDF', lrt.deltaDF(2), 'pValue', lrt.pValue(2));
-        fprintf('ML likelihood-ratio test vs %s: LR = %.3f, df = %d, p = %.4g\n', ...
-            spec.baseline, lrt.LRStat(2), lrt.deltaDF(2), lrt.pValue(2))
-    end
-
-    % Scaling: test the slope of log H against proportional scaling as well
-    is_slope = strcmp(lme.CoefficientNames, 'log_H_c');
-    if any(is_slope)
-        slope = lme.Coefficients.Estimate(is_slope);
-        t1 = (slope - 1) / lme.Coefficients.SE(is_slope);
-        p1 = 2 * tcdf(-abs(t1), lme.Coefficients.DF(is_slope));
-        fprintf('Scaling slope of log r on log H = %.3f [%.3f, %.3f]; vs 1: t = %.3f, p = %.4g\n', ...
-            slope, lme.Coefficients.Lower(is_slope), lme.Coefficients.Upper(is_slope), t1, p1)
-    end
-end
-
-function boot_results = bootstrap_covariate_model(data, results, baseline, n_boot, boot_seed)
-% BOOT_RESULTS = BOOTSTRAP_COVARIATE_MODEL(DATA, RESULTS, BASELINE, N_BOOT, BOOT_SEED)
-% Cluster (participant-level), stratified-by-dataset bootstrap of a covariate
-% model: SE and percentile CIs of its fixed effects, variance components, ICC and,
-% with a baseline, of the pseudo-R2. The baseline is refitted on the same resample
-% so the pseudo-R2 of a replicate compares the two models on the same legs. With
-% the same seed every model on the same rows gets the same resamples.
-%
-% Example usage :
-%   boot = bootstrap_covariate_model(model_data, results.covariate_models.anthro, ...
-%                                    results.covariate_models.base_cc, 5000, 20261006)
-
-    lme = results.lme;
-    lme_base = [];
-    if ~isempty(baseline)
-        lme_base = baseline.lme;
-    end
-    n_fixed = height(lme.Coefficients);
-
-    gcp;
-    tic
-    [draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, ~) ...
-        covariate_refit(boot_data, lme, lme_base), n_boot, boot_seed, NStat=n_fixed + 4, Parallel=true);
-    toc
-
-    valid = ~any(isnan(draws(:, 1:n_fixed + 3)), 2);
-    fprintf('\n--- %s - Bootstrap (%.0f%% of %d refits converged, seed %d) ---\n', ...
-        results.formula, 100*mean(valid), n_boot, boot_seed)
-    names = [lme.CoefficientNames 'tau2' 'sigma2' 'ICC' 'pseudo_R2'];
-    estimates = [lme.Coefficients.Estimate; results.tau2; results.sigma2; results.ICC; results.pseudo_R2];
-    draws = draws(valid, :);
-    CI = prctile(draws, [2.5 97.5], 1);
-    boot_inferences = table(estimates, mean(draws, 1)', std(draws, 0, 1)', CI(1, :)', CI(2, :)', ...
-        'VariableNames', {'LmeEstimate', 'BootEstimate', 'SE', 'CI_lower', 'CI_upper'}, 'RowNames', names);
-    disp(boot_inferences)
-
-    boot_results.seed = boot_seed;
-    boot_results.n_boot = n_boot;
-    boot_results.valid = valid;
-    boot_results.fail_msg = fail_msg;
-    boot_results.draws = draws;
-    boot_results.names = names;
-    boot_results.boot_inferences = boot_inferences;
-end
-
-function covariate_diagnostics(data, results, baseline, spec)
-% COVARIATE_DIAGNOSTICS(DATA, RESULTS, BASELINE, SPEC)
-% Assumption checks of one covariate model, beyond what the case bootstrap makes
-% robust: normality of the residuals and random effects, residuals vs fitted and
-% homoscedasticity across datasets, linearity in each continuous covariate
-% (marginal residuals vs the covariate, and the CI of an added quadratic term),
-% collinearity (VIF), and the leave-one-participant-out range of the pseudo-R2.
-% Prints the results and plots the residual figures.
-%
-% Example usage :
-%   covariate_diagnostics(model_data, results.covariate_models.anthro, ...
-%                         results.covariate_models.side, covariate_models(3))
-
-    lme = results.lme;
-    name = "Covariate model " + spec.name;
-    fprintf('\n===== Diagnostics: %s =====\n', name)
-
-    % Normality
-    res = residuals(lme, 'ResidualType', 'Pearson');
-    normality_check(res, name + " Residual [-]", 'anderson')
-    normality_check(randomEffects(lme), name + " Random Effects [-]", 'anderson')
-
-    % Residuals vs fitted, and equal residual variance across datasets
-    figure(Name=name + " Residuals vs Fitted")
-    scatter(fitted(lme), res, 15, data.DatasetID, 'filled')
-    yline(0, '--r')
-    xlabel('Fitted values [-]')
-    ylabel('Pearson residuals [-]')
-    title(name + " Residuals vs Fitted", 'Interpreter', 'none')
-    if numel(categories(data.DatasetID)) > 1
-        p = vartestn(res, data.DatasetID, "Display", "off", "TestType", "BrownForsythe");
-        fprintf('Brown-Forsythe test of equal residual variance across datasets: p = %.4g\n', p)
-    end
-
-    % Linearity: marginal residuals (response - fixed part) carry both the leg
-    % and the participant deviations, so a missed curve in a participant-level
-    % covariate shows in them as well
-    res_marginal = residuals(lme, 'Conditional', false);
-    continuous = spec.terms(endsWith(spec.terms, "_c") & ~contains(spec.terms, ":"));
-    for term = continuous
-        figure(Name=name + " Marginal Residuals vs " + term)
-        scatter(data.(term), res_marginal, 15, data.DatasetID, 'filled')
-        hold on
-        [x_sorted, order] = sort(data.(term));
-        plot(x_sorted, smoothdata(res_marginal(order), 'loess', ceil(0.3*height(data))), 'r-', 'LineWidth', 1.5)
-        yline(0, '--k')
-        xlabel(term, 'Interpreter', 'none')
-        ylabel('Marginal residuals [-]')
-        title(name + " Marginal Residuals vs " + term, 'Interpreter', 'none')
-
-        data_q = data;
-        data_q.quad = data.(term).^2;
-        formula_q = replace(char(lme.Formula), ' + (', ' + quad + ('); % fixed terms precede the random ones
-        lme_q = fitlme(data_q, formula_q, 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-        q = lme_q.Coefficients(strcmp(lme_q.CoefficientNames, 'quad'), :);
-        fprintf('Quadratic term in %s: %.4g, 95%% CI [%.4g, %.4g]\n', term, q.Estimate, q.Lower, q.Upper)
-    end
-
-    % Collinearity of the fixed effects (excluding the intercept)
-    X = designMatrix(lme, 'Fixed');
-    X = X(:, 2:end);
-    if size(X, 2) > 1
-        vif = diag(inv(corrcoef(X)))';
-        fprintf('VIF: %s\n', strjoin(string(lme.CoefficientNames(2:end)) + " = " + compose("%.2f", vif), ', '))
-    end
-
-    % Influence of single participants on the pseudo-R2
-    if ~isempty(baseline)
-        participant = findgroups(data.DatasetID, data.ParticipantID);
-        n_participants = max(participant);
-        pseudo_R2 = nan(n_participants, 1);
-        for k = 1:n_participants
-            keep = participant ~= k;
-            lme_k = fitlme(data(keep, :), char(lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-            lme_base_k = fitlme(data(keep, :), char(baseline.lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-            [~, tau2_k] = model_metrics(lme_k, Display="off");
-            [~, tau2_base_k] = model_metrics(lme_base_k, Display="off");
-            pseudo_R2(k) = 1 - tau2_k / tau2_base_k;
-        end
-        [~, k_max] = max(abs(pseudo_R2 - results.pseudo_R2));
-        first = find(participant == k_max, 1);
-        fprintf('Leave-one-participant-out pseudo-R2: %.3f to %.3f (full %.3f); largest change %.3f without dataset %s participant %s\n', ...
-            min(pseudo_R2), max(pseudo_R2), results.pseudo_R2, pseudo_R2(k_max) - results.pseudo_R2, ...
-            string(data.DatasetID(first)), string(data.ParticipantID(first)))
-    end
-end
-
-function per_dataset_diagnostics(data, response_name)
-% PER_DATASET_DIAGNOSTICS(DATA, RESPONSE_NAME)
-% Normality of the residuals and random effects, and residuals vs fitted, of the
-% per-dataset ICC models (response ~ 1 + (1|ParticipantID), one per dataset).
-% With few participants (Dataset 1) the checks have little power.
-%
-% Example usage :
-%   per_dataset_diagnostics(data_final, 'log_R_H')
-
-    for d = categories(data.DatasetID)'
-        data_d = data(data.DatasetID == d{1}, :);
-        lme = fitlme(data_d, [response_name ' ~ 1 + (1|ParticipantID)'], 'FitMethod', 'REML');
-        name = "Per-dataset ICC model, Dataset " + d{1} + " - " + response_name;
-        fprintf('\n===== Diagnostics: %s (%d legs) =====\n', name, height(data_d))
-        res = residuals(lme, 'ResidualType', 'Pearson');
-        normality_check(res, name + " Residual [-]", 'anderson')
-        normality_check(randomEffects(lme), name + " Random Effects [-]", 'anderson')
-        figure(Name=name + " Residuals vs Fitted")
-        scatter(fitted(lme), res, 15, 'filled')
-        yline(0, '--r')
-        xlabel('Fitted values [-]')
-        ylabel('Pearson residuals [-]')
-        title(name + " Residuals vs Fitted", 'Interpreter', 'none')
-    end
-end
-
-function stat = covariate_refit(boot_data, lme, lme_base)
-% STAT = COVARIATE_REFIT(BOOT_DATA, LME, LME_BASE)
-% Statistic of one bootstrap replicate of a covariate model: [beta, tau2, sigma2,
-% ICC, pseudo_R2]. pseudo_R2 is NaN without a baseline (LME_BASE = []). The models
-% are unweighted, so no weights are carried over.
-%
-% Example usage :
-%   stat = covariate_refit(boot_data, lme, lme_base)
-
-    lme_boot = fitlme(boot_data, char(lme.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-    [ICC, tau2, sigma2] = model_metrics(lme_boot, Display="off");
-    pseudo_R2 = NaN;
-    if ~isempty(lme_base)
-        lme_base_boot = fitlme(boot_data, char(lme_base.Formula), 'FitMethod', 'REML', 'DummyVarCoding', 'effects');
-        [~, tau2_base] = model_metrics(lme_base_boot, Display="off");
-        pseudo_R2 = 1 - tau2 / tau2_base;
-    end
-    stat = [lme_boot.Coefficients.Estimate', tau2, sigma2, ICC(1), pseudo_R2];
-end
-
-function is_log = is_log_scale(spec)
-% IS_LOG = IS_LOG_SCALE(SPEC)
-% Whether the response of SPEC is modelled on a log scale. Errors on an unknown
-% scale rather than guess which ICC back-transform applies.
-%
-% Example usage :
-%   is_log = is_log_scale(struct('name', 'log_R_H', 'scale', "log"))
-
-    if ~ismember(spec.scale, ["linear" "log"])
-        error("Unknown response scale ""%s"": no ICC back-transform is defined for it.", spec.scale)
-    end
-    is_log = spec.scale == "log";
-end
-
-function describe_response(data, spec)
-% DESCRIBE_RESPONSE(DATA, SPEC)
-% Robust descriptive summary of a response, by participant: uses participant-level
-% means first to avoid double-weighting participants with bilateral measurements.
-% Prints pooled and per-dataset statistics, plots histograms, QQ-plots and a
-% boxplot per dataset, and tests homoscedasticity across datasets.
-%
-% Input :
-%   data - the data table of measurements, after the cutoff.
-%   spec - struct with fields name (the response column) and scale ("linear"
-%          or "log"). The coefficients of variation are printed for "linear" only.
-%
-% Example usage :
-%   describe_response(data_final, struct('name', 'R_H', 'scale', "linear"))
-
-    response_name = spec.name;
-    is_log = is_log_scale(spec);
-
-    participantMeans = groupsummary(data, 'ParticipantIDGlobal', 'mean', response_name);
-
-    med_RH  = median(participantMeans.("mean_" + response_name));
-    iqr_RH  = iqr(participantMeans.("mean_" + response_name));
-    mean_RH = mean(participantMeans.("mean_" + response_name));
-    sd_RH   = std(participantMeans.("mean_" + response_name));
-
-    fprintf('Participant-level %s: total median = %.4f, total IQR = %.4f\n', response_name, med_RH, iqr_RH);
-    fprintf('Participant-level %s: total mean = %.4f, total SD = %.4f (sensitive to skew, report for completeness)\n', response_name, mean_RH, sd_RH);
-
-    figure
-    tl=tiledlayout(2, 4);
-    participant_id_global = string(participantMeans.ParticipantIDGlobal);
-    for d=["1" "2" "3" "4"]
-        mean_per_dataset = participantMeans.("mean_" + response_name)(startsWith(participant_id_global, d));
-        fprintf('\n--- Participant-level %s: Dataset %s Stats ---\n', response_name, d)
-        fprintf('n = %d\n', numel(mean_per_dataset))
-        fprintf('Mean (SD) = %.3f (%.3f)\n', mean(mean_per_dataset), std(mean_per_dataset))
-        fprintf('Median (IQR) = %.3f (%.3f)\n', median(mean_per_dataset), iqr(mean_per_dataset))
-        % A coefficient of variation needs a ratio scale; on a log scale the
-        % mean can be negative and the ratio is meaningless.
-        if ~is_log
-            fprintf('Coeffcient of Variation = %.3f %%\n', 100*std(mean_per_dataset) / mean(mean_per_dataset))
-            fprintf('MAD Coeffcient of Variation = %.3f %%\n', 100*mad(mean_per_dataset, 1) / median(mean_per_dataset))
-        end
-        fprintf('range = %.3f, min = %.3f, max = %.3f\n', range(mean_per_dataset), min(mean_per_dataset), max(mean_per_dataset))
-
-        nexttile(tl)
-        histogram(mean_per_dataset)
-        title(sprintf("Participant-level %s: Dataset %s Histogram: Skew = %.3f, Kurtosis = %.3f", response_name, d, skewness(mean_per_dataset), kurtosis(mean_per_dataset)))
-
-        nexttile(tl)
-        qqplot(mean_per_dataset)
-        title(sprintf("Participant-level %s: Dataset %s QQ-Plot", response_name, d))
-    end
-    figure
-    boxplot(participantMeans.("mean_" + response_name), extract(participant_id_global, 1))
-    title(sprintf("Participant-level %s: Boxplot", response_name))
-    xlabel("Dataset ID")
-    ylabel(response_name)
-
-    [p, stats] = vartestn(participantMeans.("mean_" + response_name), extract(participant_id_global, 1), 'TestType', 'LeveneAbsolute', Display='off');
-    fprintf('\n--- Variance Homoscedasticity Tests ---\n')
-    fprintf('Levene Absolute: fstat = %.4f, df = [%d %d], p = %.4g\n', stats.fstat, stats.df(1), stats.df(2), p);
-    flignerKilleen(participantMeans.("mean_" + response_name), extract(participant_id_global, 1));
-end
-
-function results = fit_response_model(data, spec)
-% RESULTS = FIT_RESPONSE_MODEL(DATA, SPEC)
-% Fits the final LME model of one response and prints its fixed effects and
-% variance decomposition.
-%
-% Input :
-%   data - the data table of measurements, after the cutoff.
-%   spec - struct with fields:
-%          name  - the response column name, e.g. 'log_R_H'.
-%          scale - "linear" or "log". Only "log" gets the ICC back-transformed
-%                  to the original scale.
-%
-% Output :
-%   results - struct with fields lme, beta4 (estimate, SE, t, p, CI of the
-%             effects-coded DatasetID 4), tau2, sigma2, ICC (model scale) and
-%             ICC_original (log scale only).
-%
-% Example usage :
-%   results = fit_response_model(data_final, struct('name', 'log_R_H', 'scale', "log"))
-
-    response_name = spec.name;
-    is_log = is_log_scale(spec);
-
-    formula = [response_name ' ~ 1 + DatasetID + (1|DatasetID:ParticipantID)'];
-
-    % Final Cutoff LME Model
-    lme = fitlme(data, formula, ...
-        'FitMethod', 'REML', ...
-        'DummyVarCoding', 'effects');
-
-    disp(lme)
-
-    % Extract estimates and covariance for the three estimated DatasetID coefficients
-    coefNames = lme.Coefficients.Name;
-    idx = contains(coefNames, 'DatasetID');
-
-    b = lme.Coefficients.Estimate(idx);       % [b1; b2; b3]
-    V = lme.CoefficientCovariance(idx, idx);  % 3x3 covariance submatrix
-
-    % Contrast vector: beta4 = -(b1+b2+b3) = c' * b, where c = [-1;-1;-1]
-    c = [-1; -1; -1];
-
-    beta4 = c' * b;
-    se_beta4 = sqrt(c' * V * c);
-
-    df = lme.Coefficients.DF(find(idx,1));  % use same residual DF as other fixed effects
-    tstat = beta4 / se_beta4;
-    pval = 2 * (1 - tcdf(abs(tstat), df));
-    ci_lower = beta4 - tinv(0.975, df) * se_beta4;
-    ci_upper = beta4 + tinv(0.975, df) * se_beta4;
-
-    fprintf('\n--- %s - Fixed Effects Values ---\n', response_name);
-    for idx=2:4
-        fprintf('%s: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-            lme.Coefficients.Name{idx}, ...
-            lme.Coefficients.Estimate(idx), ...
-            lme.Coefficients.SE(idx), ...
-            lme.Coefficients.tStat(idx), ...
-            lme.Coefficients.pValue(idx), ...
-            lme.Coefficients.Lower(idx), ...
-            lme.Coefficients.Upper(idx));
-    end
-    fprintf('DatasetID_4: Estimate=%.5f, SE=%.5f, t=%.3f, p=%.4g, CI=[%.5f, %.5f]\n', ...
-        beta4, se_beta4, tstat, pval, ci_lower, ci_upper);
-
-    % Display metrics formatted for publication
-    [ICC, tau2, sigma2] = model_metrics(lme, "Final LME Model - " + response_name);
-    ICC = ICC(1); % ICC1 = tau2 / (tau2 + sigma2), the definition the bootstrap also uses
-
-    results.lme = lme;
-    results.beta4 = struct('Estimate', beta4, 'SE', se_beta4, 'tStat', tstat, ...
-                           'pValue', pval, 'Lower', ci_lower, 'Upper', ci_upper);
-    results.tau2 = tau2;
-    results.sigma2 = sigma2;
-    results.ICC = ICC;
-
-    if is_log
-        ICC_original = icc_original_scale(tau2, sigma2);
-        fprintf('ICC back-transformed to the original scale:          %8.4f\n', ICC_original);
-        results.ICC_original = ICC_original;
-    end
-end
-
-function boot_results = bootstrap_response_model(data, spec, results, n_boot, boot_seed)
-% BOOT_RESULTS = BOOTSTRAP_RESPONSE_MODEL(DATA, SPEC, RESULTS, N_BOOT, BOOT_SEED)
-% Cluster (participant-level), stratified-by-dataset bootstrap of a fitted response
-% model: SE and percentile CIs of the fixed effects, variance components and ICC
-% (and of the original-scale ICC for a log-scale response). Prints the results.
-%
-% Input :
-%   data - the data table the model was fitted on.
-%   spec - struct with fields name (the response column) and scale ("linear"
-%          or "log").
-%   results - the output of fit_response_model for this response.
-%   n_boot - number of bootstrap replicates.
-%   boot_seed - the seed of the bootstrap random stream (see PROST.utils.boot_stream).
-%
-% Example usage :
-%   boot = bootstrap_response_model(data_final, spec, results.log_R_H, 5000, 20261006)
-
-    response_name = spec.name;
-    is_log = is_log_scale(spec);
-    lme = results.lme;
-    beta4 = results.beta4.Estimate;
-    tau2 = results.tau2;
-    sigma2 = results.sigma2;
-    ICC = results.ICC;
-    if is_log
-        ICC_original = results.ICC_original;
-    end
-
-    gcp; % start the parallel pool here, so toc times only the bootstrap
-    tic
-
-    % lme_refit picks the weights of the resampled rows by row number
-    assert(height(data) == height(lme.ObservationInfo), ...
-        "data must be the table the model was fitted on.")
-
-    % Columns: fixed effects (grand mean + dataset IDs), tau2, sigma2, ICC
-    n_fixed = height(lme.Coefficients) + 1;
-    [boot_draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, boot_rows) ...
-        lme_refit(boot_data, boot_rows, lme), n_boot, boot_seed, NStat=n_fixed + 3, Parallel=true);
-    toc
-    beta_boot   = boot_draws(:, 1:n_fixed);
-    tau2_boot   = boot_draws(:, n_fixed + 1); % participant-level random intercept variance
-    sigma2_boot = boot_draws(:, n_fixed + 2); % residual variance
-    ICC_boot    = boot_draws(:, n_fixed + 3); % ICC on the model scale
-
-    valid = ~any(isnan([beta_boot, tau2_boot, sigma2_boot]), 2);
-    fprintf('\n--- %s - Bootstrapping Inferences Results ---\n', response_name)
-    fprintf('%.0f%% (of %d) bootstrap refits converged (seed %d)\n', 100*mean(valid), n_boot, boot_seed);
-    if any(~valid)
-        reasons = fail_msg(~valid);
-        reasons(reasons == "") = "<refit returned NaN without an error>";
-        [reasons, ~, k] = unique(reasons);
-        fprintf('Discarded refits by reason:\n');
-        for m = 1:numel(reasons)
-            fprintf('  %d x %s\n', sum(k == m), reasons(m));
-        end
-    end
-
-    names = [lme.CoefficientNames 'DatasetID_4' 'tau2' 'sigma2' 'ICC'];
-    estimates = [lme.Coefficients.Estimate; beta4; tau2; sigma2; ICC];
-    draws = [beta_boot, tau2_boot, sigma2_boot, ICC_boot];
-    if is_log
-        names = [names 'ICC_original'];
-        estimates = [estimates; ICC_original];
-        draws = [draws, icc_original_scale(tau2_boot, sigma2_boot)];
-    end
-    draws = draws(valid, :);
-
-    % Percentile method
-    CI = prctile(draws, [2.5 97.5], 1);
-    boot_inferences = table(estimates, mean(draws, 1)', std(draws, 0, 1)', CI(1, :)', CI(2, :)', ...
-                       'VariableNames', {'LmeEstimate', 'BootEstimate' 'SE', 'CI_lower', 'CI_upper'}, ...
-                       'RowNames', names);
-    disp(boot_inferences)
-
-    ICC_draws = draws(:, strcmp(names, 'ICC'));
-    normality_check(ICC_draws, "Bootstrap ICC - " + response_name, 'anderson')
-    fprintf('\nICC (%s scale): Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
-            spec.scale, mean(ICC_draws), median(ICC_draws), ICC);
-    if is_log
-        ICC_original_draws = draws(:, strcmp(names, 'ICC_original'));
-        normality_check(ICC_original_draws, "Bootstrap ICC original scale - " + response_name, 'anderson')
-        fprintf('ICC (original scale): Bootstrap mean: %.4f, median: %.4f, original point estimate: %.4f\n', ...
-                mean(ICC_original_draws), median(ICC_original_draws), ICC_original);
-    end
-
-    boot_results.seed = boot_seed;
-    boot_results.n_boot = n_boot;
-    boot_results.valid = valid;
-    boot_results.fail_msg = fail_msg;
-    boot_results.beta = beta_boot(valid, :);
-    boot_results.tau2 = tau2_boot(valid);
-    boot_results.sigma2 = sigma2_boot(valid);
-    boot_results.ICC = ICC_draws;
-    if is_log
-        boot_results.ICC_original = ICC_original_draws;
-    end
-    boot_results.boot_inferences = boot_inferences;
-end
-
-function ICC_original = icc_original_scale(tau2, sigma2)
-% ICC_ORIGINAL = ICC_ORIGINAL_SCALE(TAU2, SIGMA2)
-% Back-transforms the ICC of a model fitted on log(y) to the scale of y, assuming
-% normal random effects and residuals on the log scale (y is lognormal):
-%   ICC = (exp(tau2) - 1) / (exp(tau2 + sigma2) - 1)
-% Not valid for a model of an untransformed response. Element-wise.
-%
-% Input :
-%   tau2 - participant-level variance on the log scale.
-%   sigma2 - residual variance on the log scale.
-%
-% Example usage :
-%   ICC_original = icc_original_scale(0.070, 0.089)
-
-    ICC_original = (exp(tau2) - 1) ./ (exp(tau2 + sigma2) - 1);
-end
-
-function per_dataset = per_dataset_icc(data, spec, n_boot, boot_seed, do_boot)
-% PER_DATASET = PER_DATASET_ICC(DATA, SPEC, N_BOOT, BOOT_SEED, DO_BOOT)
-% Fits the response of SPEC to each dataset alone, with only the participant
-% random intercept, and reports its variance components and ICC. With DO_BOOT,
-% adds participant-cluster bootstrap SEs and percentile CIs.
-% All datasets are resampled in one stratified bootstrap, not one bootstrap per
-% dataset: a replicate then draws each dataset from its own segment of the
-% random stream, so the datasets are resampled independently and quantities that
-% pair draws across datasets (differences, heterogeneity) are valid. Separate
-% calls with one seed would reuse the same random numbers in every dataset.
-%
-% Input :
-%   data - the data table of measurements, after the cutoff.
-%   spec - struct with fields name (the response column) and scale ("linear"
-%          or "log"). Only "log" gets the ICC back-transformed to the original scale.
-%   n_boot - number of bootstrap replicates.
-%   boot_seed - the seed of the bootstrap random stream (see PROST.utils.boot_stream).
-%   do_boot - whether to run the bootstrap.
-%
-% Output :
-%   per_dataset - struct with fields:
-%                 table - one row per dataset: counts, tau2, sigma2, ICC (and
-%                         ICC_original for log), and with DO_BOOT the SE, CI and
-%                         share of converged and of boundary (tau2 = 0) replicates.
-%                 boot  - with DO_BOOT, the valid draws of tau2, sigma2 and ICC
-%                         per dataset (n_boot x n_datasets each, NaN if failed).
-%
-% Example usage :
-%   per_dataset = per_dataset_icc(data_final, struct('name', 'log_R_H', 'scale', "log"), 5000, 20261006, true)
-
-    response_name = spec.name;
-    is_log = is_log_scale(spec);
-    datasets = categories(removecats(data.DatasetID));
-    n_datasets = numel(datasets);
-
-    % Point estimates. Fitted outside a try, so a systematic error stops here
-    % instead of passing silently as failed bootstrap refits.
-    stat = per_dataset_icc_refit(data, response_name, datasets, false);
-    estimates = reshape(stat, 3, n_datasets)'; % rows: datasets; columns: tau2, sigma2, ICC
-
-    n_participants = zeros(n_datasets, 1);
-    n_legs = zeros(n_datasets, 1);
-    n_bilateral = zeros(n_datasets, 1);
-    for d = 1:n_datasets
-        legs_per_participant = countcats(removecats(data.ParticipantID(data.DatasetID == datasets{d})));
-        legs_per_participant = legs_per_participant(legs_per_participant > 0);
-        n_participants(d) = numel(legs_per_participant);
-        n_legs(d) = sum(legs_per_participant);
-        n_bilateral(d) = sum(legs_per_participant == 2);
-    end
-
-    T = table(string(datasets), n_participants, n_legs, n_bilateral, ...
-              estimates(:, 1), estimates(:, 2), estimates(:, 3), ...
-              'VariableNames', {'DatasetID', 'n_participants', 'n_legs', 'n_bilateral', 'tau2', 'sigma2', 'ICC'});
-    if is_log
-        T.ICC_original = icc_original_scale(T.tau2, T.sigma2);
-    end
-
-    per_dataset = struct();
-    if do_boot
-        gcp; % start the parallel pool here, so toc times only the bootstrap
-        tic
-        [boot_draws, fail_msg] = PROST.utils.cluster_bootstrap(data, @(boot_data, ~) ...
-            per_dataset_icc_refit(boot_data, response_name, datasets, true), ...
-            n_boot, boot_seed, NStat=3*n_datasets, Parallel=true);
-        toc
-        if all(fail_msg ~= "")
-            error("Every per-dataset bootstrap replicate failed: %s", fail_msg(1))
-        end
-
-        tau2_boot   = boot_draws(:, 1:3:end);
-        sigma2_boot = boot_draws(:, 2:3:end);
-        ICC_boot    = boot_draws(:, 3:3:end);
-        valid = ~isnan(ICC_boot);
-
-        ICC_CI = prctile(ICC_boot, [2.5 97.5], 1)'; % prctile ignores NaN per column
-        T.ICC_SE = std(ICC_boot, 0, 1, 'omitnan')';
-        T.ICC_CI_lower = ICC_CI(:, 1);
-        T.ICC_CI_upper = ICC_CI(:, 2);
-        if is_log
-            ICC_original_boot = icc_original_scale(tau2_boot, sigma2_boot);
-            ICC_original_CI = prctile(ICC_original_boot, [2.5 97.5], 1)';
-            T.ICC_original_CI_lower = ICC_original_CI(:, 1);
-            T.ICC_original_CI_upper = ICC_original_CI(:, 2);
-        end
-        T.pct_converged = 100*mean(valid, 1)';
-        % Replicates at the boundary tau2 = 0 pile up at ICC = 0 and make the
-        % percentile CI less reliable; reported so their share can be judged
-        T.pct_boundary = 100*(sum(valid & ICC_boot < 1e-6, 1) ./ sum(valid, 1))';
-
-        per_dataset.boot = struct('seed', boot_seed, 'n_boot', n_boot, 'fail_msg', fail_msg, ...
-                                  'tau2', tau2_boot, 'sigma2', sigma2_boot, 'ICC', ICC_boot);
-    end
-    per_dataset.table = T;
-
-    fprintf('\n--- %s - Per-Dataset ICC (participant random intercept only) ---\n', response_name)
-    disp(T)
-end
-
-function stat = per_dataset_icc_refit(data, response_name, datasets, catch_errors)
-% STAT = PER_DATASET_ICC_REFIT(DATA, RESPONSE_NAME, DATASETS, CATCH_ERRORS)
-% Fits RESPONSE_NAME ~ 1 + (1|ParticipantID) to each dataset of DATA alone and
-% returns [tau2, sigma2, ICC1] per dataset, concatenated in the order of DATASETS.
-% Used both for the point estimates and as the statistic of a bootstrap replicate.
-%
-% Input :
-%   data - the data table, or a resample of it (see PROST.utils.cluster_resample).
-%   response_name - the response column name.
-%   datasets - cellstr of the dataset IDs, fixing the order of the output.
-%   catch_errors - true: a failed fit gives NaN for its dataset only, so one
-%                  dataset cannot discard the replicate of the others; false:
-%                  the error propagates.
-%
-% Example usage :
-%   stat = per_dataset_icc_refit(data_final, 'log_R_H', {'1' '2' '3' '4'}, false)
-
-    formula = [response_name ' ~ 1 + (1|ParticipantID)'];
-    stat = nan(1, 3*numel(datasets));
-    for d = 1:numel(datasets)
-        try
-            lme = fitlme(data(data.DatasetID == datasets{d}, :), formula, 'FitMethod', 'REML');
-            [ICC, tau2, sigma2] = model_metrics(lme, Display="off");
-            stat(3*d - 2:3*d) = [tau2, sigma2, ICC(1)];
-        catch ME
-            if ~catch_errors
-                rethrow(ME)
-            end
-        end
-    end
-end
-
-function plot_icc_forest(results, spec)
-% PLOT_ICC_FOREST(RESULTS, SPEC)
-% Forest plot of the per-dataset ICCs with their bootstrap CIs, and the pooled
-% ICC of the final model below them. Marker area is proportional to the number of
-% participants. CIs are drawn only when the bootstrap was run.
-%
-% Input :
-%   results - the results of one response: fields ICC, per_dataset, and
-%             optionally boot (the pooled bootstrap).
-%   spec - struct with fields name and scale.
-%
-% Example usage :
-%   plot_icc_forest(results.log_R_H, struct('name', 'log_R_H', 'scale', "log"))
-
-    T = results.per_dataset.table;
-    n_datasets = height(T);
-    has_ci = ismember('ICC_CI_lower', T.Properties.VariableNames);
-
-    % Undocked at the paper aspect ratio: prep_figure_for_publish scales the height
-    % with the width, so a docked window would give the dock's aspect ratio
-    figure(Name="Final LME - " + spec.name + ": Per-Dataset ICC", WindowStyle="normal", ...
-           Units="points", Position=[0 0 468 170])
-    hold on
-    y = n_datasets + 1:-1:2;
-    if has_ci
-        errorbar(T.ICC, y, [], [], T.ICC - T.ICC_CI_lower, T.ICC_CI_upper - T.ICC, ...
-                 'k', 'LineStyle', 'none', 'CapSize', 0, 'LineWidth', 0.75)
-    end
-    scatter(T.ICC, y, 12 + 0.6*T.n_participants, 'k', 's', 'filled')
-
-    % Pooled ICC: final model, dataset fixed effect
-    pooled = results.ICC;
-    if isfield(results, 'boot')
-        ci = results.boot.boot_inferences{'ICC', {'CI_lower', 'CI_upper'}};
-        patch([ci(1) pooled ci(2) pooled], [1 1.25 1 0.75], 'k')
-    else
-        plot(pooled, 1, 'kd', 'MarkerFaceColor', 'k')
-    end
-    xline(pooled, ':')
-
-    % participants / legs, so the published figure needs no title or legend
-    labels = ["Dataset " + T.DatasetID + " (" + T.n_participants + " / " + T.n_legs + ")"; ...
-              "Pooled (" + sum(T.n_participants) + " / " + sum(T.n_legs) + ")"];
-    yticks(1:n_datasets + 1)
-    yticklabels(flip(labels))
-    ylim([0.4 n_datasets + 1.6])
-    xlim([0 1])
-    if is_log_scale(spec)
-        xlabel('ICC_{log}')
-    else
-        xlabel('ICC')
-    end
-    title(sprintf("Per-dataset ICC - %s", spec.name), 'Interpreter', 'none')
-    box on
-    hold off
-end
-
-function normality_check(varaiable, var_name, test_type)
-% TEST_NORMALITY(VAR, NAME, TEST_TYPE)
-% Normality test for variable. 
-% Plots a histogram against the Gaussian PDF and a QQ-plot.
-% Performs a normality test and prints the result to command window.
-% Ignores nan and inf values of the variable.
-%
-% Input :
-%   varaiable - the variable to test.
-%   var_name - the name of the variable to test for printing.
-%   test_type - the type of test to perform. One of the following:\n\n
-%              'anderson'   - Anderson-Darling (default)
-%              'chi2gof'    - Chi2 goodness-of-fit
-%              'lilliefors' - Kolmogorov-Smirnov (standardized)
-%              'kolmogorov' - Lilliefors
-%
-% Example usage:
-%   test_normality(var, "variable", "chi2gof")
-%   test_normality(var, "variable")
-
-
-arguments
-    varaiable {mustBeNumeric}
-    var_name  (1, 1) string
-    test_type (1, 1) string {mustBeMember(test_type, ["anderson" "chi2gof" "kolmogorov" "lilliefors"])} = "anderson"
-end
-
-    varaiable = varaiable(~isnan(varaiable) & ~isinf(varaiable));
-
-    switch test_type
-    case "chi2gof"
-        % Chi-squared Goodness-of-Fit test
-        [h, p, stat] = chi2gof(varaiable);
-        fprintf('\n--- Chi-Squared Normality Test on %s ---\n', var_name);
-        fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
-        fprintf('Test Statistic (Chi^2): %.2g\n', stat.chi2stat);
-        fprintf('p-value:                %.2g\n', p);
-    case "lilliefors"
-        % Lilliefors test
-        [h, p, stat, cv] = lillietest(varaiable);
-        fprintf('\n--- Lilliefors Normality Test on %s ---\n', var_name);
-        fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
-        fprintf('Test Statistic (D):     %.2g (critical value = %.2g)\n', stat, cv);
-        fprintf('p-value:                %.2g\n', p);
-    case "anderson"
-        % Anderson-Darling test
-        [h, p, stat, cv] = adtest(varaiable);
-        fprintf('\n--- Anderson-Darling Normality Test on %s ---\n', var_name);
-        fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
-        fprintf('Test Statistic (A^2):   %.2g (critical value = %.2g)\n', stat, cv);
-        fprintf('p-value:                %.2g\n', p);
-    case "kolmogorov" 
-        % standardized KS vs N(0,1)
-        [h, p, stat, cv] = kstest((varaiable - mean(varaiable)) / std(varaiable));
-        fprintf('\n--- Standardized Kolmogorov-Smirnov Normality Test on %s ---\n', var_name);
-        fprintf('Rejection Decision (h): %d (where 1 = Non-normal)\n', h);
-        fprintf('Test Statistic (D):     %.2g (critical value = %.2g)\n', stat, cv);
-        fprintf('p-value:                %.2g\n', p);
-    end
-
-    figure(Name="QQ-plot: " + var_name)
-    qqplot(varaiable)
-    title("QQ-plot: " + var_name)
-    grid on
-
-    figure(Name="Histogram: " + var_name)
-    histogram(varaiable, Normalization='pdf', DisplayName="Histogram")
-    hold on
-
-    xx = linspace(min(varaiable), max(varaiable), 100);
-    mu = mean(varaiable);
-    sigma = std(varaiable);
-    median_val = median(varaiable);
-    quartiles = prctile(varaiable, [25 75]);
-    Q1 = quartiles(1);
-    Q3 = quartiles(2);
-
-    plot(xx, normpdf(xx, mu, sigma), 'r-', LineWidth=1.5,  LineStyle='-', DisplayName="Normal Distribution")  
-    xline(mu, 'b-', LineWidth=1.5, DisplayName="Mean")
-    xregion(mu - sigma, mu + sigma, FaceColor=0.7*[0 0 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="\pm SD")   
-    xline(median_val, 'k-', LineWidth=1.5, DisplayName="Median")
-    xregion(Q1, Q3, FaceColor=(1 - 0.7)*[1 1 1], FaceAlpha= 0.1, LineStyle='none', DisplayName="IQR")
-
-    title(var_name + " vs Normal Distribution")
-    xlabel(var_name)
-    ylabel('Probability Density Function')
-    legend
-    grid on
-end
-
-function [ICC, tau2, sigma2] = model_metrics(model, name, opts)
-% [ICC, TAU2, SIGMA2] = MODEL_METRICS(MODEL, NAME)
-% Computes metrics of variance components from the Mixed-Effects Model and
-% displays them in the command window.
-%
-% Input :
-%   model - the mixed effects model
-%   name - the name of the model for printing. "" by default.
-%
-% Name-Value pair options:
-%   Display - whether to display or suppress results to the command line. 
-%             Specified as 'on' or 'off', or as numeric or logical 1 (true) or 0 
-%             (false). A value of 'on' is equivalent to true, and 'off' is 
-%             equivalent to false.
-%             - "on" - display (default).
-%             - "off" - suppress.
-%
-%   ICC - Inter-class correlation. The ratio between the random effect component
-%         variance and total variance. Returns either ICC1 or [ICC1, ICC2] 
-%         according to Bliese 2000:
-%           ICC1 = tau^2 / (tau^2 + sigma^2)
-%         If model weights exist:
-%           ICC2 = tau^2 / (tau^2 + sigma^2 * mean(1./w)), w = weights.
-%   tau2 - variance of the random effects component
-%   sigma2 - homoscedastic variance of the residual component 
-%            (assuming weight = 1).
-%
-% Example usage :
-%   model_metrics(lme, "LMM");
-%   ICC = model_metrics(lme, "LMM");
-%   ICC = model_metrics(lme, Display="off");
-%   [ICC, tau2, sigma2] = model_metrics(lme, "LMM");
-
-
-    arguments
-        model
-        name    (1, 1) string = ""
-        opts.Display (1, 1) matlab.lang.OnOffSwitchState = "on"
-    end
-
-    [psi, sigma2] = covarianceParameters(model);
-    tau2 = psi{1}(1, 1);
-    total_variance = tau2 + sigma2;
-    ICC1 = tau2 ./ (tau2 + sigma2);
-    ICC = ICC1;
-    
-    weights =  model.ObservationInfo.Weights;
-    if any(diff(weights) ~= 0)
-        sigma2_avg = sigma2 * mean(1 ./ weights);
-        total_variance = tau2 + sigma2_avg;
-        ICC2 = tau2 ./ (tau2 + sigma2_avg);
-        ICC = [ICC ICC2];
-    end
-
-    if opts.Display
-        % Display metrics formatted for publication
-        fprintf('\n--- %s - Hierarchical Variance Decomposition Metrics ---\n', name);
-        fprintf('Participant-Level Variance:                          %8.3f\n', tau2);
-        fprintf('Residual-Level Variance (reference with no weights): %8.3f\n', sigma2);
-        fprintf('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n');
-        fprintf('Total Variance:                                      %8.4f\n', total_variance);
-        fprintf('ICC1:                                                %8.4f\n', ICC1);
-        if any(diff(weights) ~= 0)
-            fprintf('Residual-Level Variance (averaged weights):          %8.3f\n', sigma2_avg);
-            fprintf('ICC2:                                                %8.4f\n', ICC2);
-        end
-    end
-end
-
-function loo = icc_leave_one_out(model, model_name)
-% LOO = ICC_LEAVE_ONE_OUT(MODEL, MODEL_NAME)
-% Sensitivity of the ICC to single participants: refits MODEL with each
-% participant left out in turn, with the same formula, fit method, weights and
-% exclusions. Prints the most influential participants and the range of the ICC,
-% and plots its distribution. Participants with nearly flat ROS legs just below
-% the R_H cutoff can move the ICC much more than the rest.
-%
-% Input :
-%   model - the fitted mixed effects model.
-%   model_name - the name of the model for printing.
-%
-% Output :
-%   loo - table with one row per participant: ParticipantIDGlobal, ICC1_Without
-%         (ICC1 of the refit without the participant) and Delta_ICC1 (its
-%         difference from the ICC1 of MODEL).
-%
-% Example usage :
-%   loo = icc_leave_one_out(results.log_R_H.lme, "Final LME - log_R_H")
-
-    data = model.Variables;
-    weight = model.ObservationInfo.Weights;
-    excluded = model.ObservationInfo.Excluded;
-    formula = model.Formula.char;
-    ICC_all = model_metrics(model, Display="off");
-    ICC_all = ICC_all(1);
-
-    participants = unique(data.ParticipantIDGlobal(~excluded));
-    ICC_without = nan(numel(participants), 1);
-    for k = 1:numel(participants)
-        keep = data.ParticipantIDGlobal ~= participants(k);
-        lme_k = fitlme(data(keep, :), formula, ...
-                       'FitMethod', model.FitMethod, ...
-                       'Weights', weight(keep), ...
-                       'DummyVarCoding', 'effects', ...
-                       'Exclude', excluded(keep));
-        ICC_k = model_metrics(lme_k, Display="off");
-        ICC_without(k) = ICC_k(1);
-    end
-
-    loo = table(participants, ICC_without, ICC_without - ICC_all, ...
-        'VariableNames', {'ParticipantIDGlobal', 'ICC1_Without', 'Delta_ICC1'});
-    [~, order] = sort(abs(loo.Delta_ICC1), 'descend');
-    fprintf('\n--- %s - Leave-One-Participant-Out ICC1 (ICC1 = %.4f) --- \n', model_name, ICC_all)
-    disp(loo(order(1:10), :))
-    fprintf('ICC1 range when one participant is left out: %.4f - %.4f\n', min(ICC_without), max(ICC_without));
-
-    figure(Name="Leave-One-Participant-Out ICC: " + model_name)
-    histogram(ICC_without, 40);
-    xline(ICC_all, 'r', LineWidth=1.5);
-    xlabel('ICC(1) without one participant'); ylabel('Participants');
-    title("Leave-One-Participant-Out ICC: " + model_name, Interpreter='none');
-    grid on
-end
-
 function test_weight_scheme(data, response_name)
 % TEST_WEIGHT_SCHEME(DATA, RESPONSE_NAME) 
 % Tests which weights to use for the LMM fit. The optimal weights are those that 
@@ -1360,7 +320,7 @@ function test_weight_scheme(data, response_name)
     lmm_no_weight = fitlme(data, formula, ...
                            'FitMethod', 'REML', ...
                            'DummyVarCoding', 'effects');
-    ICC_no_weight = model_metrics(lmm_no_weight, Display="off");
+    ICC_no_weight = PROST.lme.model_metrics(lmm_no_weight, Display="off");
 
     % --------------------------------------------------------------------------
     % N_steps weighted LMM
@@ -1370,7 +330,7 @@ function test_weight_scheme(data, response_name)
                            'FitMethod', 'REML', ...
                            'Weights', weight_raw, ... 
                            'DummyVarCoding', 'effects');
-    ICC_n_steps_weight = model_metrics(lmm_weighted, Display="off");
+    ICC_n_steps_weight = PROST.lme.model_metrics(lmm_weighted, Display="off");
 
     % --------------------------------------------------------------------------
     % Check: does capping extreme weights change the zero-variance result?
@@ -1393,7 +353,7 @@ function test_weight_scheme(data, response_name)
                             'FitMethod', 'REML', ...
                             'Weights', weight_capped, ...
                             'DummyVarCoding', 'effects');
-        [ICC_capped, tau2, sigma2] = model_metrics(lmm_capped, Display="off");
+        [ICC_capped, tau2, sigma2] = PROST.lme.model_metrics(lmm_capped, Display="off");
 
         % lme_initial for this capped-weight model too      
         lmm_capped_ML = fitlme(data, formula, ...
@@ -1430,7 +390,7 @@ function test_weight_scheme(data, response_name)
                          'FitMethod', 'REML', ...
                          'Weights', weight_capped, ...
                          'DummyVarCoding', 'effects');
-        [ICC_fine, tau2, sigma2] = model_metrics(lmm_fine, Display="off");
+        [ICC_fine, tau2, sigma2] = PROST.lme.model_metrics(lmm_fine, Display="off");
 
         % At EACH point in this grid, verify with a second optimizer to rule out
         % optimizer-dependent boundary artifacts
@@ -1443,7 +403,7 @@ function test_weight_scheme(data, response_name)
                         'Optimizer', 'fminunc', ...
                         'OptimizerOptions', opts);
 
-        ICC_altopt =  model_metrics(lmm_alt, Display="off");
+        ICC_altopt =  PROST.lme.model_metrics(lmm_alt, Display="off");
 
         fine_results = [fine_results; table(pc, cap_val, tau2, sigma2, ICC_fine(1), ICC_fine(2), ICC_altopt(1), ICC_altopt(2), ...
             'VariableNames', {'Percentile', 'CapValue', 'Tau2', 'Sigma2', 'ICC1', 'ICC2', 'ICC1_Alt', 'ICC2_Alt'})];
@@ -1478,7 +438,7 @@ function test_weight_scheme(data, response_name)
                            'FitMethod', 'REML', ...
                            'Weights', weight_log, ...
                            'DummyVarCoding', 'effects');
-    ICC_log_weight = model_metrics(lme_log_weight, Display="off");
+    ICC_log_weight = PROST.lme.model_metrics(lme_log_weight, Display="off");
 
     % Also compare to an alternate optimizer
     opts = optimoptions('fminunc');
@@ -1489,7 +449,7 @@ function test_weight_scheme(data, response_name)
                            'DummyVarCoding', 'effects', ...
                            'Optimizer', 'fminunc', ...
                            'OptimizerOptions', opts);
-    ICC_log_weight_fminunc = model_metrics(lme_log_weight_fminunc, Display="off");
+    ICC_log_weight_fminunc = PROST.lme.model_metrics(lme_log_weight_fminunc, Display="off");
     
     % --------------------------------------------------------------------------
     % Check for only Dataset 4
@@ -1505,13 +465,13 @@ function test_weight_scheme(data, response_name)
     lmm_dataset4 = fitlme(data_dataset4, formula_noFE, ...
                           'FitMethod', 'REML', ...
                           'DummyVarCoding', 'effects');
-    ICC_dataset4_no_weight =model_metrics(lmm_dataset4, Display="off");
+    ICC_dataset4_no_weight =PROST.lme.model_metrics(lmm_dataset4, Display="off");
 
     lmm_dataset4_weighted = fitlme(data_dataset4, formula_noFE, ...
                                    'FitMethod', 'REML', ...
                                    'Weights', weight_dataset4, ...
                                    'DummyVarCoding', 'effects');
-    ICC_dataset4_n_steps_weight = model_metrics(lmm_dataset4_weighted, Display="off");
+    ICC_dataset4_n_steps_weight = PROST.lme.model_metrics(lmm_dataset4_weighted, Display="off");
 
     % --------------------------------------------------------------------------
     % Check: uncapped weight but on sqrt(n_steps)
@@ -1524,7 +484,7 @@ function test_weight_scheme(data, response_name)
                       'FitMethod', 'REML', ...
                       'Weights', weight_sqrt, ...
                       'DummyVarCoding', 'effects');
-    ICC_sqrt_weight = model_metrics(lmm_sqrt, Display="off");
+    ICC_sqrt_weight = PROST.lme.model_metrics(lmm_sqrt, Display="off");
 
     opts = optimoptions('fminunc');
     opts.Display = 'off';
@@ -1534,7 +494,7 @@ function test_weight_scheme(data, response_name)
                       'DummyVarCoding', 'effects', ...
                       'Optimizer', 'fminunc', ...
                       'OptimizerOptions', opts);
-    ICC_sqrt_weight_fminunc = model_metrics(lmm_sqrt_fminunc, Display="off");
+    ICC_sqrt_weight_fminunc = PROST.lme.model_metrics(lmm_sqrt_fminunc, Display="off");
 
     fprintf('\n--- Summary of all Weight Scheme ICCs ---\n')
     ICC_var = [ICC_no_weight NaN; ... 
@@ -1558,166 +518,6 @@ function test_weight_scheme(data, response_name)
         'Dataset 4 No Weight', 'Dataset_4 N_Steps' ...
         'Sqrt', 'Sqrt (FMinUnc)'});
     disp(ICC_summary)
-end
-
-function assumptions_check(model, model_name)
-% TEST_LMM_ASSUMPTIONS(DATA, MODEL, RESPONSE_NAME)
-% Tests the various assumptions of the mixed-effects model: 
-%   - Normality of the  random effects, 
-%   - Normality of the residuals, 
-%   - Homoscedasticity, 
-%   - Comparison to a model without random effects, 
-%   - Variance function power law.
-% Prints results to the command window.
-%
-% Input :
-%   data - the data table of measurements.
-%   model - the mixed effects model to test.
-%
-% Example usage :
-%   test_lmm_assumptions(data, lmm_final, "R_H")
-
-
-    arguments 
-        model
-        model_name (1, 1) string = "Final Model"
-    end
-
-    % ME Model Parameters
-    data = model.Variables;
-    excluded = model.ObservationInfo.Excluded;
-    valid = ~excluded;
-    response_name = model.ResponseName;
-    formula = model.Formula.char;
-   
-    % ------------------------------------------------------------------
-    % Formal Statistical Tests on Raw Vectors (Stratified/Pooled)
-    % ------------------------------------------------------------------
-    var_raw = data.(response_name)(valid); % Load your empirical data vectors
-    RMS_raw = data.RMS(valid); % RMS residuals
-    normality_check(RMS_raw, "Pooled RMS [mm]", 'anderson') % Test on pooled RMS data
-    normality_check(var_raw, "Pooled " + response_name + " [-]", 'anderson') % Test continuous pooled response data
-
-    % ------------------------------------------------------------------
-    % Conditional Normality Assessment (LME Model Residuals)
-    % ------------------------------------------------------------------
-    model_residuals = residuals(model, 'ResidualType', 'Pearson');
-    model_residuals = model_residuals(valid);
-    normality_check(model_residuals, model_name + " Residual [-]", 'anderson')
-    
-    % ------------------------------------------------------------------
-    % Normality of Random Effects (BLUPs)
-    % ------------------------------------------------------------------
-    random_effects = randomEffects(model);
-    normality_check(random_effects, model_name + " Random Effects [-]", 'anderson')
-
-    % ------------------------------------------------------------------
-    % Homoscedasticity
-    % ------------------------------------------------------------------
-    mu_hat = fitted(model);
-    mu_hat = mu_hat(valid);
-
-    figure(Name=model_name + " Residuals vs Fitted")
-    scatter(mu_hat, model_residuals, 20, 'filled');
-    yline(0, '--r');
-    xlabel('Fitted values [-]'); 
-    ylabel('Pearson residuals [-]');
-    title([model_name ' Residuals vs Fitted']);
-
-    % Brown-Forsythe's test: residual variance equal across Dataset groups
-    group = data.DatasetID(valid);   % categorical grouping variable
-
-    % Brown-Forsythe test (ANOVA on absolute deviations from group median)
-    [p, stats] = vartestn(model_residuals, group, "Display", "off", "TestType", "BrownForsythe");
-    
-    fprintf('\n--- %s - Participant-level %s Brown-Forsythe Test of Variance Homoscedasticity ---\n', model_name, response_name);
-    fprintf('Rejection Decision (h): %d (where 1 = Heteroscedastic Variance)\n', p < 0.05);
-    fprintf('Test Statistic (W):     %.5f\n', stats.fstat);
-    fprintf('p-value:                %.5f\n', p);
-
-    % ------------------------------------------------------------------
-    % Random-effects structure: LRT - Likelihood Ratio Test
-    % ------------------------------------------------------------------
-    % Compare model WITH participant random intercept vs WITHOUT
-    lmm_full = fitlme(data, formula, ...
-                        'FitMethod','REML', ...
-                        'DummyVarCoding', 'effect', ...
-                        'Exclude', excluded);  % REML is valid for this LRT: full and nested models have identical fixed effects (Pinheiro & Bates 2000, Sec. 2.4.1)
-
-    % No Random Effects formula
-    formula_noRE = model.Formula.FELinearFormula.char;
-    lmm_reduced = fitlme(data, formula_noRE, ...
-                            'FitMethod', 'REML', ...
-                            'DummyVarCoding', 'effect', ...
-                            'Exclude', excluded);  % REML is valid for this LRT: full and nested models have identical fixed effects (Pinheiro & Bates 2000, Sec. 2.4.1)
-    fprintf('\n--- %s - Likelehood Ratio Test With/Without Random Effects ---\n', model_name)
-    results = compare(lmm_reduced, lmm_full, 'CheckNesting', true);
-    disp(results);
-    
-    % ------------------------------------------------------------------
-    % Variance Function (Var(Y) ~ mu^P)
-    % ------------------------------------------------------------------
-    % Plot group means vs group variances directly
-    groupMeans = splitapply(@mean, data{valid, response_name}, findgroups(data.DatasetID(valid)));
-    groupVars  = splitapply(@var,  data{valid, response_name}, findgroups(data.DatasetID(valid)));
-
-    % Fit line to log-log to check power relationship (slope~2 => Gamma, slope~3 => IG)
-    p = polyfit(log(abs(groupMeans)), log(abs(groupVars)), 1);
-    fprintf('\n--- %s - Variance Function Check Across Datasets Directly ---\n', model_name);
-    fprintf('Estimated slope of log(Var) vs log(Mean): %.3f\n', p(1));
-
-    figure(Name=model_name + " Per-Dataset Mean vs Variance")
-    scatter(log(abs(groupMeans)), log(abs(groupVars)), 60, 'filled');
-    h_l = lsline();
-    h_l.Color = "red";
-    h_l.LineWidth = 1.5;
-    xlabel(['log(|Group Mean of ' response_name '|)']); 
-    ylabel(['log(|Group Variance) of ' response_name '|)']);
-    title([model_name ' Mean-Variance Relationship Across Datasets Directly ' sprintf('(slope = %.2f)', p(1))]);
-    grid on
-
-    % Bin fitted values into groups, compute empirical variance per bin,
-    % then regress log(|variance|) on log(|mean|)
-
-    % Use Pearson residuals instead of raw residuals - these already incorporate
-    % the model's weight structure, so remaining heteroscedasticity reflects
-    % genuine mean-variance relationship, not the weighting scheme itself
-    n_bins = floor(sqrt(numel(mu_hat)));
-    edges = quantile(mu_hat, linspace(0, 1, n_bins+1));
-    bin_idx = discretize(mu_hat, edges);
-    
-    log_mean_bin = nan(n_bins, 1);
-    log_var_bin  = nan(n_bins, 1);
-    for b = 1:n_bins
-        sel = bin_idx == b;
-        if sum(sel) > 3
-            log_mean_bin(b) = log(abs(mean(mu_hat(sel))));
-            log_var_bin(b)  = log(abs(var(model_residuals(sel))));
-        end
-    end
-    valid2 = ~isnan(log_mean_bin) & ~isnan(log_var_bin);
-    p = polyfit(log_mean_bin(valid2), log_var_bin(valid2), 1);
-    fprintf('\n--- %s - Binned Variance Function Check ---\n', model_name);
-    fprintf('Estimated slope of log(Var) vs log(Mean): %.3f\n', p(1));
-    
-    figure(Name=model_name + " Binned Mean vs Variance")
-    scatter(log_mean_bin(valid2), log_var_bin(valid2), 60, 'filled')
-    hold on
-    xfit = linspace(min(log_mean_bin(valid2)), max(log_mean_bin(valid2)), 50);
-    plot(xfit, polyval(p, xfit), 'r-', 'LineWidth', 1.5)
-    xlabel('log(|Mean of \mu_{hat} per bin|)')
-    ylabel('log(|Variance of residuals per bin|)')
-    title([model_name ' Mean-Variance Relationship Accross Binned \mu_{hat} ' sprintf('slope = %.2f', p(1))])
-    grid on
-
-    % Diagnose what's actually driving bin membership
-    % tabulate(discretize(mu_hat, edges))  % check bin sizes are reasonably balanced
-    figure(Name=model_name + " Fitted vs Dataset")
-    scatter(mu_hat, data.DatasetID(valid)); % see if bins ~ perfectly separate Datasets
-    xlabel('\mu_{hat} [-]')
-    ylabel('Dataset ID')
-    title([model_name ' Fitted vs Dataset'])
-    grid on
 end
 
 function test_cutoff_unstable_R(data, model)
@@ -1893,7 +693,7 @@ function test_cutoff_unstable_R(data, model)
                             'DummyVarCoding', 'effects', ...
                             'Exclude', excluded_filt);
 
-        [ICC_filt, tau2_filt, sigma2_filt] = model_metrics(lme_filt, Display="off");
+        [ICC_filt, tau2_filt, sigma2_filt] = PROST.lme.model_metrics(lme_filt, Display="off");
 
         resid_filt = residuals(lme_filt, 'ResidualType', 'Pearson');
         [~, p_ad, adstat] = adtest(resid_filt);
@@ -1908,7 +708,7 @@ function test_cutoff_unstable_R(data, model)
                          'Optimizer', 'fminunc', ...
                          'OptimizerOptions', opts);
 
-        ICC_alt = model_metrics(lme_alt, Display="off");
+        ICC_alt = PROST.lme.model_metrics(lme_alt, Display="off");
 
         sensitivity_results = [sensitivity_results; ...
             table(rule_names(k), th_deg, th_rad, n_filtered, tau2_filt, sigma2_filt, ICC_filt(1), ICC_alt(1), adstat, p_ad, ...
@@ -2019,49 +819,6 @@ function relabel_arc_span_ticks(ruler)
     ruler.TickLabels = compose("%g" + char(176) + "\\newline%.2f", ticks, deg2rad(ticks));
 end
 
-function [pval, stat, df] = flignerKilleen(data, group)
-    % FLIGNERKILLEEN  Fligner-Killeen test for homogeneity of variances
-    %   data  : vector of observations
-    %   group : vector/categorical of group labels (same length as data)
-
-    data = data(:);
-    group = group(:);
-    groups = unique(group);
-    k = numel(groups);
-    N = numel(data);
-
-    % Step 1: center each group by its median
-    centered = zeros(N,1);
-    for i = 1:k
-        idx = group == groups(i);
-        centered(idx) = abs(data(idx) - median(data(idx)));
-    end
-
-    % Step 2: rank the absolute centered values (overall ranks)
-    ranks = tiedrank(centered);
-
-    % Step 3: Fligner-Killeen scores = normal quantile transform of ranks
-    a = norminv(0.5 + ranks/(2*(N+1)));
-
-    % Step 4: compute test statistic
-    abar = mean(a);
-    v = var(a); % variance of the scores, used as normalizing constant
-
-    stat = 0;
-    for i = 1:k
-        idx = group == groups(i);
-        ni = sum(idx);
-        Ai = sum(a(idx));
-        stat = stat + ni * (Ai/ni - abar)^2;
-    end
-    stat = stat / v;
-
-    df = k - 1;
-    pval = 1 - chi2cdf(stat, df);
-
-    fprintf('Fligner-Killeen: chi-sq = %.4f, df = %d, p = %.4g\n', stat, df, pval);
-end
-
 function left_right_difference_check(data, var_name)
     participants_global = unique(data.ParticipantIDGlobal);
     n_participants = numel(participants_global);
@@ -2102,43 +859,8 @@ function left_right_difference_check(data, var_name)
     fprintf('Correlation Delta_%s to Delta_RMS: %.2f\n', corr(abs(delta_Variable), abs(delta_RMS)))
     fprintf('Correlation Delta_%s to mean_RMS: %.2f\n', corr(abs(delta_Variable), mean_RMS))
 
-    normality_check(delta_Variable, "Delta " + var_name + " [-]", 'anderson')
-    normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
-end
-
-function stat = lme_refit(boot_data, boot_rows, model)
-% STAT = LME_REFIT(BOOT_DATA, BOOT_ROWS, MODEL)
-% Statistic of one cluster bootstrap replicate (see PROST.utils.cluster_bootstrap):
-% refits MODEL on the resample and returns its parameters. An error of the refit
-% propagates, so cluster_bootstrap records it as the reason of a failed replicate.
-%
-% Input :
-%   boot_data - the resampled table, with a new ID per drawn participant
-%               (see PROST.utils.cluster_resample).
-%   boot_rows - the rows of the table MODEL was fitted on in the resample.
-%   model - the fitted LME model.
-%
-% Output :
-%   stat - [beta, tau2, sigma2, ICC]: the fixed effects with the effects-coded
-%          last dataset appended, the variance components and ICC1 =
-%          tau2 / (tau2 + sigma2) on the model scale.
-%
-% Example usage :
-%   [boot_data, boot_rows] = PROST.utils.cluster_resample(data, PROST.utils.boot_stream(1, 1));
-%   stat = lme_refit(boot_data, boot_rows, lme)
-
-    % Weights follow their rows, so a weighted model stays weighted (all ones if not)
-    weights = model.ObservationInfo.Weights(boot_rows);
-
-    lme_boot = fitlme(boot_data, char(model.Formula), ...
-        'FitMethod', model.FitMethod, ...
-        'Weights', weights, ...
-        'DummyVarCoding', 'effects');
-
-    beta_boot = lme_boot.Coefficients.Estimate';
-    beta_boot(end + 1) = -sum(beta_boot(2:end));
-    [ICC, tau2_boot, sigma2_boot] = model_metrics(lme_boot, Display="off");
-    stat = [beta_boot, tau2_boot, sigma2_boot, ICC(1)];
+    PROST.lme.normality_check(delta_Variable, "Delta " + var_name + " [-]", 'anderson')
+    PROST.lme.normality_check(delta_RMS, "Delta RMS [mm]", 'anderson')
 end
 
 function data = synthetic_lme_data(stream, n_per_dataset, dataset_means, tau2, sigma2)
@@ -2179,7 +901,7 @@ function self_test()
     % ------------------------------------------------------------------
     % ICC back-transform
     % ------------------------------------------------------------------
-    ICC_original = icc_original_scale([0; 0.07; 0.2], [0.09; 0.089; 0.05]);
+    ICC_original = PROST.lme.icc_original_scale([0; 0.07; 0.2], [0.09; 0.089; 0.05]);
     assert(isequal(size(ICC_original), [3 1]), "Back-transform is not element-wise.")
     assert(ICC_original(1) == 0, "Back-transform of tau2 = 0 is not 0.")
     fprintf('PASS: back-transform is element-wise and gives 0 for tau2 = 0\n')
@@ -2193,11 +915,11 @@ function self_test()
     y_left  = exp(-1.38 + u + sqrt(sigma2) * randn(stream, n, 1));
     y_right = exp(-1.38 + u + sqrt(sigma2) * randn(stream, n, 1));
     ICC_empirical = corr(y_left, y_right);
-    assert(abs(ICC_empirical - icc_original_scale(tau2, sigma2)) < 0.01, ...
+    assert(abs(ICC_empirical - PROST.lme.icc_original_scale(tau2, sigma2)) < 0.01, ...
         "Back-transform %.4f does not match the simulated original-scale ICC %.4f.", ...
-        icc_original_scale(tau2, sigma2), ICC_empirical)
+        PROST.lme.icc_original_scale(tau2, sigma2), ICC_empirical)
     fprintf('PASS: back-transform %.4f matches simulated original-scale ICC %.4f\n', ...
-        icc_original_scale(tau2, sigma2), ICC_empirical)
+        PROST.lme.icc_original_scale(tau2, sigma2), ICC_empirical)
 
     % ------------------------------------------------------------------
     % model_metrics
@@ -2208,12 +930,12 @@ function self_test()
     lme_weighted = fitlme(data, formula, 'FitMethod', 'REML', 'DummyVarCoding', 'effects', ...
                           'Weights', data.n_steps);
 
-    [ICC, tau2_hat, sigma2_hat] = model_metrics(lme, Display="off");
+    [ICC, tau2_hat, sigma2_hat] = PROST.lme.model_metrics(lme, Display="off");
     [psi, mse] = covarianceParameters(lme);
     assert(isscalar(ICC), "Unweighted model gives more than one ICC.")
     assert(tau2_hat == psi{1}(1, 1) && sigma2_hat == mse, "Variance components differ from covarianceParameters.")
     assert(abs(ICC - tau2_hat / (tau2_hat + sigma2_hat)) < 1e-12, "ICC is not tau2 / (tau2 + sigma2).")
-    assert(numel(model_metrics(lme_weighted, Display="off")) == 2, "Weighted model does not give ICC1 and ICC2.")
+    assert(numel(PROST.lme.model_metrics(lme_weighted, Display="off")) == 2, "Weighted model does not give ICC1 and ICC2.")
     fprintf('PASS: model_metrics ICC1 = tau2 / (tau2 + sigma2); weighted model adds ICC2\n')
 
     % ------------------------------------------------------------------
@@ -2221,14 +943,14 @@ function self_test()
     % ------------------------------------------------------------------
     n_fixed = height(lme.Coefficients) + 1;
     [boot_data, boot_rows] = PROST.utils.cluster_resample(data, PROST.utils.boot_stream(1, 1));
-    stat = lme_refit(boot_data, boot_rows, lme);
+    stat = PROST.lme.lme_refit(boot_data, boot_rows, lme);
     assert(numel(stat) == n_fixed + 3, "Wrong number of bootstrap parameters.")
     assert(all(isfinite(stat)), "Bootstrap refit returned non-finite parameters.")
     beta = stat(1:n_fixed);
     assert(abs(beta(end) + sum(beta(2:end-1))) < 1e-12, "Last dataset effect is not minus the sum of the others.")
     fprintf('PASS: lme_refit refits an unweighted model\n')
 
-    stat_weighted = lme_refit(boot_data, boot_rows, lme_weighted);
+    stat_weighted = PROST.lme.lme_refit(boot_data, boot_rows, lme_weighted);
     assert(all(isfinite(stat_weighted)), "Weighted bootstrap refit returned non-finite parameters.")
     assert(~isequal(stat_weighted, stat), "Weights were not applied to the refit.")
     fprintf('PASS: lme_refit refits a weighted model\n')
@@ -2248,7 +970,7 @@ function self_test()
     end
     fprintf('PASS: resampling is stratified by dataset and keeps participants whole\n')
 
-    refit = @(boot_data, boot_rows) lme_refit(boot_data, boot_rows, lme);
+    refit = @(boot_data, boot_rows) PROST.lme.lme_refit(boot_data, boot_rows, lme);
     draws = PROST.utils.cluster_bootstrap(data, refit, 3, 1, NStat=n_fixed + 3);
     assert(isequal(draws(1, :), stat), "Replicate 1 differs from substream 1.")
     assert(isequal(PROST.utils.cluster_bootstrap(data, refit, 3, 1, NStat=n_fixed + 3, Parallel=true), draws), ...
@@ -2264,15 +986,15 @@ function self_test()
     % Per-dataset ICC
     % ------------------------------------------------------------------
     datasets = categories(data.DatasetID);
-    stat_pd = per_dataset_icc_refit(data, 'y', datasets, false);
+    stat_pd = PROST.lme.per_dataset_icc_refit(data, 'y', datasets, false);
     assert(numel(stat_pd) == 3*numel(datasets) && all(isfinite(stat_pd)), ...
         "Per-dataset refit did not return [tau2, sigma2, ICC] per dataset.")
     lme_4 = fitlme(data(data.DatasetID == datasets{4}, :), 'y ~ 1 + (1|ParticipantID)', 'FitMethod', 'REML');
-    assert(abs(stat_pd(end) - model_metrics(lme_4, Display="off")) < 1e-12, ...
+    assert(abs(stat_pd(end) - PROST.lme.model_metrics(lme_4, Display="off")) < 1e-12, ...
         "Per-dataset ICC differs from a direct fit of that dataset.")
     data_bad = data;
     data_bad.y(data_bad.DatasetID == datasets{2}) = NaN; % fitlme errors with no usable rows
-    stat_bad = per_dataset_icc_refit(data_bad, 'y', datasets, true);
+    stat_bad = PROST.lme.per_dataset_icc_refit(data_bad, 'y', datasets, true);
     assert(all(isnan(stat_bad(4:6))) && isequal(stat_bad([1:3 7:end]), stat_pd([1:3 7:end])), ...
         "A failed dataset fit did not give NaN for that dataset only.")
     fprintf('PASS: per-dataset ICC matches a direct fit; a failed dataset NaNs only itself\n')
@@ -2308,16 +1030,16 @@ function self_test()
     spec_x.name = 'x_model';
     spec_x.terms = "x_c";
     spec_x.baseline = 'base';
-    base = fit_covariate_model(covariate_model_data(data_cov, spec_base), spec_base, struct([]), height(data_cov));
-    x_data = covariate_model_data(data_cov, spec_x);
+    base = PROST.lme.fit_covariate_model(PROST.lme.covariate_model_data(data_cov, spec_base), spec_base, struct([]), height(data_cov));
+    x_data = PROST.lme.covariate_model_data(data_cov, spec_x);
     assert(all(abs(groupsummary(x_data, "DatasetID", "mean", "x_c").mean_x_c) < 1e-12), ...
         "The _c column is not centred within dataset.")
-    with_x = fit_covariate_model(x_data, spec_x, base, height(data_cov));
+    with_x = PROST.lme.fit_covariate_model(x_data, spec_x, base, height(data_cov));
     beta_hat = with_x.lme.Coefficients.Estimate(strcmp(with_x.lme.CoefficientNames, 'x_c'));
     assert(abs(beta_hat - beta_x) < 0.05, "Covariate slope %.3f is not near the simulated %.3f.", beta_hat, beta_x)
     assert(with_x.pseudo_R2 > 0.2 && with_x.pseudo_R2 < 0.8, "Pseudo-R2 %.3f is not near the simulated 0.5.", with_x.pseudo_R2)
     [boot_cov, ~] = PROST.utils.cluster_resample(x_data, PROST.utils.boot_stream(1, 1));
-    stat_cov = covariate_refit(boot_cov, with_x.lme, base.lme);
+    stat_cov = PROST.lme.covariate_refit(boot_cov, with_x.lme, base.lme);
     assert(numel(stat_cov) == height(with_x.lme.Coefficients) + 4 && all(isfinite(stat_cov)), ...
         "covariate_refit did not return [beta, tau2, sigma2, ICC, pseudo_R2].")
     fprintf('PASS: covariate slope %.3f (simulated %.3f), pseudo-R2 %.3f (simulated 0.5)\n', ...
