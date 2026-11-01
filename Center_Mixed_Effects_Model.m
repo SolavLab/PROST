@@ -27,7 +27,7 @@ loo_flag = true; % leave-one-participant-out sensitivity of the ICC
 per_dataset_icc_flag = true; % ICC of each dataset on its own (bootstrap CIs need boot_flag), with a forest plot
 covariate_flag = true; % side, anthropometric and speed models of u_c (bootstrap CIs need boot_flag)
 covariate_diagnostics_flag = false; % assumption checks of the covariate models and the per-dataset ICC models
-save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Center_Mixed_Effects_Results.mat
+save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Center_Horizontal_Mixed_Effects_Results.mat
 boot_seed = 20261006; % fixed so the bootstrap SE/CI are reproducible (see PROST.utils.boot_stream)
 n_boot = 5000; % number of bootstrap replicates
 unit = "[mm]"; % unit of u_c, for the diagnostic axis labels
@@ -172,7 +172,7 @@ end
 if save_flag
     saved.center_lme_results = results;
     saved.center_lme_provenance = PROST.utils.provenance();
-    save("Center_Mixed_Effects_Results", "-struct", "saved")
+    save("Center_Horizontal_Mixed_Effects_Results", "-struct", "saved")
 end
 
 % PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots\Center Horizontal", ".", "file_type", "pdf", "prepare","on", "append", "off")
