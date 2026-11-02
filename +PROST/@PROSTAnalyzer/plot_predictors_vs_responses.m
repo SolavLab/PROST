@@ -247,15 +247,6 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             x = categorical(categorical_predictors{:, p_idx});
             x_label = replace(categorical_predictor_names(p_idx), "_", " ");
 
-            % Create new figure for new set of axes
-            if axes_counter == 0
-                fig_counter = fig_counter + 1;
-                fig_name = "Predictors vs Responses: " + y_names;
-                fig(fig_counter)  = figure(Name=fig_name, Visible=show);
-                tl = tiledlayout(fig(fig_counter), TileSpacing="compact", Padding="compact");
-                title(tl, replace(fig(fig_counter).Name, "_", " "), sprintf("Filter: %s", filter), FontSize=obj.FONT_SIZE, FontName=obj.FONT_NAME)
-            end
-
             % Initialize axis
             ax = nexttile;
 
