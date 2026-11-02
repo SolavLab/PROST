@@ -10,7 +10,7 @@ function plot_icc_forest(results, spec)
 %   spec - struct with fields name and scale.
 %
 % Example usage :
-%   PROST.lme.plot_icc_forest(results.log_R_H, struct('name', 'log_R_H', 'scale', "log"))
+%   PROST.lme.plot_icc_forest(results.log_R, struct('name', 'log_R', 'scale', "log"))
 
     T = results.per_dataset.table;
     n_datasets = height(T);

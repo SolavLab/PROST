@@ -22,7 +22,7 @@ weight_test_flag = false; % test the weight scheme of each response model
 assumptions_flag = false; % test the LME assumptions of each response model
 loo_flag = true; % leave-one-participant-out sensitivity of the ICC of each response model
 per_dataset_icc_flag = true; % ICC of each dataset on its own (bootstrap CIs need boot_flag), with a forest plot
-covariate_flag = true; % side, anthropometric, speed and scaling models of log_R_H (bootstrap CIs need boot_flag)
+covariate_flag = true; % side, anthropometric, speed and scaling models of log_R (bootstrap CIs need boot_flag)
 covariate_diagnostics_flag = false; % assumption checks of the covariate models and the per-dataset ICC models
 self_test_flag = false; % run the synthetic-data checks of the helper functions and stop
 save_flag = false; % save the complete results (needs boot_flag and loo_flag) to Radius_Mixed_Effects_Results.mat
@@ -38,7 +38,7 @@ end
 % Responses to model. 'scale' decides which ICC back-transform applies:
 %   "log"    - the ICC is also back-transformed to the original scale
 %   "linear" - the model-scale ICC is already on the original scale
-responses = struct('name', {'R_H', 'log_R_H'}, 'scale', {"linear", "log"});
+responses = struct('name', {'R', 'log_R'}, 'scale', {"linear", "log"});
 
 % Covariate models (review 1a, 1b, 4). Each adds fixed effects to
 %   response ~ 1 + DatasetID + terms + (1|DatasetID:ParticipantID)
@@ -52,41 +52,40 @@ responses = struct('name', {'R_H', 'log_R_H'}, 'scale', {"linear", "log"});
 %   cut      - apply the R_H <= 1 cutoff.
 %   baseline - model whose tau2 the pseudo-R2 = 1 - tau2/tau2_baseline refers to,
 %              and against which the ML likelihood-ratio test of the added terms runs.
-% Height enters as log H: since log R_H = log R - log H, the model of log R_H with
-% log H is the model of log R with the log H slope shifted by exactly 1, so every
-% other estimate, tau2 and the pseudo-R2 do not depend on the height normalization.
+% Height enters as log H, so its slope is the elasticity of r with respect to H:
+% 1 is proportional scaling, 0 no association.
 % The anthropometric block is tested against the side-only model, so its test and
 % pseudo-R2 isolate the anthropometrics.
 anthro_rows = ["Leg" "Age" "Sex" "Height" "Mass" "Leg_length"];
 anthro_terms = ["Leg" "Age_c" "Sex" "log_H_c" "Mass_c"];
 covariate_models = [ ...
-    struct('name', 'base_cc',       'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+    struct('name', 'base_cc',       'response', 'log_R',   'terms', {strings(1, 0)}, ...
            'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', '')
-    struct('name', 'side',          'response', 'log_R_H', 'terms', "Leg", ...
+    struct('name', 'side',          'response', 'log_R',   'terms', "Leg", ...
            'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'base_cc')
-    struct('name', 'anthro',        'response', 'log_R_H', 'terms', anthro_terms, ...
+    struct('name', 'anthro',        'response', 'log_R',   'terms', anthro_terms, ...
            'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'side')
-    struct('name', 'anthro_leglen', 'response', 'log_R_H', 'terms', ["Leg" "Age_c" "Sex" "log_L_c" "Mass_c"], ...
+    struct('name', 'anthro_leglen', 'response', 'log_R',   'terms', ["Leg" "Age_c" "Sex" "log_L_c" "Mass_c"], ...
            'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'side')
     % Slope heterogeneity: one slope per dataset, tested against the common slope
-    struct('name', 'anthro_het',    'response', 'log_R_H', 'terms', [anthro_terms ...
+    struct('name', 'anthro_het',    'response', 'log_R',   'terms', [anthro_terms ...
                                                                       "Age_c:DatasetID" "Sex:DatasetID" "log_H_c:DatasetID" "Mass_c:DatasetID"], ...
            'complete', anthro_rows, 'datasets', [], 'cut', true, 'baseline', 'anthro')
     % Dataset 4 alone: the largest dataset, with a precise ICC, so its pseudo-R2
     % does not average over datasets with different variance components
-    struct('name', 'base_D4',       'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+    struct('name', 'base_D4',       'response', 'log_R',   'terms', {strings(1, 0)}, ...
            'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', '')
-    struct('name', 'side_D4',       'response', 'log_R_H', 'terms', "Leg", ...
+    struct('name', 'side_D4',       'response', 'log_R',   'terms', "Leg", ...
            'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'base_D4')
-    struct('name', 'anthro_D4',     'response', 'log_R_H', 'terms', anthro_terms, ...
+    struct('name', 'anthro_D4',     'response', 'log_R',   'terms', anthro_terms, ...
            'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'side_D4')
-    struct('name', 'speed_D4',      'response', 'log_R_H', 'terms', "v_star_c", ...
+    struct('name', 'speed_D4',      'response', 'log_R',   'terms', "v_star_c", ...
            'complete', [anthro_rows "v_star"], 'datasets', 4, 'cut', true, 'baseline', 'base_D4')
-    struct('name', 'base_D34',      'response', 'log_R_H', 'terms', {strings(1, 0)}, ...
+    struct('name', 'base_D34',      'response', 'log_R',   'terms', {strings(1, 0)}, ...
            'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', '')
-    struct('name', 'speed_D34',     'response', 'log_R_H', 'terms', "v_star_c", ...
+    struct('name', 'speed_D34',     'response', 'log_R',   'terms', "v_star_c", ...
            'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', 'base_D34')
-    struct('name', 'speed_D34_het', 'response', 'log_R_H', 'terms', ["v_star_c" "v_star_c:DatasetID"], ...
+    struct('name', 'speed_D34_het', 'response', 'log_R',   'terms', ["v_star_c" "v_star_c:DatasetID"], ...
            'complete', "v_star", 'datasets', [3 4], 'cut', true, 'baseline', 'speed_D34')
     % Scaling: slope 1 = r proportional to H, slope 0 = r unrelated to H. The
     % cutoff selects on r/H, so the slope is also reported without it.
@@ -171,7 +170,7 @@ end
 
 % Assumption checks of the per-dataset ICC models
 if covariate_diagnostics_flag
-    PROST.lme.per_dataset_diagnostics(data_final, 'log_R_H')
+    PROST.lme.per_dataset_diagnostics(data_final, 'log_R')
 end
 
 %% Covariate Models: Side, Anthropometrics, Speed and Scaling
@@ -613,7 +612,7 @@ function test_cutoff_unstable_R(data, model)
     suspect_rows = data(data.(response_name) > threshold, :);
     fprintf('\n--- Observations with Implausibly Large %s --- \n', response_name)
     disp(suspect_rows(:, {'DatasetID','ParticipantIDGlobal','Leg','R','R_H','RMS','n_steps', 'ArcSpanDeg', 'ArcSpanRad'}))
-    fprintf('%d observations exceed threshold R_H = %.3f (median(R_H) + 5*iqr(data.R_H))\n', height(suspect_rows), threshold);
+    fprintf('%d observations exceed threshold %s = %.3f (median + 5*iqr)\n', height(suspect_rows), response_name, threshold);
     
     % ------------------------------------------------------------------
     % Direct Empirical Check: does arc span predict R?

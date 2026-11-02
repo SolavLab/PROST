@@ -13,7 +13,7 @@ function stat = per_dataset_icc_refit(data, response_name, datasets, catch_error
 %                  the error propagates.
 %
 % Example usage :
-%   stat = PROST.lme.per_dataset_icc_refit(data_final, 'log_R_H', {'1' '2' '3' '4'}, false)
+%   stat = PROST.lme.per_dataset_icc_refit(data_final, 'log_R', {'1' '2' '3' '4'}, false)
 
     formula = [response_name ' ~ 1 + (1|ParticipantID)'];
     stat = nan(1, 3*numel(datasets));

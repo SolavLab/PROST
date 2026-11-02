@@ -26,7 +26,7 @@ function per_dataset = per_dataset_icc(data, spec, n_boot, boot_seed, do_boot)
 %                         per dataset (n_boot x n_datasets each, NaN if failed).
 %
 % Example usage :
-%   per_dataset = PROST.lme.per_dataset_icc(data_final, struct('name', 'log_R_H', 'scale', "log"), 5000, 20261006, true)
+%   per_dataset = PROST.lme.per_dataset_icc(data_final, struct('name', 'log_R', 'scale', "log"), 5000, 20261006, true)
 
     response_name = spec.name;
     is_log = PROST.lme.is_log_scale(spec);

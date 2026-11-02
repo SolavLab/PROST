@@ -16,7 +16,7 @@ function loo = icc_leave_one_out(model, model_name)
 %         difference from the ICC1 of MODEL).
 %
 % Example usage :
-%   loo = PROST.lme.icc_leave_one_out(results.log_R_H.lme, "Final LME - log_R_H")
+%   loo = PROST.lme.icc_leave_one_out(results.log_R.lme, "Final LME - log_R")
 
     data = model.Variables;
     weight = model.ObservationInfo.Weights;

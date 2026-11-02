@@ -6,7 +6,7 @@ function per_dataset_diagnostics(data, response_name, unit)
 % UNIT is the unit of the response for the axis labels (default "[-]").
 %
 % Example usage :
-%   PROST.lme.per_dataset_diagnostics(data_final, 'log_R_H')
+%   PROST.lme.per_dataset_diagnostics(data_final, 'log_R')
 
     if nargin < 3
         unit = "[-]";

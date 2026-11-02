@@ -13,7 +13,7 @@ function assumptions_check(model, model_name, unit)
 %   model - the mixed effects model to test.
 %
 % Example usage :
-%   test_lmm_assumptions(data, lmm_final, "R_H")
+%   test_lmm_assumptions(data, lmm_final, "R")
 
 
     arguments 

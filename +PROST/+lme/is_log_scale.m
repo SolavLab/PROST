@@ -4,7 +4,7 @@ function is_log = is_log_scale(spec)
 % scale rather than guess which ICC back-transform applies.
 %
 % Example usage :
-%   is_log = PROST.lme.is_log_scale(struct('name', 'log_R_H', 'scale', "log"))
+%   is_log = PROST.lme.is_log_scale(struct('name', 'log_R', 'scale', "log"))
 
     if ~ismember(spec.scale, ["linear" "log"])
         error("Unknown response scale ""%s"": no ICC back-transform is defined for it.", spec.scale)

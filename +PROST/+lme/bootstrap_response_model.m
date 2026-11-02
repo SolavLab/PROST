@@ -13,7 +13,7 @@ function boot_results = bootstrap_response_model(data, spec, results, n_boot, bo
 %   boot_seed - the seed of the bootstrap random stream (see PROST.utils.boot_stream).
 %
 % Example usage :
-%   boot = PROST.lme.bootstrap_response_model(data_final, spec, results.log_R_H, 5000, 20261006)
+%   boot = PROST.lme.bootstrap_response_model(data_final, spec, results.log_R, 5000, 20261006)
 
     response_name = spec.name;
     is_log = PROST.lme.is_log_scale(spec);

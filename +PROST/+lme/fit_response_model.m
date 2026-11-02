@@ -6,7 +6,7 @@ function results = fit_response_model(data, spec)
 % Input :
 %   data - the data table of measurements, after the cutoff.
 %   spec - struct with fields:
-%          name  - the response column name, e.g. 'log_R_H'.
+%          name  - the response column name, e.g. 'log_R'.
 %          scale - "linear" or "log". Only "log" gets the ICC back-transformed
 %                  to the original scale.
 %
@@ -16,7 +16,7 @@ function results = fit_response_model(data, spec)
 %             ICC_original (log scale only).
 %
 % Example usage :
-%   results = PROST.lme.fit_response_model(data_final, struct('name', 'log_R_H', 'scale', "log"))
+%   results = PROST.lme.fit_response_model(data_final, struct('name', 'log_R', 'scale', "log"))
 
     response_name = spec.name;
     is_log = PROST.lme.is_log_scale(spec);

@@ -11,7 +11,7 @@ function describe_response(data, spec)
 %          or "log"). The coefficients of variation are printed for "linear" only.
 %
 % Example usage :
-%   PROST.lme.describe_response(data_final, struct('name', 'R_H', 'scale', "linear"))
+%   PROST.lme.describe_response(data_final, struct('name', 'R', 'scale', "linear"))
 
     response_name = spec.name;
     is_log = PROST.lme.is_log_scale(spec);
