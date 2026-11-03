@@ -79,8 +79,8 @@ function save_all_open_figures(figures_folder, sub_folders, opts, prep_opts)
     % Define the sub folders for each figure
     if isempty(sub_folders)
         sub_folders = extractBefore({fig_handles(:).Name}, ":");
-        sub_folders = convertCharsToStrings(sub_folders);
     end
+    sub_folders = convertCharsToStrings(sub_folders);
     
     % replace missing with current folder as sub-folder so those folders are saved in the figures path.
     sub_folders(ismissing(sub_folders)) = ".";
