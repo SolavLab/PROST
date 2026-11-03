@@ -10,9 +10,16 @@ close all
 clc
 
 save_flag = false; % save the results to Distribution_By_Dataset_Results.mat
+boot_flag = false; % run the bootstrap (takes a few minutes)
 boot_seed = 20261006; % same seed as Radius_Mixed_Effects_Model.m (see boot_stream)
 n_boot = 5000; % number of bootstrap replicates
 R_H_cutoff = 1; % unstable-radius cutoff of Radius_Mixed_Effects_Model.m
+
+% The saved file is the record of the reported results: a partial run must not
+% overwrite a complete one.
+if save_flag && ~boot_flag
+    error("Bootstrap not run, so u_c_ci is empty. Set boot_flag = true to run it.")
+end
 
 if ~exist("PROSTAnalyzer", "var")
     load("PROSTAnalyzer.mat")
@@ -39,8 +46,8 @@ fprintf("R_H <= %g: %d of %d legs kept (%d excluded)\n", ...
 % RCV is only meaningful for a positive ratio-scale variable: it is reported for
 % R and R_H, not for the logs or u_c, whose medians are near zero and can change sign.
 specs = struct( ...
-    'variable', {'R_H', 'R_H', 'log_R_H', 'u_c', 'u_c', 'R', 'R', 'log_R', 'u_c_H', 'u_c_H'}, ...
-    'subset',   {"all", "stable", "stable", "all", "stable", "all", "stable", "stable", "all", "stable"});
+    'variable', {'R_H', 'R_H', 'log_R_H', 'R', 'R', 'log_R', 'u_c_H', 'u_c_H', 'u_c', 'u_c'}, ...
+    'subset',   {"all", "stable", "stable", "all", "stable", "stable", "all", "stable", "all", "stable"});
 
 dataset_ids = unique(data.DatasetID);
 groups = [string(dataset_ids); "Pooled"];
@@ -73,10 +80,13 @@ for s = 1:numel(specs)
         summary = [summary; row]; %#ok<AGROW>
     end
 end
+disp(summary)
+
 
 %% Pooled RCV of R_H and R after Removing the Dataset Centres
 % Rescales each leg by its dataset median, so the pooled spread no longer
 % contains the between-dataset shift of the centre.
+summary_centered = table;
 for variable = ["R_H" "R"]
     for subset = ["all", "stable"]
         in_subset = true(height(data), 1);
@@ -90,19 +100,21 @@ for variable = ["R_H" "R"]
             x_centered(id == d) = x(id == d) / median(x(id == d));
         end
         st = PROST.PROSTAnalyzer.analyze_stats(x_centered).summary;
-        fprintf("Pooled %s / dataset median (%s legs): RCV_Q = %.1f %%, RCV_M = %.1f %%\n", ...
-            variable, subset, st.CV_IQR, st.CV_MAD)
-        if variable == "R_H"
-            summary_centered.(subset) = st;
-        else
-            summary_centered_R.(subset) = st;
-        end
+
+        row = table(string(variable), subset, st.n, ...
+            st.Median, st.IQR, st.Mean, st.SD, st.CV_IQR, st.CV_MAD, st.Skewness, st.Kurtosis, ...
+            'VariableNames', {'Variable', 'Subset', 'n', 'Median', 'IQR', ...
+            'Mean', 'SD', 'RCV_Q', 'RCV_M', 'Skewness', 'Kurtosis'});
+
+        summary_centered = [summary_centered; row]; %#ok<AGROW>
     end
 end
+disp(summary_centered)
 
 %% Bootstrap CIs of the per-Dataset Median u_c and u_c_H
 % Participants are resampled with replacement within each dataset and keep all
 % their legs, so the CI accounts for the two legs of a participant being dependent.
+if boot_flag
 u_c_ci = table;
 for variable = ["u_c" "u_c_H"]
     for subset = ["all", "stable"]
@@ -124,14 +136,14 @@ for variable = ["u_c" "u_c_H"]
     end
 end
 
-disp(summary)
 disp(u_c_ci)
+end
 
+%% Save Results 
 % Distinct variable names, so loading the file next to other results cannot clash
 if save_flag
     saved.distribution_summary = summary;
     saved.distribution_summary_centered = summary_centered;
-    saved.distribution_summary_centered_R = summary_centered_R;
     saved.distribution_u_c_ci = u_c_ci;
     saved.distribution_settings = struct('boot_seed', boot_seed, 'n_boot', n_boot, ...
         'R_H_cutoff', R_H_cutoff);

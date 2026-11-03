@@ -59,7 +59,6 @@ function out = analyze_stats(value, distnames, opts)
         opts.MinExpected  (1,1) double = 5
     end
 
-    fprintf("Analyzing Statistics...\n");
     x = value(:);
     x = x(isfinite(x));
     n = numel(x);
