@@ -38,7 +38,8 @@ end
 % Responses to model. 'scale' decides which ICC back-transform applies:
 %   "log"    - the ICC is also back-transformed to the original scale
 %   "linear" - the model-scale ICC is already on the original scale
-responses = struct('name', {'R', 'log_R'}, 'scale', {"linear", "log"});
+% 'unit' is the unit of the response, for the diagnostic axis labels.
+responses = struct('name', {'R', 'log_R'}, 'scale', {"linear", "log"}, 'unit', {"[mm]", "[-]"});
 
 % Covariate models (review 1a, 1b, 4). Each adds fixed effects to
 %   response ~ 1 + DatasetID + terms + (1|DatasetID:ParticipantID)
@@ -153,7 +154,7 @@ for spec = responses
 
     % Test Linear Mixed-Effects Model Assumptions
     if assumptions_flag
-        PROST.lme.assumptions_check(results.(spec.name).lme, "Final LME - " + spec.name + ":")
+        PROST.lme.assumptions_check(results.(spec.name).lme, "Final LME - " + spec.name + ":", spec.unit)
     end
 
     if boot_flag
