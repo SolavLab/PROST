@@ -206,7 +206,6 @@ if save_flag
     save("Radius_Mixed_Effects_Results", "-struct", "saved")
 end
 
-% PROST.utils.save_all_open_figures("C:\Users\chenr\Documents\PROST\figures\ROS Analysis\Mixed-Effects Plots\Radius", ".", "file_type", "pdf", "prepare","on", "append", "off")
 
 %% -----------------------------------------------------------------------------
 % Helper Functions
