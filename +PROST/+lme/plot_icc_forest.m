@@ -26,7 +26,8 @@ function plot_icc_forest(results, spec)
         errorbar(T.ICC, y, [], [], T.ICC - T.ICC_CI_lower, T.ICC_CI_upper - T.ICC, ...
                  'k', 'LineStyle', 'none', 'CapSize', 0, 'LineWidth', 0.75)
     end
-    scatter(T.ICC, y, 12 + 0.6*T.n_participants, 'k', 's', 'filled')
+    % Area (pt^2) strictly proportional to n, scaled so the smallest square stays legible
+    scatter(T.ICC, y, 25/min(T.n_participants)*T.n_participants, 'k', 's', 'filled')
 
     % Pooled ICC: final model, dataset fixed effect
     pooled = results.ICC;
@@ -36,7 +37,7 @@ function plot_icc_forest(results, spec)
     else
         plot(pooled, 1, 'kd', 'MarkerFaceColor', 'k')
     end
-    xline(pooled, ':')
+    xline(pooled, ':', 'LineWidth', 1.5)
 
     % participants / legs, so the published figure needs no title or legend
     labels = ["Dataset " + T.DatasetID + " (" + T.n_participants + " / " + T.n_legs + ")"; ...
