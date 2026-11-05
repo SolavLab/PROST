@@ -1,286 +1,329 @@
 # PROST Toolbox
 
-**PROST** is an open-source MATLAB toolbox for pooling gait biomechanics data from multiple publicly available datasets, computing roll-over shapes (ROS), fitting circular arc parameters, and analyzing their relationships with anthropometric variables. The toolbox preprocesses raw individual-level walking trials, harmonizes dataset-specific variables and marker definitions, standardizes measurements into a common spatial and temporal representation, and pools data into a unified database. It then computes right and left ROS for each participant, estimates corresponding circular arc parameters, and enables individual participant data (IPD) meta-analysis.
+**PROST** (Public ROS Toolbox) is an open-source MATLAB toolbox for computing the ankle-foot **roll-over shape (ROS)**. The ROS is the sagittal-plane path of the centre of pressure (CoP) during the stance phase of walking, expressed in a shank-based coordinate system.
+
+PROST works from four public gait datasets collected in independent laboratories. It harmonises their marker trajectories, ground reaction forces, and CoP data into a common representation: 249 participants and 5,667 stance phases. For each participant leg, it fits a circular arc to the pooled ROS of all that leg's stance phases. The arc parameters are the radius, centre, start and end angles, and arc length. They form a leg-level individual participant data (IPD) table, which the toolbox uses for a one-stage IPD meta-analysis with linear mixed-effects models.
+
+The methodology is described in the accompanying paper (see [Citation](#citation)).
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
+- [Getting the Data](#getting-the-data)
 - [Quick Start](#quick-start)
+- [Pipeline](#pipeline)
 - [Core Components](#core-components)
 - [Usage Examples](#usage-examples)
 - [Project Structure](#project-structure)
 - [Main Functions](#main-functions)
 - [Utilities](#utilities)
 - [Testing](#testing)
+- [Data Sources and Licenses](#data-sources-and-licenses)
+- [Third-Party Code](#third-party-code)
+- [Citation](#citation)
+- [License](#license)
+- [Support and Contributing](#support-and-contributing)
 
 ## Features
 
-- **Multi-Dataset Integration**: Pool gait biomechanics data from multiple publicly available datasets
-- **Data Harmonization**: Standardize dataset-specific variables, marker definitions, and measurements into a common spatial and temporal representation
-- **ROS Computation**: Calculate right and left roll-over shapes (ROS) for each participant
-- **Circular Arc Fitting**: Estimate circular arc parameters for gait analysis
-- **Individual Participant Data (IPD) Meta-Analysis**: Analyze relationships between ROS/arc parameters and anthropometric variables across pooled datasets
-- **Statistical Analysis**: Distribution fitting, correlation analysis (Pearson & Spearman), and goodness-of-fit testing
-- **Data Cleaning**: Automatic detection and handling of invalid/ignored participant data
-- **Visualization**: Comprehensive plotting functions for ROS analysis, CoP trajectories, and correlations
+- **Multi-Dataset Integration**: Pool gait biomechanics data from multiple publicly available datasets.
+- **Data Harmonization**: Standardize dataset-specific variables, marker definitions, and measurements into a common spatial and temporal representation ([DATASET_FORMAT.md](DATASET_FORMAT.md)).
+- **ROS Computation**: Compute right and left roll-over shapes for each participant.
+- **Circular Arc Fitting**: Fit a circular arc to each leg's ROS (radius, centre, start/end angles, arc length, RMS radial residual).
+- **IPD Meta-Analysis**: Linear mixed-effects models relating arc parameters to anthropometrics across the pooled datasets (`+PROST/+lme`).
+- **Statistical Analysis**: Distribution fitting, correlation analysis (Pearson and Spearman, Wilcoxon rank-sum for categorical predictors), goodness-of-fit testing, and cluster bootstrap.
+- **Data Cleaning**: A curated exclusion list plus automatic detection of invalid steps. Excluded data are flagged, never deleted.
+- **Visualization**: Plotting functions for ROS, CoP trajectories, predictor–response relationships, distributions, and walking speeds.
 
 ## Installation
 
 ### Requirements
 
-- MATLAB R2024b or later (developed using MATLAB R2024b)
-- Statistics and Machine Learning Toolbox™
-- Curve Fitting Toolbox™ (optional)
+- MATLAB R2024b or later (developed with R2024b)
+- Optimization Toolbox™ (circular-arc fit)
+- Statistics and Machine Learning Toolbox™ (mixed-effects models, distribution fitting, bootstrap)
+- Signal Processing Toolbox™ (only needed to rebuild Dataset 4)
+- [Git LFS](https://git-lfs.com) (to download `PROSTAnalyzer.mat`)
+
+Rebuilding Datasets 2 and 4 from C3D files uses the bundled ezc3d MEX files. These are Windows-only (`.mexw64`). See [Third-Party Code](#third-party-code).
 
 ### Setup
 
-1. Clone or download the PROST repository
-2. Open MATLAB and navigate to the PROST root directory
-3. Run the setup script or manually add the folder to your MATLAB path:
+1. Clone the repository and fetch the Git LFS files:
 
-```matlab
-addpath(genpath('path/to/PROST'));
-```
+   ```bash
+   git clone https://github.com/SolavLab/PROST.git
+   cd PROST
+   git lfs install
+   git lfs pull
+   ```
+
+   The repository includes several GB of source data, so cloning takes a while.
+
+2. Add the repository root to the MATLAB path. The `+PROST` package only needs its parent folder on the path, so `genpath` is not required:
+
+   ```matlab
+   addpath('path/to/PROST');
+   ```
+
+   The top-level scripts add the path and `cd` to the toolbox root themselves.
+
+## Getting the Data
+
+There are two starting points.
+
+- **Reproduce the analyses from the saved analyzer.** `PROSTAnalyzer.mat` (~115 MB, Git LFS) holds the fully built, cleaned, and fitted `PROSTAnalyzer` object. After `git lfs pull`, the analysis scripts run directly from it.
+- **Rebuild from the source data.** The built `example_datasets/Dataset_N.mat` files are not distributed. Build them with the scripts in `example_datasets/DatasetN/`, following [example_datasets/README.md](example_datasets/README.md), and then run `Create_PROST`. For **Datasets 2 and 4**, run `convert_c3d_to_mat.m` before `build_Dataset_N.m`.
 
 ## Quick Start
 
-### 1. Load Example Datasets
-
-Run the `Create_PROST.m` script to initialize the analysis:
+### From the saved analyzer
 
 ```matlab
-Create_PROST
+Plot_PROST                        % figures (loads PROSTAnalyzer.mat if not in the workspace)
+Radius_Mixed_Effects_Model        % LME analysis of the arc radius
+Center_Mixed_Effects_Model        % LME analysis of the horizontal arc centre
+Distribution_By_Dataset           % per-dataset distributions
+Count_Valid_Participants_Steps    % cohort counts
 ```
 
-This script will:
-- Load or build four example datasets
-- Create a `PROSTAnalyzer` object with all datasets
-- Prepare the data for analysis
-
-### 2. Perform Analysis
-
-The `PROSTAnalyzer` object provides methods for:
-- Computing statistics and distributions
-- Analyzing correlations between predictors and responses
-- Generating visualizations
-
-### 3. Generate Plots
-
-Run `Plot_PROST.m` to generate comprehensive analysis plots:
+### From the built datasets
 
 ```matlab
-Plot_PROST
+Create_PROST   % loads example_datasets/Dataset_N.mat, cleans, fits, and saves PROSTAnalyzer.mat
 ```
+
+`Create_PROST` refits every leg, so it is slow. It also holds the curated exclusion list, with a reason recorded for each entry. Note that it overwrites `PROSTAnalyzer.mat`.
+
+The scripts start with `clearvars -except ...` so that `Dataset_N` and `PROSTAnalyzer` stay in the workspace, and re-running them skips the expensive loads.
+
+## Pipeline
+
+1. **Build**: `example_datasets/DatasetN/build_Dataset_N.m` converts each published source dataset into a `Dataset_N.mat` struct ([DATASET_FORMAT.md](DATASET_FORMAT.md)).
+2. **Ingest**: `PROST.PROSTAnalyzer(load_list, toolbox_root)` copies each participant into `DataRecords`. It transforms every step's CoP into the shank frame and builds `SummaryTable`.
+3. **Clean**: `clean_data` applies an exclusion list (`PROSTDatasetList`) and flags "toe-to-heel" steps, where the shank-frame CoP runs backwards. Nothing is deleted. Participants, sides, and steps carry cascading `Is_included` flags.
+4. **Fit**: `create_IPD_table` fits a circular arc to each leg's pooled point cloud. The first and last 15 of the 101 time-normalized samples of every step are discarded. The fit uses Coope's linear least squares for the initial guess, then `fminunc` on the squared radial residuals. The result is one `IPDTable` row per leg.
+5. **Analyze and plot**: the plotting methods, the analysis scripts, and the `+PROST/+lme` package.
+
+### Units
+
+| Quantity | Unit |
+|---|---|
+| Anthropometrics (height, mass, segment lengths, age) | m, kg, years |
+| CoP, markers, fitted radius / centre / residual | mm |
+| Angles | degrees |
+
+Use `PROST.utils.convert_units` for cross-unit work, e.g. when normalizing the radius by height.
 
 ## Core Components
 
 ### PROSTAnalyzer Class
 
-The main analysis class located at `+PROST/@PROSTAnalyzer/PROSTAnalyzer.m`.
+The main analysis class, `+PROST/@PROSTAnalyzer/PROSTAnalyzer.m`. It is a `handle` class.
 
 **Key Properties:**
-- `DataRecords`: Stores all dataset information
-- `IPDTable`: Unified table of all participant data (Individual Participant Data)
-- `SummaryTable`: Summary information for each dataset
-- `IgnoreObject`: List of participants/trials to exclude from analysis
+- `DataRecords`: All dataset, participant, and step data, including the derived shank-frame CoP (`Shank_cop`) and `Is_included` flags.
+- `IPDTable`: Leg-level table of anthropometrics and fitted arc parameters. It is over-allocated, so use rows `1:IPDTableSize`.
+- `SummaryTable`: Dataset-level cohort summary. Use rows `1:SummaryTableSize`.
+- `IgnoreObject`: A `PROSTDatasetList` of excluded participants and trials.
 
-**Key Methods:**
-- `add_dataset()`: Add a new dataset to DataRecords
-- `clean_data()`: Remove or flag invalid data
-- `create_IPD_table()`: Build unified data table across datasets
-- `compute_correlations()`: Calculate correlation coefficients
-- `analyze_stats()`: Fit distributions and compute goodness-of-fit metrics
-- `plot_ros()`: Visualize roll-over shapes (ROS)
-- `plot_cop()`: Plot center of pressure trajectories
-- `plot_predictors_vs_responses()`: Scatter plots of predictor-response relationships
-- `plot_stats()`: Display statistical summaries
-- `plot_speed_distribution()`: Histograms of measured walking speed per dataset and speed condition
+`IPDTable` columns are tagged `'predictor'` or `'response'` in `Properties.VariableDescriptions`. `get_predictors` and `get_responses` select columns by these tags.
+
+Shank-frame CoP is computed for the lateral anatomical side only. `plot_cop` is the exception: it recomputes from the raw markers.
 
 ### PROSTDatasetList Class
 
-Manages lists of datasets or ignored participants. Used for filtering and selective analysis.
+Holds lists of datasets, participants, trials, and sides. It is used for exclusion lists, and `NaN` in a trial list means "all trials".
 
 ### Error Handling
 
-- `PROSTError`: Custom error class for toolbox-specific errors
-- `PROSTWarning`: Custom warning class for toolbox-specific warnings
+`PROSTError` and `PROSTWarning` use IDs of the form `PROSTAnalyzer:<Property>:<Code>`. `PROSTWarning.asError`, `off`, and `on` promote or silence one specific warning.
 
 ## Usage Examples
 
-### Example 1: Load and Analyze a Dataset
+### Example 1: Build an Analyzer and Fit Distributions
 
 ```matlab
-% Create PROSTAnalyzer with datasets
+toolbox_root = 'path/to/PROST';
+load(fullfile(toolbox_root, 'example_datasets', 'Dataset_1.mat'))   % built locally
+load(fullfile(toolbox_root, 'example_datasets', 'Dataset_2.mat'))
+
+% Each row pairs an in-memory dataset struct with a name, in either order
 load_list = {Dataset_1, "Dataset 1"; Dataset_2, "Dataset 2"};
-analyzer = PROST.PROSTAnalyzer(load_list, pwd);
+analyzer = PROST.PROSTAnalyzer(load_list, toolbox_root);
 
-% Clean invalid data
-analyzer.clean_data();
+analyzer.clean_data();          % automatic bad-step detection; pass a PROSTDatasetList to exclude more
+analyzer.create_IPD_table();    % fit one circular arc per leg
 
-% Get response data and fit distributions to it
-responses = analyzer.get_responses("Radius"); % Get all response variables from IPD table
-radius = responses.Radius;
-stats = analyzer.analyze_stats(radius, ["normal", "lognormal", "gamma"]);
+responses = analyzer.get_responses("Radius");   % table with the Radius column
+stats = analyzer.analyze_stats(responses.Radius, ["normal", "lognormal", "gamma"]);
 ```
 
-### Example 2: Compute and Plot Correlations
+### Example 2: Correlations and Plots
 
 ```matlab
-% Compute correlations
-predictors = analyzer.get_responses("Radius"); % Get radius predictor variables from IPD table
+predictors = analyzer.get_predictors(["Height" "Mass"]);
 correlations = analyzer.compute_correlations(predictors, responses);
 
-% Plot relationships
 analyzer.plot_predictors_vs_responses(["Height" "Mass"], "Radius", ...
-    'show', 'on', 'file_type', 'pdf');
+    show="on", file_type=["pdf" "svg"]);
 ```
 
 ## Project Structure
 
 ```
 PROST/
-├── Create_PROST.m                 # Main setup script
-├── Plot_PROST.m                   # Plotting script
-├── Count_Valid_Participants_Steps.m
-├── +PROST/                        # Main package namespace
-│   ├── PROSTDatasetList.m         # Dataset list class
-│   ├── PROSTError.m               # Error class
-│   ├── PROSTWarning.m             # Warning class
-│   ├── @PROSTAnalyzer/            # Main analyzer class
-│   │   ├── PROSTAnalyzer.m        # Class definition
-│   │   ├── add_dataset.m
-│   │   ├── clean_data.m
-│   │   ├── compute_correlations.m
-│   │   ├── analyze_stats.m
-│   │   ├── convert_to_shank_frame.m
-│   │   ├── plot_ros.m
-│   │   ├── plot_cop.m
-│   │   ├── plot_predictors_vs_responses.m
-│   │   ├── plot_stats.m
-│   │   ├── plot_speed_distribution.m
-│   │   ├── create_IPD_table.m
-│   │   └── private/               # Private methods
-│   ├── +utils/                    # Utility functions
-│   │   ├── convert_units.m
-│   │   ├── estimate_foot_length.m
-│   │   ├── find_index_from_value.m
-│   │   ├── winsorize.m
-│   │   └── ...
-│   └── +tests/                    # Unit tests
-│       ├── test_PROSTAnalyzer.m
-│       ├── test_ROS_calculation.m
-│       └── ...
-├── example_datasets/              # Example data
-│   ├── Dataset_1.mat
-│   ├── Dataset_2.mat
-│   ├── Dataset1/                  # Dataset source and build scripts
-│   ├── Dataset2/
-│   ├── Dataset3/
-│   └── Dataset4/
-├── figures/                       # Output figures
-│   ├── ROS Analysis/
-│   ├── Predictors vs Responses/
-│   └── Speeds/
-└── lib-ext/                       # External libraries
-    └── ezc3d_matlab/              # C3D file processing
+├── Create_PROST.m                    # Build, clean, fit, save PROSTAnalyzer.mat
+├── Plot_PROST.m                      # Figures from PROSTAnalyzer.mat
+├── Radius_Mixed_Effects_Model.m      # LME analysis: arc radius
+├── Center_Mixed_Effects_Model.m      # LME analysis: horizontal arc centre
+├── Distribution_By_Dataset.m         # Per-dataset distributions
+├── Count_Valid_Participants_Steps.m  # Cohort counts
+├── PROSTAnalyzer.mat                 # Saved analyzer (Git LFS)
+├── *_Results.mat                     # Saved analysis results
+├── DATASET_FORMAT.md                 # Structure of Dataset_N.mat
+├── CITATION.cff
+├── +PROST/
+│   ├── PROSTDatasetList.m
+│   ├── PROSTError.m
+│   ├── PROSTWarning.m
+│   ├── @PROSTAnalyzer/               # Analyzer class: public methods + private/
+│   ├── +lme/                         # Mixed-effects models, ICC, diagnostics, bootstrap
+│   ├── +utils/                       # Utility functions
+│   └── +tests/                       # Toolbox tests
+├── example_datasets/
+│   ├── README.md                     # Sources, licenses, build steps
+│   ├── Dataset1/ … Dataset4/         # Source data, build scripts, tests/
+│   └── Dataset_N.mat                 # Built locally (gitignored)
+├── figures/                          # Saved figures
+└── lib-ext/
+    └── ezc3d_matlab/                 # Third-party C3D reader (MIT)
 ```
 
 ## Main Functions
+
+All methods belong to `PROSTAnalyzer`. Run `help PROST.PROSTAnalyzer.<method>` for the full signature.
 
 ### Analysis Methods
 
 | Function | Purpose |
 |----------|---------|
-| `analyze_stats()` | Fit distributions, compute AIC/BIC/log-likelihood |
-| `compute_correlations()` | Calculate Pearson and Spearman correlations |
-| `create_IPD_table()` | Build unified participant data table |
-| `clean_data()` | Remove or flag invalid participants/trials |
+| `clean_data(ignore_list, BadSteps=true)` | Apply an exclusion list and automatic bad-step detection |
+| `create_IPD_table()` | Fit circular arcs and build the leg-level IPD table |
+| `analyze_stats(value, distnames, ...)` | Fit distributions, compute AIC/BIC/log-likelihood and goodness of fit |
+| `compute_correlations(predictors, responses)` | Pearson, Spearman, R²; Wilcoxon rank-sum for categorical predictors |
 
-### Geometric/Kinematic Methods
+### Geometric Methods (static)
 
 | Function | Purpose |
 |----------|---------|
-| `convert_to_shank_frame()` | Transform CoP to shank-relative coordinate system |
-| `cop_to_shank_frame()` | Convert center of pressure measurements |
+| `convert_to_shank_frame(data, knee, ankle)` | Transform lab-frame points into the shank coordinate system |
+| `cop_to_shank_frame(step, anatomical_side)` | Shank-frame CoP of one step |
 
 ### Plotting Methods
 
 | Function | Purpose |
 |----------|---------|
-| `plot_ros()` | Visualize range of oscillation data |
-| `plot_cop()` | Plot center of pressure trajectories |
-| `plot_predictors_vs_responses()` | Scatter plots with trend lines |
-| `plot_stats()` | Display statistical summaries and distributions |
-| `plot_speed_distribution()` | Histograms of measured walking speed per dataset, optionally split by speed condition with nominal-speed marks |
+| `plot_ros()` | Plot roll-over shapes and fitted circular arcs |
+| `plot_cop()` | Plot CoP trajectories in the lab and shank frames |
+| `plot_predictors_vs_responses()` | Scatter plots with trend lines and correlations |
+| `plot_stats()` | Distributions, fitted densities, and Q–Q plots |
+| `plot_speed_distribution()` | Histograms of measured walking speed per dataset, optionally split by speed condition |
+
+Plotters take name-value options (`arguments` blocks). They share the save options `show`, `append`, `overwrite`, `file_type` (a list such as `["pdf" "svg" "jpeg" "fig"]`), `prepare`, and `prepare_options`.
 
 ### Data Access Methods
 
 | Function | Purpose |
 |----------|---------|
-| `get_dataset()` | Retrieve dataset by ID |
-| `get_dataset_name()` | Get name of a dataset |
-| `get_good_steps()` | Retrieve valid/clean steps |
-| `get_IPD_samples()` | Extract samples from IPD table |
-| `get_step_speeds()` | Measured walking speed of every valid step |
-| `get_predictors()` | Get predictor variables |
-| `get_responses()` | Get response variables |
+| `get_dataset(dataset_id)` | Copy of a dataset's record (read-only use) |
+| `get_dataset_name(dataset_id)` | Name of a dataset |
+| `get_good_steps(steps, min_speed)` | Included steps (static) |
+| `get_IPD_samples(var_list, ...)` | Samples from the IPD table |
+| `get_step_speeds(dataset_ids)` | Measured walking speed of every included step |
+| `get_predictors(list)` | Predictor columns of the IPD table |
+| `get_responses(list)` | Response columns of the IPD table |
+
+### Data Management Methods
+
+| Function | Purpose |
+|----------|---------|
+| `add_dataset(dataset_name, dataset)` | Add a dataset |
+| `delete_dataset(dataset_id)` | Remove a dataset |
+| `set_dataset(dataset_id, dataset)`, `set_dataset_name(dataset_id, name)` | Replace a dataset or rename it |
+| `add_to_ignore(...)`, `delete_from_ignore(...)`, `is_ignored(...)` | Manage the exclusion list |
+| `dataset_exists`, `participant_exists`, `is_in_IPD_table`, `has_medial` | Queries |
 
 ## Utilities
 
-The `+utils/` package provides helper functions:
+`+PROST/+utils/`:
 
-- **`capitalize.m`**: Convert strings to title case
-- **`convert_units.m`**: Unit conversion (m, cm, mm, etc.)
-- **`diffp.m`**: Differentiation/numerical derivatives
-- **`estimate_foot_length.m`**: Estimate foot dimensions
-- **`find_index_from_value.m`**: Find array indices matching values
-- **`winsorize.m`**: Winsorization of outliers
-- **`pretty_print.m`**: Formatted console output
-- **`save_figure.m`**: Save figures with consistent formatting
+- **`capitalize`**: Capitalize strings
+- **`convert_units`**: Unit conversion (m, cm, mm, etc.)
+- **`diffp`**: Padded numerical differentiation
+- **`estimate_foot_length`**: Estimate foot length from step data
+- **`find_index_from_value`**: Find array indices matching values
+- **`get_knee_marker`**: Construct a virtual knee marker
+- **`winsorize`**: Winsorization of outliers
+- **`cluster_bootstrap`**, **`cluster_resample`**, **`boot_stream`**: Cluster (participant-level) bootstrap with reproducible random streams
+- **`provenance`**: Record code and data provenance of saved results
+- **`pretty_print`**: Formatted console output
+- **`save_figure`**, **`save_all_open_figures`**, **`prep_figure_for_publish`**: Figure export
+
+`+PROST/+lme/` contains the mixed-effects analysis used by `Radius_Mixed_Effects_Model.m` and `Center_Mixed_Effects_Model.m`. That covers model fitting, covariate models, ICC (overall, per dataset, leave-one-out), assumption and normality checks, and bootstrap confidence intervals.
 
 ## Testing
 
-Run unit tests to verify toolbox functionality:
+Tests are MATLAB scripts with `assert` statements, not `matlab.unittest` classes.
 
 ```matlab
-% Run all tests
-runtests('+PROST/+tests')
-
-% Run specific test
+% Requires the built Dataset_N.mat files
 runtests('+PROST/+tests/test_PROSTAnalyzer.m')
 ```
 
-**Available Tests:**
-- `test_PROSTAnalyzer.m`: Main analyzer functionality
-- `test_ROS_calculation.m`: ROS computation accuracy
-- `test_filter_DB.m`: Data filtering
-- `test_speeds_of_DB.m`: Speed calculations
+- `+PROST/+tests/test_PROSTAnalyzer.m`: analyzer functionality.
+- `+PROST/+tests/test_ROS_calculation.m`: visual diagnostic, with no assertions.
+- `example_datasets/DatasetN/tests/`: per-dataset validation of the build output (axis directions, gait events, metadata linkage).
+
+## Data Sources and Licenses
+
+PROST uses four publicly available datasets. Full references and build steps are in [example_datasets/README.md](example_datasets/README.md).
+
+| Dataset | Source publication | License of source data |
+|---|---|---|
+| 1 | Moreira et al. (2021), *Sci Data*, [doi:10.1038/s41597-021-00881-3](https://doi.org/10.1038/s41597-021-00881-3) | CC0 1.0 |
+| 2 | Schreiber & Moissenet (2019), *Sci Data*, [doi:10.1038/s41597-019-0124-4](https://doi.org/10.1038/s41597-019-0124-4) | CC BY 4.0 |
+| 3 | Lencioni et al. (2019), *Sci Data*, [doi:10.1038/s41597-019-0323-z](https://doi.org/10.1038/s41597-019-0323-z) | CC0 1.0 |
+| 4 | Van Criekinge et al. (2023), *Sci Data*, [doi:10.1038/s41597-023-02767-y](https://doi.org/10.1038/s41597-023-02767-y) | CC0 1.0 |
+
+Source data files remain under their original licenses. The PROST code license does not apply to them. If you use these data, please cite the original publications.
+
+## Third-Party Code
+
+[lib-ext/ezc3d_matlab/](lib-ext/ezc3d_matlab/) contains MATLAB binaries of [ezc3d](https://github.com/pyomeca/ezc3d) (pyomeca), MIT License. It is used only to convert C3D files for Datasets 2 and 4. See its [LICENSE](lib-ext/ezc3d_matlab/LICENSE).
 
 ## Citation
 
-If you use PROST in your research, please cite:
+If you use PROST, please cite:
 
-```
-PROST Toolbox (2026)
-Author: Chen Reichsbouscher
-```
+> Reichsbouscher C, Solav D. PROST: An Open Toolbox, Harmonised Multi-Lab Dataset, and Meta-Analysis of Ankle-Foot Roll-Over Shape. *Journal TODO*, year TODO. doi:TODO
+
+<!-- TODO: add the Zenodo DOI of the release -->
+For the software version, use the metadata in [CITATION.cff](CITATION.cff). GitHub shows it under "Cite this repository".
 
 ## License
 
-[Include your license information here]
+- **Code**: GNU General Public License v3.0 or later (GPL-3.0-or-later). See [LICENSE](LICENSE). Copyright (c) 2026 SoBIG - Technion.
+- **Derived data** (`PROSTAnalyzer.mat`, `*_Results.mat`): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Source datasets**: their original licenses. See [Data Sources and Licenses](#data-sources-and-licenses).
+- **Third-party code** (`lib-ext/`): its own license. See [Third-Party Code](#third-party-code).
 
-## Support & Issues
+## Support and Contributing
 
-For bug reports, feature requests, or questions:
-- Check existing documentation in the source code
-- Review example scripts: `Create_PROST.m`, `Plot_PROST.m`
-- Run unit tests to verify installation
+- Bug reports and questions: [GitHub Issues](https://github.com/SolavLab/PROST/issues).
+- Contributions are welcome. Please open an issue to discuss a change before submitting a pull request.
 
 ## Version History
 
-- **v1.0** (Current): Initial release with ROS analysis, CoP tracking, and statistical tools
-
----
-
-**Last Updated**: June 2026
+- **v1.0.0**: Initial public release.

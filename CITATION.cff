@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use PROST, please cite the accompanying paper (preferred-citation) and the software version you used."
+title: "PROST: Public ROS Toolbox"
+version: 1.0.0
+# TODO: Zenodo DOI of the v1.0.0 release
+# doi: 10.5281/zenodo.TODO
+license: GPL-3.0-or-later
+repository-code: "https://github.com/SolavLab/PROST"
+type: software
+keywords:
+  - roll-over shape
+  - gait
+  - biomechanics
+  - centre of pressure
+  - individual participant data meta-analysis
+  - MATLAB
+authors:
+  - family-names: Reichsbouscher
+    given-names: Chen
+    affiliation: "Faculty of Mechanical Engineering, Technion – Israel Institute of Technology"
+    # orcid: "https://orcid.org/TODO"
+  - family-names: Solav
+    given-names: Dana
+    affiliation: "Faculty of Mechanical Engineering, Technion – Israel Institute of Technology"
+    # orcid: "https://orcid.org/TODO"
+preferred-citation:
+  type: article
+  title: "PROST: An Open Toolbox, Harmonised Multi-Lab Dataset, and Meta-Analysis of Ankle-Foot Roll-Over Shape"
+  authors:
+    - family-names: Reichsbouscher
+      given-names: Chen
+    - family-names: Solav
+      given-names: Dana
+  # TODO: journal, year, and DOI once published
+  # journal: "TODO"
+  # year: TODO
+  # doi: "TODO"

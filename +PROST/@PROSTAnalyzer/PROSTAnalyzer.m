@@ -89,11 +89,10 @@ classdef PROSTAnalyzer < handle
         function [obj, dataset_ids] = PROSTAnalyzer(load_list, toolbox_root)
         %PROSTAnalyzer Constructor
         % Input :
-        %   load_list - a cell array where each row contains pairs of 
-        %               dataset name and path to the dataset
+        %   load_list - a cell array where each row pairs an in-memory dataset
+        %               struct with its name, in either order
         %               Example:
-        %               {"DB Name 1", "path/to/DB1.mat"; "DB Name", 
-        %               "path/to/DB2.mat"}
+        %               {Dataset_1, "Dataset 1"; "Dataset 2", Dataset_2}
         %   toolbox_root - the root path where the toolbox is saved for internal 
         %                  use. By default
         %                  opens a UI directory window that asks you where the
@@ -178,7 +177,6 @@ classdef PROSTAnalyzer < handle
         % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
         % [fig, speed_table] = plot_speed_distribution(obj, dataset_ids, opts, save_opts);
         % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
-        % [XL, YL, XS, YS, BETA, PCTVAR, MSE, stats] = pls_analysis(obj, show, file_type);
         % set_dataset(obj, dataset_id, dataset);
         % set_dataset_name(obj, dataset_id, dataset_name);
     end

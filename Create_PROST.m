@@ -35,9 +35,9 @@ for idx = 1:length(dataset_list)
 end
 
 %% Create Load List
-%   load_list - a cell array where each row contains pairs of dataset name and 
-%               path to the dataset. Example:
-%               {"Dataset 1 Name", "path/to/Dataset1.mat"; "Dataset 2 Name", "path/to/Dataset2.mat"}
+%   load_list - a cell array where each row pairs an in-memory dataset struct
+%               with its name, in either order. Example:
+%               {Dataset_1, "Dataset 1"; "Dataset 2", Dataset_2}
 load_list = {Dataset_1, "Dataset 1"; ...
              Dataset_2, "Dataset 2"; ... 
              Dataset_3, "Dataset 3"; ...
