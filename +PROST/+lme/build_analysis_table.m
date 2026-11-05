@@ -40,6 +40,7 @@ function data = build_analysis_table(analyzer)
     data.log_R_H = log(data.R_H);
     data.log_R = log(radius); % with log_H, the scaling model of r on H
     data.log_H = log(body_height);
+    data.log_M = log(data.Mass); % with log_H, mass enters the log_R models as an elasticity
     data.log_L = log(data.Leg_length);
     data.AngleStartDeg = angle_start;
     data.AngleStartRad = deg2rad(angle_start);
