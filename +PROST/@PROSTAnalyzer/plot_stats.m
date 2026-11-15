@@ -125,16 +125,8 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     fig_data = gobjects(0);
 
 
-    % Get variable
-    var = obj.get_IPD_samples(var_name);
-    if ~strcmp(var.Properties.VariableTypes, "double")
-        throw(PROST.PROSTError("VariableType", "WrongVariableType", ...
-                "The chosen variable must be of numeric type but is of type %s", var.Properties.VariableTypes));
-    end
-    value = var.(var_name);
-    value_name = replace(replace(var_name, "_", " "), "rms", "RMS");
-    value_units = var.Properties.VariableUnits;
-    value_type = var.Properties.VariableDescriptions;
+    % Get variable, normalized if requested
+    [value, value_name, value_units, value_type] = get_plot_variable(obj, var_name, normalizer_name);
 
     % Get categorizing variable
     if isempty(category_name)
@@ -149,23 +141,6 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
     end
     category_labels = replace(category_name + ": " + string(category_options), "_", " ");
     n_categories = numel(category_options);
-
-    % Normalize variable
-    if ~isempty(normalizer_name)
-        normalizer = obj.get_IPD_samples(normalizer_name);
-        if ~strcmp(normalizer.Properties.VariableTypes, "double")
-            throw(PROST.PROSTError("SamplesVariable", "WrongVariableType", ...
-                "The chosen normalizer must be of numeric type but is of type %s", var.Properties.VariableTypes));
-        end
-        try
-            value = value ./ PROST.utils.convert_units(normalizer.(normalizer_name), normalizer.Properties.VariableUnits, var.Properties.VariableUnits);
-            value_units = "-";
-        catch
-            value = value ./ normalizer;
-            value_units = value_units + "/" + normalizer.Properties.VariableUnits;
-        end
-        value_name = value_name + " / " +  replace(normalizer_name, "_", " ");
-    end
 
     % Determine which types of plots are applicable
     histogram_types = ["count" "probability" "percentage" "countdensity" "cumcount" "pdf" "cdf"];
@@ -261,13 +236,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
         if dataplot_flag % hist_flag || kde_flag || dist_flag
             % Set axis parameters
             ax_data = nexttile(tl_data);
-            ax_data.FontUnits = "points";
-            ax_data.FontSize = obj.FONT_SIZE;
-            ax_data.FontName = obj.FONT_NAME;
-            ax_data.TitleFontWeight = obj.FONT_WEIGHT;
-            ax_data.FontWeight = obj.FONT_WEIGHT;
-            hold(ax_data, "on");
-            grid(ax_data, "on");
+            style_axes(obj, ax_data);
             title(ax_data, category_titles(cat_idx))
 
             if function_type == "icdf"
@@ -324,14 +293,7 @@ function [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, 
                 txt = txt + sprintf(" (%d below / %d above x-limits)", n_below, n_above);
             end
         end
-        text(ax_data, 0.01, 1, txt, ...
-            Units="normalized", ...
-            FontSize=obj.FONT_SIZE_TEXT, ...
-            FontName=obj.FONT_NAME_TEXT, ...
-            FontWeight=obj.FONT_WEIGHT_TEXT, ...
-            HorizontalAlignment="left", ...
-            VerticalAlignment="top", ...
-            BackgroundColor="white");
+        add_n_textbox(obj, ax_data, txt);
 
         if kde_flag
             kde = stats_i.fits.kernel.kde;
@@ -415,51 +377,24 @@ function show_overflow(ax, x_lim, n_below, n_above, h)
         l.YData(l.XData < x_lim(1) | l.XData > x_lim(2)) = NaN;
     end
 
-    full_lim = x_lim;
-    overflow_ticks = [];
-    overflow_labels = strings(0);
-    if ~isempty(h) && ~ismember(h.Normalization, ["cdf" "cumcount"])
-        w = h.BinWidth;
-        gap = w/2;
-        filled = h.BinCounts > 0;
-        scale = sum(h.Values(filled))/sum(h.BinCounts(filled));
-        color = ax.ColorOrder(h.SeriesIndex, :);
-
-        % Keep only the bins inside the limits, at their normalized heights, so
-        % the gaps stay empty. x_lim lies on bin edges (snapped by the caller).
-        inside = h.BinEdges >= x_lim(1) & h.BinEdges <= x_lim(2);
-        heights = h.Values(inside(1:end - 1) & inside(2:end));
-        h.Normalization = "count";
-        set(h, BinEdges=h.BinEdges(inside), BinCounts=heights);
-        counts = [n_below n_above];
-        symbols = ["<" ">"];
-        for s = 1:2
-            if counts(s) == 0
-                continue
-            end
-            edges = sort(x_lim(s) + (2*s - 3)*[gap gap + w]);
-            histogram(ax, BinEdges=edges, BinCounts=counts(s)*scale, ...
-                      FaceColor="none", EdgeColor=color, LineWidth=h.LineWidth, ...
-                      HandleVisibility="off");
-            full_lim(s) = edges(s);
-            % Label the bin's range, not its size: a number on the bar would be
-            % read against the y-axis, which a count or percentage is not
-            overflow_ticks(end + 1) = mean(edges); %#ok<AGROW>
-            overflow_labels(end + 1) = sprintf("%s%g", symbols(s), x_lim(s)); %#ok<AGROW>
-        end
+    if isempty(h) || ismember(h.Normalization, ["cdf" "cumcount"])
+        % No overflow bins: only the limits and the tick relabelling
+        draw_overflow_bins(ax, x_lim, 1, 0, 0, [0 0 0], 1);
+        return
     end
-    xlim(ax, full_lim);
 
-    % Keep ticks off the gaps, which have no x scale, and mark the overflow bins
-    % by their ranges
-    ticks = ax.XTick;
-    ticks = ticks(ticks >= x_lim(1) & ticks <= x_lim(2));
-    labels = string(ax.XAxis.TickLabelFormat);
-    labels = compose(labels, ticks);
-    [ticks, order] = sort([ticks overflow_ticks]);
-    labels = [labels overflow_labels];
-    ax.XTick = ticks;
-    ax.XTickLabel = labels(order);
+    filled = h.BinCounts > 0;
+    scale = sum(h.Values(filled))/sum(h.BinCounts(filled));
+    color = ax.ColorOrder(h.SeriesIndex, :);
+
+    % Keep only the bins inside the limits, at their normalized heights, so
+    % the gaps stay empty. x_lim lies on bin edges (snapped by the caller).
+    w = h.BinWidth;
+    inside = h.BinEdges >= x_lim(1) & h.BinEdges <= x_lim(2);
+    heights = h.Values(inside(1:end - 1) & inside(2:end));
+    h.Normalization = "count";
+    set(h, BinEdges=h.BinEdges(inside), BinCounts=heights);
+    draw_overflow_bins(ax, x_lim, w, n_below*scale, n_above*scale, color, h.LineWidth);
 end
 
 % ------------ Helper functions for validation

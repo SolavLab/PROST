@@ -33,6 +33,8 @@ classdef PROSTAnalyzer < handle
         COLOR_LEFT_DARK = [0.5, 0.0, 0.0]; % reddish dark
         COLORMAP_RIGHT = "summer";
         COLORMAP_LEFT = "autumn";
+        COLOR_MEDIAN = [0.05 0.15 0.45]; % navy
+        COLOR_IQR = [0.55 0.65 0.85]; % pale slate blue
         COLOR_DEFAULT_BLUE = [0 0.4470 0.7410];
         COLOR_DEFAULT_ORANGE = [0.8500 0.3250 0.0980];
         COLOR_DEFAULT_YELLOW = [0.9290 0.6940 0.1250];
@@ -40,6 +42,8 @@ classdef PROSTAnalyzer < handle
         COLOR_DEFAULT_GREEN = [0.4660 0.6740 0.1880];
         COLOR_DEFAULT_LIGHTBLUE = [0.3010 0.7450 0.9330];
         COLOR_DEFAULT_RED = [0.6350 0.0780 0.1840];
+        COLOR_DEFAULT_GREY = [0.6 0.6 0.6];
+        COLOR_DEFAULT_DARKGREY = [0.25 0.25 0.25];
         MARKER_CENTER = 'square';
         MARKER_NADIR = 'square';
         MARKER_ANKLE = 'hexagram';
@@ -53,6 +57,7 @@ classdef PROSTAnalyzer < handle
         MARKER_ALPHA = 0.5;
         MARKER_LINE_WIDTH = 1;
         LINE_WIDTH = 1.5;
+        BAR_EDGE_WIDTH = 0.5;
         LINE_STYLE_SOLID = "-";
         LINE_STYLE_DASHED = "--";
         LINE_STYLE_DOTTED = ":";
@@ -155,9 +160,9 @@ classdef PROSTAnalyzer < handle
             end
         end
         
-        % dataset_id = add_dataset(obj, dataset_name, dataset, participants_to_ignore_left, participants_to_ignore_right);
+        % dataset_id = add_dataset(obj, dataset_name, dataset);
         % add_to_ignore(obj, dataset_id, participants, trials, side);
-        % clean_data(obj, ignore_list);
+        % clean_data(obj, ignore_list, opts);
         % create_IPD_table(obj);
         % tf = dataset_exists(obj, dataset_id);
         % delete_dataset(obj, dataset_id);
@@ -166,17 +171,18 @@ classdef PROSTAnalyzer < handle
         % dataset_name = get_dataset_name(obj, dataset_id);
         % [predictors, names, units, types] = get_predictors(obj, list);
         % [responses, names, units, types] = get_responses(obj, list);
-        % [IPD_samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, varargin);
+        % [samples, row_numbers, var_names] = get_IPD_samples(obj, var_list, varargin);
         % speed_table = get_step_speeds(obj, dataset_ids);
         % tf = has_medial(obj, dataset_id);
         % tf = is_ignored(obj, dataset_id, participant_id, trials, side);
         % tf = is_in_IPD_table(obj, dataset_id, participant_id, side);
         % tf = participant_exists(obj, dataset_id, participant_id);
-        % plot_cop(obj, dataset_id, participant_id, side, step_number)
-        % plot_predictors_vs_responses(obj, predictors_list, responses_list, number_of_axes_in_fig, show, file_type);
-        % plot_ros(obj, who_to_plot, number_of_axes_in_fig, plot_type, show, file_type);
+        % fig = plot_cop(obj, who_to_plot, opts, save_opts);
+        % [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list, responses_list, opts, save_opts, filt_opts);
+        % fig = plot_ros(obj, who_to_plot, opts, save_opts);
         % [fig, speed_table] = plot_speed_distribution(obj, dataset_ids, opts, save_opts);
-        % fig = plot_stats(obj, var_name, normalizer_name, categorizer_name, show, file_type, varargin)
+        % [fig_data, fig_qq, stats] = plot_stats(obj, var_name, normalizer_name, category_name, distnames, opts, save_opts, hist_opts);
+        % [fig, summary] = plot_summary_histogram(obj, var_name, normalizer_name, opts, save_opts);
         % set_dataset(obj, dataset_id, dataset);
         % set_dataset_name(obj, dataset_id, dataset_name);
     end
@@ -196,22 +202,28 @@ classdef PROSTAnalyzer < handle
 
     %% PRIVATE METHODS
     methods (Access = private)
-        % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side);
+        % h = add_n_textbox(obj, ax, txt);
         % add_to_IPD_table(obj, dataset_id);
+        % dataset_id = add_to_data_records(obj, dataset_name, dataset, anatomical_side);
         % add_to_summary_table(obj, dataset_id);
-        % delete_from_data_records(obj, dataset_id, index);
         % delete_from_IPD_table(obj, flag, varargin);
-        % delete_from_summary_table(obj, index);
-        % filter_data_by_bad_steps(obj, dataset_id, bad_step_min_duration, anatomical_side);
-        % filter_data_by_ignore(obj);
+        % delete_from_data_records(obj, dataset_id);
+        % delete_from_summary_table(obj, dataset_id);
+        % h = draw_group_summary(obj, ax, medians, quartiles, colors, style);
+        % h = draw_stacked_histogram(obj, ax, edges, counts, colors, labels);
+        % filter_data_by_bad_steps(obj, dataset_ids, bad_step_min_duration, anatomical_side);
+        % filter_data_by_ignore(obj, ignore_list);
         % fit_to_circular_arc(obj, entry_number);
-        % [IPD_samples, row_numbers] = get_IPD_samples_by_entry(obj, dataset_id, participant_id, side);
-        % [IPD_samples, var_names] = get_IPD_samples_by_variable(obj, var_list);
+        % [samples, row_numbers] = get_IPD_samples_by_entry(obj, dataset_id, participant_id, side);
+        % [samples, var_names] = get_IPD_samples_by_variable(obj, var_list);
+        % [value, value_name, value_units, value_type] = get_plot_variable(obj, var_name, normalizer_name);
         % [summary, entry_number] = get_summary_entry(obj, dataset_id);
         % var = get_summary_var(obj, var_name);
-        % tf = is_in_summary_table(obj, dataset_id)
+        % tf = is_in_summary_table(obj, dataset_id);
         % make_point_cloud(obj, dataset_id, participant_id, side, good_step_nums, row_number, anatomical_side);
+        % [h, h_literature, literature] = plot_comparison_values(obj, ax, m, range, normalizer_name, response_name, plot_unit, opts);
         % populate_table(obj, dataset_id, start_row, anatomical_side);
+        % style_axes(obj, ax);
         % sync_data_records_lookup(obj, dataset_id);
         % update_num_included_summary(obj, dataset_ids);
     end
@@ -228,6 +240,9 @@ classdef PROSTAnalyzer < handle
     methods(Static, Access=private)
         [age, sex, height, mass, leg_length, thigh_length, shank_length, footwear_condition] = get_metadata(metadata, side);
         y = filter_outliers(y, filter, filter_options);
+        [lim, n_below, n_above] = coverage_limits(values, coverage, two_sided, extra_values);
+        h = draw_overflow_bins(ax, x_lim, bin_width, n_below, n_above, colors, line_width);
+        tf = is_signed_variable(var_name);
     end
 end
 

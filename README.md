@@ -229,6 +229,7 @@ All methods belong to `PROSTAnalyzer`. Run `help PROST.PROSTAnalyzer.<method>` f
 | `plot_cop()` | Plot CoP trajectories in the lab and shank frames |
 | `plot_predictors_vs_responses()` | Scatter plots with trend lines and correlations |
 | `plot_stats()` | Distributions, fitted densities, and Q–Q plots |
+| `plot_summary_histogram()` | Count histograms stacked by dataset, with pooled and per-dataset median/IQR and literature reference values |
 | `plot_speed_distribution()` | Histograms of measured walking speed per dataset, optionally split by speed condition |
 
 Plotters take name-value options (`arguments` blocks). They share the save options `show`, `append`, `overwrite`, `file_type` (a list such as `["pdf" "svg" "jpeg" "fig"]`), `prepare`, and `prepare_options`.
@@ -278,8 +279,9 @@ Plotters take name-value options (`arguments` blocks). They share the save optio
 Tests are MATLAB scripts with `assert` statements, not `matlab.unittest` classes.
 
 ```matlab
-% Requires the built Dataset_N.mat files
-runtests('+PROST/+tests/test_PROSTAnalyzer.m')
+% Requires the built Dataset_N.mat files. Run as a script: its sections share
+% variables, so runtests (which isolates each section) does not work yet.
+PROST.tests.test_PROSTAnalyzer
 ```
 
 - `+PROST/+tests/test_PROSTAnalyzer.m`: analyzer functionality.

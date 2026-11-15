@@ -211,7 +211,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end
             
             % Plot values for comparison
-            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit);
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit, show_zero=is_signed_variable(response_name));
 
             txt = sprintf(" R^2 = %.2g\n" + ...
                           " Spearman: \\rho = %.2g, p = %.2g\n" + ...
@@ -272,7 +272,7 @@ function [fig, correlations] = plot_predictors_vs_responses(obj, predictors_list
             end
             
             % Plot values for comparison
-            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit);
+            h_compare = plot_comparison_values(obj, ax, y_median, y_iqr, normalizer_name, response_name, y_unit, show_zero=is_signed_variable(response_name));
 
             % Wilcoxon \ Mann-Whitney U-test
             txt = sprintf(" Wilcoxon: H = %d, p = %.2g\n r_{rb} = %.2f", ...
@@ -355,77 +355,6 @@ function mustBeTextOrEmpty(value)
        return
     end
     mustBeText(value);
-end
-
-function h = plot_comparison_values(obj, ax, y_m, y_range, normalizer_name, response_name, y_unit)
-    arguments
-        obj
-        ax
-        y_m             (1, 1) double
-        y_range         (1, 2) double
-        normalizer_name {mustBeTextScalarOrEmpty} = []
-        response_name   (1, 1) string = "Radius"
-        y_unit          (1, 1) string = "mm"
-    end
-
-    h = gobjects(0);
-    % Plot 0 value
-    h = [h yline(ax, 0, Color=obj.LINE_COLOR, LineWidth=1, DisplayName="Zero")];
-
-    % Plot representative values
-    h = [h yline(ax, y_m, Color=obj.COLOR_DEFAULT_BLUE, LineWidth=1, DisplayName="Median")];
-    h = [h yregion(y_range(1), y_range(2), FaceAlpha=0.1, FaceColor=obj.COLOR_DEFAULT_BLUE, EdgeColor="none", DisplayName="IQR")];
-
-    % Plot values from literature for comparison
-    if ~isempty(normalizer_name) && normalizer_name == "Height"
-        paper_colors = orderedcolors("gem");
-        paper_colors = paper_colors(2:end, :);
-
-        if response_name == "Radius"
-            % Median height-normalised radii of measured ROS of able-bodied walking.
-            % Ankle-foot ROS (CoP in the shank, knee-ankle, CS, as in PROST):
-            % Hansen & Childress, 2004 (A) "Effects of shoe heel height..." and Hansen
-            % & Meier, 2010 "Roll-over shapes of the ankle-foot and knee-ankle-foot
-            % systems of able-bodied children". Knee-ankle-foot ROS (CoP in a
-            % hip-ankle CS, not directly comparable to PROST): Hansen et al., 2004 (B)
-            % "Roll-over shapes of human locomotor systems: effects of walking speed"
-            % and Hansen & Childress, 2005 "Effects of adding weight to the torso...".
-            hansen_effects_2004_radius = 0.19;
-            hansen_roll_over_2010_radius = 0.22;
-            hansen_roll_over_2004_radius = 0.15;
-            hansen_effects_2005_radius = 0.16;
-
-            h = [h yline(ax, hansen_effects_2004_radius,   Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (A)")];
-            h = [h yline(ax, hansen_roll_over_2010_radius, Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2010")];
-            h = [h yline(ax, hansen_roll_over_2004_radius, Color=paper_colors(3, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
-            h = [h yline(ax, hansen_effects_2005_radius,   Color=paper_colors(4, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
-        elseif response_name == "Center_horizontal"
-            % Median height-normalised centre horizontal coordinates of measured
-            % knee-ankle-foot ROS of able-bodied walking (CoP in a hip-ankle CS, not
-            % directly comparable to the shank-based PROST ankle-foot ROS): Hansen et
-            % al., 2004 (B) "Roll-over shapes of human locomotor systems: effects of
-            % walking speed" and Hansen & Childress, 2005 "Effects of adding weight to
-            % the torso...".
-            hansen_roll_over_2004_center_hor = 0.006;
-            hansen_effects_2005_center_hor = 0.011;
-
-            h = [h yline(ax, hansen_roll_over_2004_center_hor, Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2004 (B)")];
-            h = [h yline(ax, hansen_effects_2005_center_hor,   Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Hansen, 2005")];
-        end
-    elseif isempty(normalizer_name) && response_name == "Center_horizontal"
-        paper_colors = orderedcolors("gem");
-        paper_colors = paper_colors(2:end, :);
-
-        % Arc-centre offsets anterior to the tibial axis imposed on rigid arc feet
-        % (design values, not measured ROS): Adamczyk et al., 2006, p. 3957 and
-        % Adamczyk & Kuo, 2013, p. 2725. In m:
-        adamczyk_advantages_2006_center_hor = 0.076;
-        adamczyk_mechanical_2013_center_hor = 0.058;
-        to_unit = @(v) PROST.utils.convert_units(v, "m", y_unit);
-
-        h = [h yline(ax, to_unit(adamczyk_advantages_2006_center_hor), Color=paper_colors(1, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Adamczyk, 2006")];
-        h = [h yline(ax, to_unit(adamczyk_mechanical_2013_center_hor), Color=paper_colors(2, :), Linewidth=1, LineStyle=obj.LINE_STYLE_DASHED, DisplayName="Adamczyk, 2013")];
-    end
 end
 
 function [n_below, n_above] = clip_to_coverage(obj, axs, y, coverage)
